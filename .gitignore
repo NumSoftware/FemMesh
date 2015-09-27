@@ -1,0 +1,5 @@
+*.vtk
+*.dat
+*.datt
+*.bk.jl
+theory/
