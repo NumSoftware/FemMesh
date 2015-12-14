@@ -31,7 +31,7 @@ export is_solid, is_line, is_joint, is_inside
 export inverse_map, extrapolator
 export coords_tri6, coords_tri9, coords_tri10, coords_quad4, coords_quad8 #...
 
-# Shape types:
+# Shapes compatible with VTK
 const LIN2  = 3
 const LIN3  = 21
 const TRI3  = 5
@@ -43,6 +43,7 @@ const TET10 = 24
 const HEX8  = 12
 const HEX20 = 25
 
+# Shapes represented as polyvertex
 const LIN4   = 31
 const TRI9   = 33
 const TRI10  = 34
@@ -50,10 +51,12 @@ const QUAD9  = 37
 const QUAD12 = 38
 const QUAD16 = 39
 
+# Embedded links
 const LINK1  = 51
 const LINK2  = 52
 const LINK3  = 53
 
+# Conventional joints
 const JLIN2  = 100 + LIN2 
 const JLIN3  = 100 + LIN3 
 const JLIN4  = 100 + LIN4 
@@ -62,7 +65,7 @@ const JTRI6  = 100 + TRI6
 const JQUAD4 = 100 + QUAD4
 const JQUAD8 = 100 + QUAD8
 
-typealias ShapeType Integer
+typealias ShapeType Int64
 
 SHAPE_TAG = [ LIN2  => 102, LIN3   => 103, LIN4 => 104, 
               TRI3  => 703, TRI6   => 706, TRI9 => 709, TRI10  => 710, 
@@ -87,15 +90,16 @@ function get_name(shape::ShapeType)
 end
 
 function get_vtk_type(shape::ShapeType)
-    if shape in [LINK1, LINK2, LINK3, LIN4, TRI9, TRI10, QUAD9, QUAD12, QUAD16] || shape>100
+    if shape>50
         return 2 # vtk_poly_vertex
     end
 
-    return shape # Conventional:
+    return shape # Conventional
 end
 
 function get_shape_from_vtk(vtk_type::Int64, npoints::Int64, ndim::Int64)
-    if vtk_type!=2 return vtk_type end # poly_vertex
+
+    if vtk_type!=2 return vtk_type end # diff from poly_vertex
 
     if     npoints==1   return LINK1
     elseif npoints==2   return LINK2
@@ -934,7 +938,16 @@ function inverse_map(shape::ShapeType, coords::Array{Float64,2}, X0::Array{Float
     ndim  = get_ndim(shape)
     R = zeros(ndim)
     C = coords
+
+    #@show(size(coords))
+    #@show(size(X0))
+    #@show(ndim)
+
     X = X0
+    if size(coords,2)==2
+        X = X0[1:ndim]
+    end
+
     k = 0
     for k=1:MAXIT
         # calculate Jacobian
@@ -957,7 +970,7 @@ function inverse_map(shape::ShapeType, coords::Array{Float64,2}, X0::Array{Float
     if k==MAXIT; println("Warning: max iterations reached in inverse mapping") end
 
     if ndim==2
-        R = [ R, 0.0 ]
+        R = vcat( R, 0.0 )
     end
     return R
 end

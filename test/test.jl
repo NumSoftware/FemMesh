@@ -3,7 +3,7 @@ using FactCheck
 
 verbose = true
 
-facts("\nTesting generate_mesh function on solids") do
+facts("\nMesh generation on solids") do
     bl = Block2D( [0 0; 1 1], nx=10, ny=10, shape=TRI3)
     mesh = generate_mesh(bl, verbose=verbose)
     save(mesh, "out.vtk", verbose=verbose)
@@ -37,7 +37,7 @@ facts("\nTesting generate_mesh function on solids") do
     rm("out.vtk")
 end
 
-facts("\nTesting generate_mesh function on trusses") do
+facts("\nMesh generation on trusses") do
 
     coord = [ 0 0; 9 0; 18 0; 0 9; 9 9; 18 9.]
     conn  = [ 1 2; 1 5; 2 3; 2 6; 2 5; 2 4; 3 6; 3 5; 4 5; 5 6]
@@ -54,4 +54,31 @@ facts("\nTesting generate_mesh function on trusses") do
     @fact length(mesh.points) --> 3
 
     rm("out.vtk")
+end
+
+facts("\nMesh smoothing") do
+    bl   = Block2D( [0 0; 1 1], nx=2, ny=2, shape=QUAD4)
+    mesh = generate_mesh(bl, verbose=verbose)
+    smooth!(mesh, verbose=verbose)
+    @fact mesh.quality --> roughly(1.0, atol=1e-2)
+
+    bl   = Block2D( [0 0; 1 1], nx=2, ny=2, shape=TRI3)
+    mesh = generate_mesh(bl, verbose=verbose)
+    smooth!(mesh, verbose=verbose)
+    @fact mesh.quality --> roughly(0.97, atol=1e-2)
+
+    bl = Block3D( [ 0 0 0; 2 0 0; 2 1 0; 0 1 0; 0 0 1; 1 0 1; 1 1 1; 0 1 1 ], nx=3, ny=3, nz=3, shape=HEX8)
+    mesh = generate_mesh(bl, verbose=verbose)
+    smooth!(mesh, verbose=verbose)
+    @fact mesh.quality --> roughly(0.98, atol=1e-2)
+
+    bl = Block2D( [ 1.0 0.0; 2.0 0.0; 0.0 2.0; 0.0 1.0; 1.5 0.0; 1.5 1.5; 0.0 1.5; 0.7 0.7 ], nx=3, ny=6, shape=QUAD8)
+    mesh = generate_mesh(bl, verbose=verbose)
+    smooth!(mesh, verbose=verbose)
+    @fact mesh.quality --> roughly(0.99, atol=1e-2)
+
+    bl = Block2D( [ 1.0 0.0; 2.0 0.0; 0.0 2.0; 0.0 1.0; 1.5 0.0; 1.5 1.5; 0.0 1.5; 0.7 0.7 ], nx=3, ny=6, shape=TRI6)
+    mesh = generate_mesh(bl, verbose=verbose)
+    smooth!(mesh, eps=1e-3, epsmin=1e-2, verbose=verbose)
+    @fact mesh.quality --> roughly(0.94, atol=1e-2)
 end

@@ -37,7 +37,7 @@ end
 # Cell class for triangulation
 type TCell
     points::Array{TPoint,1}
-    adjacs::Array{Union(TCell,Nothing),1}
+    adjacs::Array{Union{TCell,Void},1}
 
     function TCell(p0, p1, p2, t1=nothing, t2=nothing, t3=nothing)
         this = new()

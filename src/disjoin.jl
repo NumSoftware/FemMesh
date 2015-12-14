@@ -21,7 +21,8 @@
 
 # This file includes the code for adding joints between cells
 
-include("mesh.jl")
+#include("mesh.jl")
+export disjoin!
 
 function joint_shape(shape::ShapeType)
     if shape == LIN2  ; return JLIN2  end
@@ -37,14 +38,14 @@ end
 # Adds joint cells over all shared faces
 function disjoin!(mesh::Mesh)
     cells  = mesh.cells
-    solids = filter( c -> is_solid(c), cells)
+    solids = filter( c -> is_solid(c.shape), cells)
 
     newpoints = Point[]
 
     # Splitting
     for c in solids
-        is_solid(c) || continue
-        for (i,p) in enumerate(cell.points)
+        is_solid(c.shape) || continue
+        for (i,p) in enumerate(c.points)
             newp = Point(p.x, p.y, p.z)
             p.id = 0 # set id=0 as a flag for points to be removed
             newp.extra = c.id
@@ -54,10 +55,10 @@ function disjoin!(mesh::Mesh)
     end
 
     # List all repeated faces
-    face_pairs = (Cell, Cell)[]
+    face_pairs = Tuple{Cell, Cell}[]
 
     # Joints generation
-    facedict = Dict{Uint64, Cell}()
+    facedict = Dict{UInt64, Cell}()
 
     # Get paired faces 
     for cell in solids
@@ -89,12 +90,12 @@ function disjoin!(mesh::Mesh)
         end
 
         jshape = joint_shape(f1.shape)
-        cell = Cell(shape, con, "")
+        cell = Cell(jshape, con, "")
         push!(jcells, cell)
     end
 
     # Fix 1d joint elements
-    cdict = Dict{Uint64, Cell}()
+    cdict = Dict{UInt64, Cell}()
     for c in solids
         if c.crossed
             cdict[ hash(c) ] = c
@@ -134,6 +135,8 @@ function disjoin!(mesh::Mesh)
     mesh.points = vcat(points, newpoints)
     mesh.cells  = vcat(cells, jcells)
     update!(mesh)
+
+    return mesh
     
 end
 

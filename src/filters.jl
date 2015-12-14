@@ -5,7 +5,7 @@ function get_shares(cells::Array{Cell,1}, points::Point=Array(Point,0))
 
     # get all points from cells if needed
     if length(points==0)
-        pointsd = Dict{Uint64, Point}()
+        pointsd = Dict{UInt64, Point}()
         for cell in cells
             for point in cell.points
                 pointsd[hash(point)] = point

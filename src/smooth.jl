@@ -354,7 +354,7 @@ function mountA(mesh::Mesh, fixed::Bool, conds)
     border_fcs = get_surface(mesh.cells)
 
     # get all points from surface including a list of faces per point
-    nodesd = Dict{Uint64, sNode}()
+    nodesd = Dict{UInt64, sNode}()
     for cell in border_fcs
         for point in cell.points
             hk = hash(point)
@@ -530,7 +530,7 @@ function force_bc(mesh::Mesh, E::Float64, nu::Float64, α::Float64)
 end
 
 function smooth!(mesh::Mesh; verbose=true, alpha::Float64=0.3, target::Float64=0.97, fixed::Bool=false, maxit::Int64=100, epsmin::Float64=1e-3,
-    eps::Float64=1e-4, save_steps::Bool=false, filekey::String="smooth", conds=nothing)
+    eps::Float64=1e-4, save_steps::Bool=false, filekey::AbstractString="smooth", conds=nothing)
 
     verbose && println(BOLD, CYAN, "Mesh smoothing:", DEFAULT)
 
@@ -612,7 +612,8 @@ end
 
 precompile(smooth!, (Mesh,) )
 
-function laplacian_smooth(mesh::Mesh; alpha::Float64=1.0, maxit::Int64=100, verbose::Bool=true, epsmin::Float64=1e-3, eps::Float64=1e-4, save_steps::Bool=false, filekey::String="smooth")
+function laplacian_smooth(mesh::Mesh; alpha::Float64=1.0, maxit::Int64=100, verbose::Bool=true, epsmin::Float64=1e-3,
+    eps::Float64=1e-4, save_steps::Bool=false, filekey::AbstractString="smooth")
 
     ndim = mesh.ndim
 
@@ -631,7 +632,7 @@ function laplacian_smooth(mesh::Mesh; alpha::Float64=1.0, maxit::Int64=100, verb
 
     # get all points from surface including a list of faces per point
     border_fcs = get_surface(mesh.cells)
-    nodesd     = Dict{Uint64, sNode}()
+    nodesd     = Dict{UInt64, sNode}()
     for cell in border_fcs
         for point in cell.points
             hk = hash(point)

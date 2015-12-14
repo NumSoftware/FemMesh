@@ -23,6 +23,7 @@ VERSION >= v"0.4.0-dev+6521" && __precompile__()
 module FemMesh
 
 using Base
+using JSON
 
 export Point
 
@@ -57,21 +58,5 @@ typealias Matx Array{Float64, 2}
 # Mesh module
 include("tools/linalg.jl")
 include("mesh.jl")
-#include("shape.jl")
-
-#using .MeshGen
-#export is_solid, is_line, is_joint
-#export Block2D, Block3D, BlockTruss, BlockInset, Mesh
-#export generate_mesh
-
-# Fem module
-#include("node.jl")
-#include("elem.jl")
-#include("face.jl")
-#include("domain.jl")
-#include("mec/solver.jl")
-#include("mec/mechanical.jl")
-
-#include("seep/seep.jl")
 
 end#module

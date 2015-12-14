@@ -31,10 +31,10 @@ type Point
     x    ::Float64
     y    ::Float64
     z    ::Float64
-    tag  ::String
+    tag  ::AbstractString
     id   ::Int64
     extra::Int64
-    function Point(x,y,z; tag="")
+    function Point(x::Float64,y::Float64,z::Float64; tag="")
         const NDIG = 14
         x = round(x, NDIG)
         y = round(y, NDIG)
@@ -59,7 +59,7 @@ hash(p::Point) = hash((p.x, p.y, p.z))
 
 getcoords(p::Point) = [p.x, p.y, p.z]
 
-function get_point(points::Dict{Uint64,Point}, C::Array{Float64,1})
+function get_point(points::Dict{UInt64,Point}, C::Array{Float64,1})
     hs = hash(Point(C))
     get(points, hs, nothing)
 end
@@ -85,14 +85,14 @@ end
 type Cell
     shape  ::ShapeType
     points ::Array{Point,1}
-    tag    ::String
+    tag    ::AbstractString
     id     ::Integer
     ndim   ::Integer
     quality::Float64              # quality index: surf/(reg_surf) 
     crossed::Bool                 # flag if cell crossed by linear inclusion
-    ocell  ::Union(Cell,Nothing)  # owner cell in the case of a face
+    ocell  ::Union{Cell,Void}  # owner cell in the case of a face
     extra  ::Integer
-    function Cell(shape::ShapeType, points, tag="", ocell=nothing)
+    function Cell(shape::ShapeType, points::Array{Point,1}, tag::AbstractString="", ocell=nothing)
         this = new(shape, points, tag, -1)
         this.ndim = 0
         this.quality = 0.0
@@ -101,6 +101,8 @@ type Cell
         return this
     end
 end
+
+Face=Cell
 
 
 ### Cell methods
@@ -121,7 +123,7 @@ end
 
 # Return all points in cells
 function get_points(cells::Array{Cell,1})
-    pointsd = Dict{Uint64, Point}()
+    pointsd = Dict{UInt64, Point}()
     for cell in cells
         for point in cell.points
             pointsd[hash(point)] = point
@@ -151,7 +153,7 @@ end
 # Gets the coordinates of a bounding box for an array of cells
 function bounding_box(cells::Array{Cell,1})
     # Get all points
-    pointsd = Dict{Uint64, Point}()
+    pointsd = Dict{UInt64, Point}()
     for cell in cells
         for point in cell.points
             pointsd[hash(point)] = point
@@ -328,7 +330,7 @@ function get_faces(cell::Cell)
     f_idxs = FACETS_IDXS[cell.shape]
 
     for f_idx in f_idxs
-        points = [ cell.points[i] for i in f_idx]
+        points = Point[ cell.points[i] for i in f_idx]
         face   = Cell(FACETS_SHAPE[cell.shape], points, cell.tag, cell)
         push!(faces, face)
     end

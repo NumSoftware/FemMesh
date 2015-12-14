@@ -22,20 +22,21 @@ export BlockInset
 
 type BlockInset <: Block
     coords   ::Array{Float64,2}
-    curvetype::Union(Int,String) # 0:polyline, 1:closed polyline, 2: lagrangian, 3:cubic Bezier with inner points
+    curvetype::Union{Int,AbstractString} # 0:polyline, 1:closed polyline, 2: lagrangian, 3:cubic Bezier with inner points
     closed   ::Bool
     shape    ::ShapeType
-    tag      ::String
+    tag      ::AbstractString
     ε        ::Float64 # bisection tolerance
     εn       ::Float64 # increment to find next cell
     εc       ::Float64 # tolerance to find cells
     λ        ::Float64 # jump to find multiple intersections in one cell
     id       ::Int64
     icount   ::Int64
-    _endpoint  ::Union(Point, Nothing)
-    _startpoint::Union(Point, Nothing)
+    _endpoint  ::Union{Point, Void}
+    _startpoint::Union{Point, Void}
 
-    function BlockInset(coords; curvetype=0, closed=false, shape=LIN3, tag="", tol=1e-9, toln=1e-4, tolc=1e-9, lam=1., id=-1)
+    function BlockInset(coords; curvetype=0, closed=false, shape=LIN3, tag="", tol=1e-9, toln=1e-4, tolc=1e-9, lam=1., id=-1) 
+        # TODO: add option: merge_nodes
         if typeof(curvetype)<:Integer
             if !(0<=curvetype<=3); error("Wrong curve type") end
             ctype = curvetype
@@ -206,7 +207,9 @@ function split_curve(coords::Array{Float64,2}, bl::BlockInset, closed::Bool, msh
     # Initializing more variables
     ccell  = icell
     points = Array(Point, npoints)
-    bl._endpoint = nothing
+
+    # Do not set _endpoint to nothing ( bl._endpoint = nothing ) to allow connectivity between segments!
+
     end_reached  = false
     s  = 0.0
     sp = 0.0

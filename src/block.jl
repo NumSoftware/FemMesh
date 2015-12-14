@@ -33,7 +33,7 @@ type BlockTruss <: Block
     coords::Array{Float64,2}
     conns ::Array{Int64,2}
     shape ::ShapeType
-    tag::String
+    tag::AbstractString
     id::Int64
 
     function BlockTruss(coords::Array{Float64,2}, conns::Array{Int64,2}; shape=LIN2, tag="", id=-1)
@@ -54,7 +54,7 @@ copy(bl::BlockTruss) = BlockTruss(copy(bl.coords), bl.conns, shape=bl.shape, tag
 type BlockCoords <: Block
     coords::Array{Float64,2}
     conns ::Array{Int64,2}
-    tag::String
+    tag::AbstractString
     id::Int64
 
     function BlockCoords(coords::Array{Float64,2}, conns::Array{Int64,2}; tag="", id=-1)
@@ -78,7 +78,7 @@ type Block2D <: Block
     nx::Int64
     ny::Int64
     shape::ShapeType
-    tag::String
+    tag::AbstractString
     id::Int64
     function Block2D(coords; nx=1, ny=1, shape=QUAD4, tag="", id=-1)
         if size(coords,1)==2
@@ -103,7 +103,7 @@ type Block3D <: Block
     ny::Int64
     nz::Int64
     shape::ShapeType
-    tag::String
+    tag::AbstractString
     id::Int64
     function Block3D(coords; nx=1, ny=1, nz=1, shape=HEX8, tag="", id=-1)
         C    = size(coords,1)==2? box_coords(vec(coords[1,:]), vec(coords[2,:])): coords
@@ -138,6 +138,15 @@ function array(bl::Block; n=1, x=0.0, y=0.0, z=0.0)
         push!(blocks, cp)
     end
     return blocks
+end
+
+
+# TODO:
+function rotate(bl::Block; vr=[1,0,0], angle=0.0 )
+end
+
+# TODO:
+function polar(bl::Block; vr=[1,0,0], n=1 )
 end
 
 

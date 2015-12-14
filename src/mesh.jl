@@ -26,7 +26,6 @@ export get_surface, get_neighbors
 include("entities.jl")
 include("delaunay.jl")
 
-using JSON
 
 ### Type Mesh
 type Mesh
@@ -34,7 +33,7 @@ type Mesh
     cells  ::Array{Cell,1}
     faces  ::Array{Cell,1}
     edges  ::Array{Cell,1}
-    bpoints::Dict{Uint64,Point}
+    bpoints::Dict{UInt64,Point}
     ndim   ::Int
     bins   ::Bins
     quality::Float64
@@ -43,7 +42,7 @@ type Mesh
     function Mesh()
         this = new()
         this.points = []
-        this.bpoints = Dict{Uint64, Point}()
+        this.bpoints = Dict{UInt64, Point}()
         this.cells  = []
         this.faces  = []
         this.edges  = []
@@ -60,7 +59,7 @@ include("block.jl")
 
 
 function get_surface(cells::Array{Cell,1})
-    surf_dict = Dict{Uint64, Cell}()
+    surf_dict = Dict{UInt64, Cell}()
 
     # Get only unique faces. If dup, original and dup are deleted
     for cell in cells
@@ -80,7 +79,7 @@ function get_surface(cells::Array{Cell,1})
 end
 
 function get_edges(surf_cells::Array{Cell,1})
-    edges_dict = Dict{Uint64, Cell}()
+    edges_dict = Dict{UInt64, Cell}()
 
     # Get only unique edges
     for cell in surf_cells
@@ -95,7 +94,7 @@ end
 
 # Return a list of neighbors for each cell
 function get_neighbors(cells::Array{Cell,1})
-    faces_dict = Dict{Uint64, Cell}()
+    faces_dict = Dict{UInt64, Cell}()
     neighbors = [ Cell[] for i=1:length(cells) ]
 
     # Get cell faces. If dup, original and dup are deleted but neigh info saved
@@ -121,7 +120,7 @@ end
 function get_surface_alt(cells::Array{Cell,1})
     # Actually slower....
     # Get all points
-    pointsd = Dict{Uint64, Point}()
+    pointsd = Dict{UInt64, Point}()
     for cell in cells
         for point in cell.points
             pointsd[hash(point)] = point
@@ -144,7 +143,7 @@ function get_surface_alt(cells::Array{Cell,1})
     F = [ get_faces(cell) for cell in cells]
     nc = length(cells)
     #CF = Array(Array{Array{Int64,1},1}, nc)
-    CF = Array(Array{Uint64,1}, nc)
+    CF = Array(Array{UInt64,1}, nc)
     for cell in cells # fast
         #CF[cell.id] = [ sort([pt.id for pt in face.points]) for face in F[cell.id]]
         CF[cell.id] = [ hash(face) for face in F[cell.id]]
@@ -283,7 +282,7 @@ end
 #end
 
 
-function save(mesh::Mesh, filename::String; verbose::Bool=true)
+function save(mesh::Mesh, filename::AbstractString; verbose::Bool=true)
     # Saves the mesh information in vtk format
 
     npoints = length(mesh.points)
@@ -373,15 +372,6 @@ function get_shape_type(geo, npoints=0)
     return shapetype
 end
 
-function load_mesh(filename)
-    basename, ext = splitext(filename)
-    if ext=="vtk"
-        load_mesh_json(filename)
-    else
-        load_mesh_vtk(filename)
-    end
-end
-
 function load_mesh_vtk(filename)
     file = open(filename)
     mesh = Mesh()
@@ -457,20 +447,20 @@ function load_mesh_vtk(filename)
     return mesh
 end
 
-function loadmesh(filename; format="json")
+function load_mesh_json(filename; format="json")
     mesh = Mesh()
 
     data = JSON.parsefile(filename)
-    verts = data["verts"]
+    verts = data["points"]
     cells = data["cells"]
 
     # Loading points
     for vert in verts
-        C = float(vert["c"])
-        C = [C, 0.0][1:3]
-        #push!(C, 0.0)
-        P = Point(C)
-        P.id  = vert["id"]+1
+        C = vert["c"]
+        push!(C, 0.0)
+        P = Point(C[1], C[2], C[3])
+        #P.id  = vert["id"]+1
+        P.id  = vert["id"]
         P.tag = string(vert["tag"])
         push!(mesh.points, P)
 
@@ -485,22 +475,25 @@ function loadmesh(filename; format="json")
 
     # Loading cells
     for cell in cells
-        geo   = cell["geo"]
-        conn  = cell["verts"]
-        conn  = [ i+1 for i in conn]
+        #geo   = cell["shape"]
+        conn  = cell["points"]
+        #conn  = [ i+1 for i in conn]
+        conn  = [ i for i in conn]
         npoints = length(conn)
 
         # check for embedded joint
         if haskey(cell, "jlinid") # is joint element
             lincell = cells[cell["jlinid"]]
-            npoints = length(lincell["verts"])
+            npoints = length(lincell["points"])
         end
 
-        shapetype = get_shape_type(geo, npoints)
-        points    = [ mesh.points[i] for i in conn ]
+        #shapetype = get_shape_type(geo, npoints)
+        shapetype = eval(parse(cell["shape"]))
+        points    = Point[ mesh.points[i] for i in conn ]
         C = Cell(shapetype, points, string(cell["tag"]))
-        C.id  = cell["id"]+1
-        c.ndim=ndim; 
+        #C.id  = cell["id"]+1
+        C.id  = cell["id"]
+        C.ndim=ndim; 
         push!(mesh.cells, C)
     end
 
@@ -539,6 +532,18 @@ function loadmesh(filename; format="json")
     return mesh
 end
 
+
+function Mesh(filename::AbstractString)
+    basename, ext = splitext(filename)
+    if ext==".vtk"
+        return load_mesh_vtk(filename)
+    else # try JSON
+        return load_mesh_json(filename)
+    end
+end
+
+
 include("filters.jl") 
 include("extrude.jl") 
 include("smooth.jl") 
+include("disjoin.jl") 
