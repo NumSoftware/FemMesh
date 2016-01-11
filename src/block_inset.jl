@@ -20,6 +20,17 @@
 
 export BlockInset
 
+"""
+`BlockInset(coords, [curvetype=0,] [shape=LIN3,] [closed=false,] [tag="",] [toln=1e-4,] [tolc=1e-9,] [lam=1.0,])`
+
+Generates an inset block object from a matrix of coordinates `coords`. `curvetype` is an integer value
+that represents the inset shape and can be:
+
+0:polyline, 2:lagrangian, 3:cubic Bezier.
+
+`shape` represents the shape for 1D elements used in the final mesh. Possible values are LIN2 and LIN3.
+`closed=true` can be used if a closed inset curve is required.
+"""
 type BlockInset <: Block
     coords   ::Array{Float64,2}
     curvetype::Union{Int,AbstractString} # 0:polyline, 1:closed polyline, 2: lagrangian, 3:cubic Bezier with inner points
@@ -47,8 +58,8 @@ type BlockInset <: Block
         end
         
         if size(coords,2)==2
-            nrows = size(coords,1)
-            coords = [ coords  zeros(nrows)]
+            nrows  = size(coords,1)
+            coords = hcat(coords, zeros(nrows))
         end
 
         this = new(coords, ctype, closed, shape, tag, tol, toln, tolc, lam, id)

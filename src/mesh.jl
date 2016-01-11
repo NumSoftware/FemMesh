@@ -28,6 +28,10 @@ include("delaunay.jl")
 
 
 ### Type Mesh
+"""
+`Mesh()` constructs an unitialized mesh object to be used in finite element analyses.
+It contains geometric fields as: points, cells, faces, edges, ndim, quality, etc.
+"""
 type Mesh
     points ::Array{Point,1}
     cells  ::Array{Cell,1}
@@ -220,14 +224,13 @@ function quality!(mesh::Mesh)
     mesh.qmin    = minimum(Q)
 end
 
-function generate_mesh(blocks::Block...; verbose::Bool=true, genfacets::Bool=true, genedges::Bool=false, initial_mesh=nothing)
-    generate_mesh([blocks...], verbose=verbose, genfacets=genfacets, genedges=genedges, initial_mesh=initial_mesh)
-end
 
-function generate_mesh(initial_mesh::Mesh, blocks::Block...; verbose::Bool=true, genfacets::Bool=true, genedges::Bool=false)
-    generate_mesh([blocks...], verbose=verbose, genfacets=genfacets, genedges=genedges, initial_mesh=initial_mesh)
-end
-
+"""
+Generates a mesh based on an array of geometry blocks:
+```
+generate_mesh(blocks, [verbose=true,] [genfacets=true,] [genedges=false,] [initial_mesh=nothing]) -> mesh_object
+```
+"""
 function generate_mesh(blocks::Array; verbose::Bool=true, genfacets::Bool=true, genedges::Bool=false, initial_mesh=nothing)
     nblocks = length(blocks)
     if verbose
@@ -275,6 +278,27 @@ function generate_mesh(blocks::Array; verbose::Bool=true, genfacets::Bool=true, 
     return mesh
 end
 
+"""
+Generates a mesh object based on a comma separated list of block objects:
+```
+generate_mesh(blocks..., [verbose=true,] [genfacets=true,] [genedges=false,] [initial_mesh=nothing]) -> mesh_object
+```
+"""
+function generate_mesh(blocks::Block...; verbose::Bool=true, genfacets::Bool=true, genedges::Bool=false)
+    generate_mesh([blocks...], verbose=verbose, genfacets=genfacets, genedges=genedges)
+end
+
+"""
+Generates a mesh object based on an initial mesh and a comma separated list of block objects:
+```
+generate_mesh(initial_mesh, blocks..., [verbose=true,] [genfacets=true,] [genedges=false,] [initial_mesh=nothing]) -> mesh_object
+```
+"""
+function generate_mesh(initial_mesh::Mesh, blocks::Block...; verbose::Bool=true, genfacets::Bool=true, genedges::Bool=false)
+    generate_mesh([blocks...], verbose=verbose, genfacets=genfacets, genedges=genedges, initial_mesh=initial_mesh)
+end
+
+
 #precompile(generate_mesh, (Array,))
 #if VERSION >= v"0.4.0-dev+6521" 
     #precompile(generate_mesh, (Block,))
@@ -282,6 +306,12 @@ end
 #end
 
 
+"""
+Saves a mesh object into a file in VTK legacy format:
+```
+save(mesh, filename, [verbose=true])
+```
+"""
 function save(mesh::Mesh, filename::AbstractString; verbose::Bool=true)
     # Saves the mesh information in vtk format
 
@@ -359,6 +389,8 @@ function save(mesh::Mesh, filename::AbstractString; verbose::Bool=true)
     if verbose
         println(GREEN, "  file $filename written (Mesh)", DEFAULT)
     end
+
+    close(f)
 
 end
 
@@ -533,6 +565,9 @@ function load_mesh_json(filename; format="json")
 end
 
 
+"""
+`Mesh(filename)` constructs a mesh object based on a file in VTK legacy format or JSON format.
+"""
 function Mesh(filename::AbstractString)
     basename, ext = splitext(filename)
     if ext==".vtk"

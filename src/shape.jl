@@ -939,10 +939,6 @@ function inverse_map(shape::ShapeType, coords::Array{Float64,2}, X0::Array{Float
     R = zeros(ndim)
     C = coords
 
-    #@show(size(coords))
-    #@show(size(X0))
-    #@show(ndim)
-
     X = X0
     if size(coords,2)==2
         X = X0[1:ndim]

@@ -20,6 +20,21 @@
 
 VERSION >= v"0.4.0-dev+6521" && __precompile__()
 
+"""
+**FemMesh.jl**
+
+FemMesh module implements functions and types related to mesh generation for
+finite element analyses. 
+
+**Important data types**
+
+Block2D, Block3D, BlockTruss, BlockInset, Point, Cell, Face, Edge, Mesh.
+
+**Important functions** 
+
+generate_mesh, copy, move, array, rotate, polar, extrude.
+
+"""
 module FemMesh
 
 using Base

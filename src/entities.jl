@@ -54,8 +54,9 @@ end
 ### Point methods
 
 import Base.hash
-#hash(p::Point) = round(p.x*1001 + p.y*10000001 + p.z*100000000001)
-hash(p::Point) = hash((p.x, p.y, p.z))
+#hash(p::Point) = round(UInt, 1000000 + p.x*1001 + p.y*10000001 + p.z*100000000001)
+#hash(p::Point) = hash((p.x, p.y, p.z))
+hash(p::Point) = hash( (p.x==0.0?0.0:p.x, p.y==0.0?0.0:p.y, p.z==0.0?0.0:p.z) ) # comparisons used to avoid signed zero
 
 getcoords(p::Point) = [p.x, p.y, p.z]
 

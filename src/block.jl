@@ -19,6 +19,7 @@
 ##############################################################################
 
 export Block2D, Block3D, BlockTruss, BlockCoords
+export move, copy, rotate, polar
 import Base.copy
 
 ### Type Block
@@ -28,7 +29,11 @@ abstract Block
 
 include("block_inset.jl")
 
+"""
+`BlockTruss(coords, conns, [shape=LIN2,] [tag="",])`
 
+Generates a block object for the mesh generation of trusses:
+"""
 type BlockTruss <: Block
     coords::Array{Float64,2}
     conns ::Array{Int64,2}
@@ -49,8 +54,19 @@ type BlockTruss <: Block
     end
 end
 
+"""
+`copy(block)` 
+
+Creates a copy of a `block` object.
+"""
 copy(bl::BlockTruss) = BlockTruss(copy(bl.coords), bl.conns, shape=bl.shape, tag=bl.tag)
 
+
+"""
+`BlockCoords(coords, conns, [shape=LIN2,] [tag="",])`
+
+Generates a 2D or 3D block object based on a matrix of coordinates and a matrix of connectivities.
+"""
 type BlockCoords <: Block
     coords::Array{Float64,2}
     conns ::Array{Int64,2}
@@ -73,6 +89,12 @@ end
 copy(bl::BlockTruss) = BlockTruss(copy(bl.coords), bl.conns, shape=bl.shape, tag=bl.tag)
 
 
+"""
+`Block2D(coords, [nx=1,] [ny=1,] [shape=QUAD4,] [tag=""] )`
+
+Generates a block object for the mesh generation of 2D meshes.
+`shape` can be TRI3, TRI6, QUAD4, QUAD8.
+"""
 type Block2D <: Block
     coords::Array{Float64,2}
     nx::Int64
@@ -96,7 +118,11 @@ end
 copy(bl::Block2D) = Block2D(copy(bl.coords), nx=bl.nx, ny=bl.ny, shape=bl.shape, tag=bl.tag)
 
 
+"""
+`Block3D(coords, [nx=1,] [ny=1,] [nz=1,] [shape=HEX8,] [tag=""] )`
 
+Generates a block object for the mesh generation of 3D meshes.
+"""
 type Block3D <: Block
     coords::Array{Float64,2}
     nx::Int64
@@ -118,6 +144,11 @@ copy(bl::Block3D) = Block3D(copy(bl.coords), nx=bl.nx, ny=bl.ny, nz=bl.nz, shape
 
 # Functions for blocks
 
+"""
+`move(block, [x=0.0,] [y=0.0,] [z=0.0])` 
+
+Changes de coordinates of a `block`. Also returns a reference.
+"""
 function move(bl::Block;x=0.0, y=0.0, z=0.0)
     n = size(bl.coords, 1)
     bl.coords[1:n, 1] += x
@@ -127,6 +158,11 @@ function move(bl::Block;x=0.0, y=0.0, z=0.0)
 end
 
 
+"""
+`array(block, [n=1,] [x=0.0,] [y=0.0,] [z=0.0])` 
+
+Creates `n-1` copies of a `block` separated by distances `x`, `y` and/or `z` along respective axes.
+"""
 function array(bl::Block; n=1, x=0.0, y=0.0, z=0.0)
     blocks = [ bl ]
     for i=1:n-1
@@ -141,12 +177,70 @@ function array(bl::Block; n=1, x=0.0, y=0.0, z=0.0)
 end
 
 
-# TODO:
-function rotate(bl::Block; vr=[1,0,0], angle=0.0 )
+"""
+`rotate(block, [base=[0,0,0],] [axis=[0,0,1],] [angle=90.0])`
+
+Rotates a `block` according to a `base` point, a `axis` vector and an `angle`.
+"""
+function rotate(bl::Block; base=[0.,0,0], axis=[0.,0,1], angle=90.0 )
+
+    length(axis)==2 && ( axis=vcat(axis, 0.0) )
+    length(base)==2 && ( base=vcat(base, 0.0) )
+
+    # unit vector
+    axis = axis/norm(axis)
+    a, b, c = axis
+    d = sqrt(b^2+c^2)
+    d==0.0 && ( d=1.0 )
+
+    # unit vector for rotation
+    l = cos(angle*pi/180)
+    m = sin(angle*pi/180)
+
+    # Rotation matrices
+    Rx  = [  1.    0.    0.
+             0.   c/d  -b/d 
+             0.   b/d   c/d ]
+
+    Rxi = [  1.    0.    0.
+             0.   c/d   b/d 
+             0.  -b/d   c/d ]
+
+    Ry  = [   d    0.  -a
+             0.    1.  0.
+              a    0.   d ]
+           
+    Ryi = [   d    0.   a
+             0.    1.  0.
+             -a    0.   d ]
+
+    Rz  = [   l   -m   0.
+              m    l   0.
+             0.   0.   1. ]
+
+    # all rotations matrix
+    R = Rxi*Ryi*Rz*Ry*Rx
+
+    # equation: p2 = base + R*(p-base)
+    bl.coords = ( base .+ R*(bl.coords' .- base) )'
+    return bl
 end
 
-# TODO:
-function polar(bl::Block; vr=[1,0,0], n=1 )
+"""
+`polar(block, [base=[0,0,0],] [axis=[0,0,1],] [angle=360.0,] [n=2])`
+
+Creates `n-1` copies of a `block` and places them using polar distribution based on 
+a `base` point, an `axis` vector, a total `angle`.
+"""
+function polar(bl::Block; base=[0.,0,0], axis=[0.,0,1], angle=360, n=2 )
+    blocks = [ bl ]
+    angle = angle/n
+    for i=1:n-1
+        bli = copy(bl)
+        rotate(bli, base=base, axis=axis, angle=angle*i)
+        push!(blocks, bli)
+    end
+    return blocks
 end
 
 
@@ -203,7 +297,8 @@ function split_block(bl::Block2D, msh::Mesh)
                         msh.bpoints[hash(p)] = p
                     end
                 else
-                    p = Point(C); push!(msh.points, p)
+                    p = Point(C); 
+                    push!(msh.points, p)
                 end
                 p_arr[i,j] = p
             end
@@ -435,11 +530,6 @@ function split_block(bl::Block3D, msh::Mesh)
                     s = (2.0/ny)*(j-1) - 1.0
                     t = (2.0/nz)*(k-1) - 1.0
                     N = shape_func(bshape, [r, s, t])
-                    #if size(bl.coords,1)==8
-                        #N = shape_func(HEX8, [r, s, t])
-                    #else
-                        #N = shape_func(HEX20, [r, s, t])
-                    #end
                     C = round(N'*bl.coords, 8)
                     C = reshape(C, 3)
                     p::Any = nothing
