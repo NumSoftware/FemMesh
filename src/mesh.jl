@@ -578,6 +578,74 @@ function Mesh(filename::AbstractString)
 end
 
 
+export rotate
+
+"""
+`rotate(mesh, [base=[0,0,0],] [axis=[0,0,1],] [angle=90.0])`
+
+Rotates a Mesh object `mesh` according to a `base` point, an `axis` vector and an `angle`.
+"""
+function rotate(mesh::Mesh; base=[0.,0,0], axis=[0.,0,1], angle=90.0 )
+
+    length(axis)==2 && ( axis=vcat(axis, 0.0) )
+    length(base)==2 && ( base=vcat(base, 0.0) )
+
+    # unit vector
+    axis = axis/norm(axis)
+    a, b, c = axis
+    d = sqrt(b^2+c^2)
+    d==0.0 && ( d=1.0 )
+
+    # unit vector for rotation
+    l = cos(angle*pi/180)
+    m = sin(angle*pi/180)
+
+    # Rotation matrices
+    Rx  = [  1.    0.    0.
+             0.   c/d  -b/d 
+             0.   b/d   c/d ]
+
+    Rxi = [  1.    0.    0.
+             0.   c/d   b/d 
+             0.  -b/d   c/d ]
+
+    Ry  = [   d    0.  -a
+             0.    1.  0.
+              a    0.   d ]
+           
+    Ryi = [   d    0.   a
+             0.    1.  0.
+             -a    0.   d ]
+
+    Rz  = [   l   -m   0.
+              m    l   0.
+             0.   0.   1. ]
+
+    # all rotations matrix
+    R = Rxi*Ryi*Rz*Ry*Rx
+
+    for p in mesh.points
+        p.x, p.y, p.z = base + R*([p.x, p.y, p.z] - base)
+    end
+
+    return mesh
+end
+
+# move...
+"""
+`move(mesh, [dx=0.0,] [dy=0.0,] [dz=0.0])` 
+
+Moves a Mesh object `mesh`. Also returns a reference.
+"""
+function move(mesh::Mesh; dx=0.0, dy=0.0, dz=0.0)
+    for p in mesh.points
+        p.x += dx
+        p.y += dy
+        p.z += dz
+    end
+    return mesh
+end
+
 include("filters.jl") 
 include("extrude.jl") 
 include("smooth.jl") 

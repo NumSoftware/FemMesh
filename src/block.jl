@@ -19,7 +19,7 @@
 ##############################################################################
 
 export Block2D, Block3D, BlockTruss, BlockCoords
-export move, copy, rotate, polar
+export move, array, copy, rotate, polar
 import Base.copy
 
 ### Type Block
@@ -147,23 +147,37 @@ copy(bl::Block3D) = Block3D(copy(bl.coords), nx=bl.nx, ny=bl.ny, nz=bl.nz, shape
 """
 `move(block, [x=0.0,] [y=0.0,] [z=0.0])` 
 
-Changes de coordinates of a `block`. Also returns a reference.
+Changes the coordinates of a `block`. Also returns a reference.
 """
-function move(bl::Block;x=0.0, y=0.0, z=0.0)
-    n = size(bl.coords, 1)
-    bl.coords[1:n, 1] += x
-    bl.coords[1:n, 2] += y
-    bl.coords[1:n, 3] += z
+function move(bl::Block;x=0.0, y=0.0, z=0.0, dx=0.0, dy=0.0, dz=0.0)
+    bl.coords[:, 1] += x
+    bl.coords[:, 2] += y
+    bl.coords[:, 3] += z
     return bl
 end
 
 
 """
-`array(block, [n=1,] [x=0.0,] [y=0.0,] [z=0.0])` 
+`move(blocks, [x=0.0,] [y=0.0,] [z=0.0])` 
+
+Changes the coordinates of an array of blocks. Also returns a reference.
+"""
+function move(blocks::Array{Block,1}; x=0.0, y=0.0, z=0.0, dx=0.0, dy=0.0, dz=0.0)
+    for bl in blocks
+        bl.coords[:, 1] += x
+        bl.coords[:, 2] += y
+        bl.coords[:, 3] += z
+    end
+    return blocks 
+end
+
+
+"""
+`array(block, [n=2,] [x=0.0,] [y=0.0,] [z=0.0])` 
 
 Creates `n-1` copies of a `block` separated by distances `x`, `y` and/or `z` along respective axes.
 """
-function array(bl::Block; n=1, x=0.0, y=0.0, z=0.0)
+function array(bl::Block; n=2, x=0.0, y=0.0, z=0.0)
     blocks = [ bl ]
     for i=1:n-1
         dx = i*x
@@ -180,7 +194,7 @@ end
 """
 `rotate(block, [base=[0,0,0],] [axis=[0,0,1],] [angle=90.0])`
 
-Rotates a `block` according to a `base` point, a `axis` vector and an `angle`.
+Rotates a `block` according to a `base` point, an `axis` vector and an `angle`.
 """
 function rotate(bl::Block; base=[0.,0,0], axis=[0.,0,1], angle=90.0 )
 
