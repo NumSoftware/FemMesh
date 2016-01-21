@@ -18,8 +18,7 @@
 #    along with FemLab.  If not, see <http://www.gnu.org/licenses/>.         #
 ##############################################################################
 
-export Block2D, Block3D, BlockTruss, BlockCoords
-export move, array, copy, rotate, polar
+export Block2D, Block3D, BlockTruss, BlockCoords, BlockCylinder
 import Base.copy
 
 ### Type Block
@@ -54,13 +53,6 @@ type BlockTruss <: Block
     end
 end
 
-"""
-`copy(block)` 
-
-Creates a copy of a `block` object.
-"""
-copy(bl::BlockTruss) = BlockTruss(copy(bl.coords), bl.conns, shape=bl.shape, tag=bl.tag)
-
 
 """
 `BlockCoords(coords, conns, [shape=LIN2,] [tag="",])`
@@ -85,8 +77,6 @@ type BlockCoords <: Block
         return this
     end
 end
-
-copy(bl::BlockTruss) = BlockTruss(copy(bl.coords), bl.conns, shape=bl.shape, tag=bl.tag)
 
 
 """
@@ -115,8 +105,6 @@ type Block2D <: Block
     end
 end
 
-copy(bl::Block2D) = Block2D(copy(bl.coords), nx=bl.nx, ny=bl.ny, shape=bl.shape, tag=bl.tag)
-
 
 """
 `Block3D(coords, [nx=1,] [ny=1,] [nz=1,] [shape=HEX8,] [tag=""] )`
@@ -138,125 +126,22 @@ type Block3D <: Block
     end
 end
 
-copy(bl::Block3D) = Block3D(copy(bl.coords), nx=bl.nx, ny=bl.ny, nz=bl.nz, shape=bl.shape, tag=bl.tag)
+type BlockCylinder <: Block
+    coords::Array{Float64,2} # two end points
+    r::Float64
+    nr::Int64
+    n::Int64
+    shape::ShapeType # HEX8, HEX20
+    tag::AbstractString
+    id::Int64
 
-
-
-# Functions for blocks
-
-"""
-`move(block, [x=0.0,] [y=0.0,] [z=0.0])` 
-
-Changes the coordinates of a `block`. Also returns a reference.
-"""
-function move(bl::Block;x=0.0, y=0.0, z=0.0, dx=0.0, dy=0.0, dz=0.0)
-    bl.coords[:, 1] += x
-    bl.coords[:, 2] += y
-    bl.coords[:, 3] += z
-    return bl
-end
-
-
-"""
-`move(blocks, [x=0.0,] [y=0.0,] [z=0.0])` 
-
-Changes the coordinates of an array of blocks. Also returns a reference.
-"""
-function move(blocks::Array{Block,1}; x=0.0, y=0.0, z=0.0, dx=0.0, dy=0.0, dz=0.0)
-    for bl in blocks
-        bl.coords[:, 1] += x
-        bl.coords[:, 2] += y
-        bl.coords[:, 3] += z
+    function BlockCylinder(coords; r=1.0, nr=3, n=2, shape=HEX8, tag="", id=-1)
+        if size(coords,1) != 2; error("Invalid coordinates matrix for BlockCylinder") end
+        if nr<2; error("Invalid nr=$nr value for BlockCylinder") end
+        this = new(coords, r, nr, n, shape, tag, id)
+        return this
     end
-    return blocks 
 end
-
-
-"""
-`array(block, [n=2,] [x=0.0,] [y=0.0,] [z=0.0])` 
-
-Creates `n-1` copies of a `block` separated by distances `x`, `y` and/or `z` along respective axes.
-"""
-function array(bl::Block; n=2, x=0.0, y=0.0, z=0.0)
-    blocks = [ bl ]
-    for i=1:n-1
-        dx = i*x
-        dy = i*y
-        dz = i*z
-        cp = copy(bl)
-        move(cp, x=dx, y=dy, z=dz)
-        push!(blocks, cp)
-    end
-    return blocks
-end
-
-
-"""
-`rotate(block, [base=[0,0,0],] [axis=[0,0,1],] [angle=90.0])`
-
-Rotates a `block` according to a `base` point, an `axis` vector and an `angle`.
-"""
-function rotate(bl::Block; base=[0.,0,0], axis=[0.,0,1], angle=90.0 )
-
-    length(axis)==2 && ( axis=vcat(axis, 0.0) )
-    length(base)==2 && ( base=vcat(base, 0.0) )
-
-    # unit vector
-    axis = axis/norm(axis)
-    a, b, c = axis
-    d = sqrt(b^2+c^2)
-    d==0.0 && ( d=1.0 )
-
-    # unit vector for rotation
-    l = cos(angle*pi/180)
-    m = sin(angle*pi/180)
-
-    # Rotation matrices
-    Rx  = [  1.    0.    0.
-             0.   c/d  -b/d 
-             0.   b/d   c/d ]
-
-    Rxi = [  1.    0.    0.
-             0.   c/d   b/d 
-             0.  -b/d   c/d ]
-
-    Ry  = [   d    0.  -a
-             0.    1.  0.
-              a    0.   d ]
-           
-    Ryi = [   d    0.   a
-             0.    1.  0.
-             -a    0.   d ]
-
-    Rz  = [   l   -m   0.
-              m    l   0.
-             0.   0.   1. ]
-
-    # all rotations matrix
-    R = Rxi*Ryi*Rz*Ry*Rx
-
-    # equation: p2 = base + R*(p-base)
-    bl.coords = ( base .+ R*(bl.coords' .- base) )'
-    return bl
-end
-
-"""
-`polar(block, [base=[0,0,0],] [axis=[0,0,1],] [angle=360.0,] [n=2])`
-
-Creates `n-1` copies of a `block` and places them using polar distribution based on 
-a `base` point, an `axis` vector, a total `angle`.
-"""
-function polar(bl::Block; base=[0.,0,0], axis=[0.,0,1], angle=360, n=2 )
-    blocks = [ bl ]
-    angle = angle/n
-    for i=1:n-1
-        bli = copy(bl)
-        rotate(bli, base=base, axis=axis, angle=angle*i)
-        push!(blocks, bli)
-    end
-    return blocks
-end
-
 
 function box_coords{T1<:Number, T2<:Number}(C1::Array{T1,1}, C2::Array{T2,1})
     C = Array(Float64, 8, 3)
@@ -690,4 +575,39 @@ function split_block(bl::BlockCoords, msh::Mesh)
         cell = Cell(shape, points, bl.tag)
         push!(msh.cells, cell)
     end
+end
+
+
+
+function split_block(bl::BlockCylinder, msh::Mesh)
+
+    nx1 = round(Int, bl.nr/3)
+    nx2 = bl.nr - nx1
+    shape2D = bl.shape==HEX8 ? QUAD4 : QUAD8
+
+    coords = bl.r*[ 0 0; 1/3 0; 1/3 1/3; 0 1/3; 1/6 0; 1/3 1/6; 1/6 1/3; 0 1/6 ]
+    bl1 = Block2D(coords, nx=nx1, ny=nx1, shape= shape2D, tag=bl.tag)
+
+    s45 = sin(45*pi/180)
+    c45 = s45
+    s225 = sin(22.5*pi/180)
+    c225 = cos(22.5*pi/180)
+
+    coords = bl.r*[ 1/3 0; 1 0; c45 s45; 1/3 1/3; 2/3 0; c225 s225; (c45+1/3)/2 (s45+1/3)/2; 1/3 1/6 ]
+    bl2 = Block2D(coords, nx=nx2, ny=nx1, shape= shape2D, tag=bl.tag)
+
+    coords = bl.r*[ 0 1/3; 1/3 1/3; c45 s45; 0 1; 1/6 1/3; (c45+1/3)/2 (s45+1/3)/2; s225 c225; 0 2/3 ]
+    bl3 = Block2D(coords, nx=nx1, ny=nx2, shape= shape2D, tag=bl.tag)
+
+    blocks = [bl1, bl2, bl3 ]
+    blocks = polar(blocks, n=4)
+    move(blocks, x=bl.coords[1,1], y=bl.coords[1,2], z=bl.coords[1,3])
+
+    len = norm(bl.coords[1,:] - bl.coords[2,:])
+    blocks3D = extrude(blocks, len=len, n=bl.n)
+
+    for bl in blocks3D
+        split_block(bl, msh)
+    end
+
 end

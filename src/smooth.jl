@@ -21,7 +21,7 @@
 
 # This file contains the code for smoothing meshes
 
-export smooth!, laplacian_smooth
+export smooth!, laplacian_smooth!
 
 # Returns a matrix with the cell coordinates
 function cellcoords(c::Cell)
@@ -612,7 +612,7 @@ end
 
 precompile(smooth!, (Mesh,) )
 
-function laplacian_smooth(mesh::Mesh; alpha::Float64=1.0, maxit::Int64=100, verbose::Bool=true, epsmin::Float64=1e-3,
+function laplacian_smooth!(mesh::Mesh; alpha::Float64=1.0, maxit::Int64=100, verbose::Bool=true, epsmin::Float64=1e-3,
     eps::Float64=1e-4, save_steps::Bool=false, filekey::AbstractString="smooth")
 
     ndim = mesh.ndim

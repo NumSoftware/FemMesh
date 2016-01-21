@@ -58,9 +58,8 @@ type Mesh
     end
 end
 
-
 include("block.jl")
-
+include("operators.jl")
 
 function get_surface(cells::Array{Cell,1})
     surf_dict = Dict{UInt64, Cell}()

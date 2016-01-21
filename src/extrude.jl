@@ -22,7 +22,7 @@
 export extrude
 
 """
-`extrude(block, [axis=[0,0,1],] [len=1.0,] [n=1,])`
+`extrude(block, [axis=[0,0,1],] [len=1.0,] [n=1])`
 
 Extrudes a 2D `block` generating a 3D block based on a direction `axis`, a lenght `len` and a number `n` of divisions.
 """
@@ -55,9 +55,9 @@ function extrude(block::Block2D; axis=[0,0,1], len::Number=1.0, n::Int=1)
     if npoints==8
         midcoords = coords[1:4,:] .+ V'*len*0.5
         if normal_order
-            newcoords = vcat(coords, topcoords, midcoords)
+            newcoords = vcat(coords[1:4,:], topcoords[1:4,:], coords[5:8,:], topcoords[5:8,:], midcoords)
         else
-            newcoords = vcat(topcoords, coords, midcoords)
+            newcoords = vcat(coords[5:8,:], topcoords[5:8,:], coords[1:4,:], topcoords[1:4,:], midcoords)
         end
     end
 
@@ -65,6 +65,17 @@ function extrude(block::Block2D; axis=[0,0,1], len::Number=1.0, n::Int=1)
 
     return Block3D( newcoords, nx=block.nx, ny=block.ny, nz=n, shape=shape)
 
+end
+
+function extrude(blocks::Array; axis=[0,0,1], len=1.0::Number, n=1::Int)
+    blocks3D = []
+
+    for bl in blocks
+        bl3D = extrude(bl, axis=axis, len=len, n=n)
+        push!(blocks3D, bl3D)
+    end
+
+    return blocks3D
 end
 
 # Generates a new mesh obtained by extrusion of a 2D mesh
