@@ -88,11 +88,11 @@ function cubicBezier(s::Float64, PorQ::Array{Float64,2}, isQ::Bool=false)
     ndim = size(PorQ,2)    # space dimension
     np   = size(PorQ,1)    # number of points
     ns   = np - 1          # number of spacings
-    nb   = ifloor(ns/3)    # number of bezier curves
+    nb   = floor(Int64, ns/3)    # number of bezier curves
     Ds   = 1.0 / nb        # spacing between curves
 
     # find index of Bezier and local coordinate t
-    ib = ifloor(s/Ds) + 1    # index of Bezier
+    ib = floor(Int64, s/Ds) + 1    # index of Bezier
     if ib > nb; ib = nb end # fix index if s ~= 1+eps
     s0 = (ib-1) * Ds        # s @ left point
     t  = (s - s0) / Ds      # local t
