@@ -283,8 +283,16 @@ Generates a mesh object based on a comma separated list of block objects:
 generate_mesh(blocks..., [verbose=true,] [genfacets=true,] [genedges=false,] [initial_mesh=nothing]) -> mesh_object
 ```
 """
-function generate_mesh(blocks::Block...; verbose::Bool=true, genfacets::Bool=true, genedges::Bool=false)
-    generate_mesh([blocks...], verbose=verbose, genfacets=genfacets, genedges=genedges)
+function generate_mesh(blocks::Union{Block, Array}...; verbose::Bool=true, genfacets::Bool=true, genedges::Bool=false)
+    flat = []
+    for bl in blocks
+        if isa(bl, Block)
+            push!(flat, bl)
+        else
+            append!(flat, bl)
+        end
+    end
+    generate_mesh(flat, verbose=verbose, genfacets=genfacets, genedges=genedges)
 end
 
 """

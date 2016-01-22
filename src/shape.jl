@@ -934,10 +934,11 @@ function is_solid(shape::ShapeType)
 end
 
 function inverse_map(shape::ShapeType, coords::Array{Float64,2}, X0::Array{Float64,1}, Tol=1.0e-7)
-    MAXIT = 25
+    MAXIT = 20
     ndim  = get_ndim(shape)
     R = zeros(ndim)
     C = coords
+    local ΔX::Array{Float64,1}
 
     X = X0
     if size(coords,2)==2
@@ -963,7 +964,7 @@ function inverse_map(shape::ShapeType, coords::Array{Float64,2}, X0::Array{Float
         if norm(ΔX) < Tol; break end
     end
 
-    if k==MAXIT; println("Warning: max iterations reached in inverse mapping") end
+    k==MAXIT && println("Warning: max iterations (MAXIT=$MAXIT) reached in inverse mapping. norm(ΔX)=$(norm(ΔX))")
 
     if ndim==2
         R = vcat( R, 0.0 )
