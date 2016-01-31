@@ -202,7 +202,7 @@ function update!(mesh::Mesh; verbose::Bool=false, genfacets::Bool=true, genedges
 
     # Facets
     if genfacets
-        verbose && print("  finding faces...\r")
+        verbose && print("  finding facets...\r")
         mesh.faces = get_surface(mesh.cells)
     end
 
@@ -416,9 +416,8 @@ function load_mesh_vtk(filename)
     mesh = Mesh()
 
     # read nodal information
-    alltext = readall(f)
+    alltext = readall(filename)
     data    = split(alltext)
-    close(f)
 
     # read header
     idx  = 1
@@ -447,12 +446,19 @@ function load_mesh_vtk(filename)
         idx += 3
     end
 
+    # get ndim
+    ndim = 2
+    for point in mesh.points
+        if point.z != 0.0; ndim = 3; break end
+    end
+    mesh.ndim = ndim
+
     # read number of cells
     while data[idx] != "CELLS"
         idx += 1
     end
     ncells = parse(data[idx+1])
-    #ncdata = parse(data[idx+2])
+    ncdata = parse(data[idx+2])
     idx += 3
 
     # read cells connectivities
@@ -462,7 +468,7 @@ function load_mesh_vtk(filename)
         idx += 1
         conn = Point[]
         for j=1:npoints
-            point = mesh.points( parse(data[idx]) + 1 )
+            point = mesh.points[ parse(data[idx]) + 1 ]
             idx  += 1
             push!(conn, point)
         end
@@ -478,10 +484,14 @@ function load_mesh_vtk(filename)
 
     # read type of cells
     for i=1:ncells
-        shape = get_vtk_type( parse(data[idx]))
+        vtk_shape = parse(data[idx])
+        shape = get_shape_from_vtk( vtk_shape, length(conns[i]), ndim )
         cell  = Cell(shape, conns[i])
+        push!(mesh.cells, cell)
         idx  += 1
     end
+
+    update!(mesh)
 
     return mesh
 end
