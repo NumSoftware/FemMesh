@@ -32,6 +32,7 @@ export inverse_map, extrapolator
 export coords_tri6, coords_tri9, coords_tri10, coords_quad4, coords_quad8 #...
 
 # Shapes compatible with VTK
+const POLYV = 2
 const LIN2  = 3
 const LIN3  = 21
 const TRI3  = 5
@@ -91,7 +92,7 @@ end
 
 function get_vtk_type(shape::ShapeType)
     if shape>50
-        return 2 # vtk_poly_vertex
+        return POLYV # vtk_poly_vertex
     end
 
     return shape # Conventional
@@ -118,6 +119,8 @@ function get_shape_from_vtk(vtk_type::Int64, npoints::Int64, ndim::Int64)
     elseif npoints==18  return JTRI9
     elseif npoints==20  return JTRI10
     end
+
+    return POLYV
 
 end
 

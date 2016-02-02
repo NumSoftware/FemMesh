@@ -305,6 +305,14 @@ FACETS_IDXS = [
     HEX20  => ( (1, 5, 8, 4,17,16,20,12), (2, 3, 7, 6, 10,19,14,18), (1, 2, 6, 5, 9,18,13,17), (3, 4, 8, 7,11,20,15,19), (1, 4, 3, 2,12,11, 10, 9), (5, 6, 7, 8,13,14,15,16) ),
     ]
 
+# Dictionary of edge indexes for 3D shapes
+EDGES_IDXS = [
+    TET4   => ( (1, 2),    (2, 3),      (3, 1),     (1, 4),      (2, 4),      (3, 4)       ),
+    TET10  => ( (1, 2, 5), (2, 3, 6),   (3, 1, 7),  (1, 4, 8),   (2, 4, 9),   (3, 4, 10)   ),
+    HEX8   => ( (1, 2),    (2, 3),      (3, 4),     (4, 1),      (5, 6),      (6, 7),      (7, 8),      (8, 5),      (1, 5),      (2, 6),      (3, 7),     (4, 8)     ),
+    HEX20  => ( (1, 2, 9), (2, 3, 10),  (3, 4, 11), (4, 1, 12),  (5, 6, 13),  (6, 7, 14),  (7, 8, 15),  (8, 5, 16),  (1, 5, 17),  (2, 6, 18),  (3, 7, 19), (4, 8, 20) ),
+    ]
+
 # Dictionary of corresponding faces type
 FACETS_SHAPE = [
     QUAD4  => LIN2 ,
@@ -324,9 +332,7 @@ FACETS_SHAPE = [
 # gets all facets of a cell
 function get_faces(cell::Cell)
     faces  = Array(Cell,0)
-    if !haskey(FACETS_IDXS, cell.shape)
-        return faces
-    end
+    if !haskey(FACETS_IDXS, cell.shape) return faces end
 
     f_idxs = FACETS_IDXS[cell.shape]
 
@@ -338,6 +344,27 @@ function get_faces(cell::Cell)
 
     return faces
 end
+
+# gets all edges of a cell
+function get_edges(cell::Cell)
+    ndim = get_ndim(cell.shape)
+    if ndim==2 return get_faces(cell) end
+
+    edges  = Array(Cell,0)
+    if !haskey(EDGES_IDXS, cell.shape) return edges end
+
+    e_idxs = EDGES_IDXS[cell.shape]
+
+    for e_idx in e_idxs
+        points = Point[ cell.points[i] for i in e_idx]
+        shape  = length(points)==2? LIN2 : LIN3
+        edge   = Cell(shape, points, cell.tag, cell)
+        push!(edges, edge)
+    end
+
+    return edges
+end
+
 
 # Pseudo determinant of non-square matrices
 function norm2(J::Array{Float64,2})

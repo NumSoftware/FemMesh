@@ -119,6 +119,71 @@ function get_neighbors(cells::Array{Cell,1})
 
 end
 
+export renumber!
+
+
+function renumber!(mesh::Mesh)
+
+    # Get all mesh edges
+    all_edges = Dict{UInt64, Cell}()
+    for cell in mesh.cells
+        for edge in get_edges(cell)
+            hs = hash(edge)
+            all_edges[hs] = edge
+        end
+    end
+
+    # Get points neighbors
+    npoints = length(mesh.points)
+    neighs  = Array{Point}[ [] for i in 1:npoints  ]
+
+    for edge in values(all_edges)
+        points = edge.points
+        np = length(points)
+        for i=1:np-1
+            for j=i+1:np
+                push!(neighs[points[i].id], points[j])
+                push!(neighs[points[j].id], points[i])
+            end
+        end
+    end
+
+    neighs  = Array{Point}[ unique(list) for list in neighs  ]
+
+    degrees = Int64[ length(list) for list in neighs]
+    _, idx  = findmin(degrees)
+
+    #@show degrees
+    #@show idx
+
+    N = [ mesh.points[idx] ] # new list of cells
+    R = [ mesh.points[idx] ] # first levelset
+    R0 = [ ] 
+    
+    while length(N) < npoints
+        # Get level set
+        A = Set{Point}([ ])
+        for p in R
+            for q in neighs[p.id]
+                if q in R0 || q in R continue end
+                push!(A, q)
+            end
+        end
+        append!(N, collect(A))
+        R0 = R
+        R  = A
+
+    end
+
+    # Update numbers
+    for (i,p) in enumerate(N)
+        p.id = i
+    end
+    mesh.points = N
+
+end
+
+
 # TESTING
 function get_surface_alt(cells::Array{Cell,1})
     # Actually slower....
@@ -442,6 +507,7 @@ function load_mesh_vtk(filename)
         y = parse(data[idx+1])
         z = parse(data[idx+2])
         point = Point(x,y,z)
+        point.id = i
         push!(mesh.points, point)
         idx += 3
     end
@@ -483,12 +549,40 @@ function load_mesh_vtk(filename)
     idx += 2
 
     # read type of cells
+    check_embedded = false
     for i=1:ncells
         vtk_shape = parse(data[idx])
         shape = get_shape_from_vtk( vtk_shape, length(conns[i]), ndim )
         cell  = Cell(shape, conns[i])
         push!(mesh.cells, cell)
         idx  += 1
+        if shape == POLYV check_embedded = true end
+    end
+
+    # Setting embeddeds
+    if check_embedded
+        # mount dictionary of cells
+        cdict = Dict{UInt64, Cell}() 
+        for cell in mesh.cells
+            conn = [ point.id for point in cell.points]
+            hs = hash(conn)
+            cdict[hs] = cell
+        end
+        # fix shape type for embeddeds
+        for cell in mesh.cells
+            if cell.shape == POLYV && length(cell.points)>=5
+                conn = [ point.id for point in cell.points]
+                hs2 = hash(conn[1:end-2])
+                if haskey(cdict, hs2) 
+                    cell.shape = LINK2
+                    continue
+                end
+                hs3 = hash(conn[1:end-3])
+                if haskey(cdict, hs3) 
+                    cell.shape = LINK3
+                end
+            end
+        end
     end
 
     update!(mesh)
