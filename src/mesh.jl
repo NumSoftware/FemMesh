@@ -20,7 +20,7 @@
 
 export Mesh
 export copy, move
-export update!, quality!, generate_mesh, save, loadmesh
+export update!, quality!, reorder!, generate_mesh, save, loadmesh
 export get_surface, get_neighbors
 
 include("entities.jl")
@@ -119,14 +119,29 @@ function get_neighbors(cells::Array{Cell,1})
 
 end
 
-export renumber!
-
-
-function renumber!(mesh::Mesh)
+# Reverse Cuthill–McKee algorithm (RCM) 
+function reorder!(mesh::Mesh; sort_degrees=true, reversed=false)
 
     # Get all mesh edges
     all_edges = Dict{UInt64, Cell}()
     for cell in mesh.cells
+        # exception for embedded cells
+        if cell.shape in (LINK2, LINK3)
+            edge = Cell(LIN2, [ cell.points[1], cell.points[end-1] ])
+            hs = hash(edge)
+            all_edges[hs] = edge
+            continue
+        end
+
+        # exception for line cells
+        if cell.shape in (LIN2, LIN3)
+            edge = Cell(cell.shape, cell.points)
+            hs = hash(edge)
+            all_edges[hs] = edge
+            continue
+        end
+
+        # adding cell edges
         for edge in get_edges(cell)
             hs = hash(edge)
             all_edges[hs] = edge
@@ -148,20 +163,19 @@ function renumber!(mesh::Mesh)
         end
     end
 
+    # removing duplicates
     neighs  = Array{Point}[ unique(list) for list in neighs  ]
 
+    # list of degrees per point
     degrees = Int64[ length(list) for list in neighs]
     _, idx  = findmin(degrees)
 
-    #@show degrees
-    #@show idx
-
     N = [ mesh.points[idx] ] # new list of cells
     R = [ mesh.points[idx] ] # first levelset
-    R0 = [ ] 
+    R0 = [ ] # last levelset
     
     while length(N) < npoints
-        # Get level set
+        # Generating current levelset A
         A = Set{Point}([ ])
         for p in R
             for q in neighs[p.id]
@@ -169,16 +183,29 @@ function renumber!(mesh::Mesh)
                 push!(A, q)
             end
         end
-        append!(N, collect(A))
+        
+        # Convert set A into an array RA
+        RA = collect(A)
+        if sort_degrees
+            D  = [ degrees[point.id] for point in RA ]
+            RA = RA[sortperm(D)]
+        end
+
+        append!(N, RA)
         R0 = R
         R  = A
 
     end
 
-    # Update numbers
+    # Update numbers in reverse order
+    if reversed
+        N = reverse(N)
+    end
+
     for (i,p) in enumerate(N)
         p.id = i
     end
+
     mesh.points = N
 
 end
@@ -206,7 +233,6 @@ function get_surface_alt(cells::Array{Cell,1})
     end
 
     @show 1
-
     # Get matrix of cells faces
     F = [ get_faces(cell) for cell in cells]
     nc = length(cells)
@@ -216,8 +242,8 @@ function get_surface_alt(cells::Array{Cell,1})
         #CF[cell.id] = [ sort([pt.id for pt in face.points]) for face in F[cell.id]]
         CF[cell.id] = [ hash(face) for face in F[cell.id]]
     end
-    @show 2
 
+    @show 2
     # Get cells boundary flag matrix
     CB = [ trues(length(CF[cell.id])) for cell in cells]
     for cell in cells
@@ -232,8 +258,8 @@ function get_surface_alt(cells::Array{Cell,1})
             end
         end
     end
-    @show 3
 
+    @show 3
     # Get list of boundary faces (almost fast)
     facets = Cell[]
     for cell in cells
@@ -313,6 +339,10 @@ function generate_mesh(blocks::Array; verbose::Bool=true, genfacets::Bool=true, 
 
     # Updates numbering, qualitu, facets and edges
     update!(mesh, verbose=verbose, genfacets=genfacets, genedges=genedges)
+
+    # Reorder nodal numbering
+    verbose && print("  reordering points...\r")
+    reorder!(mesh)
 
     if verbose
         npoints = length(mesh.points)
