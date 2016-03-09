@@ -40,8 +40,6 @@ module FemMesh
 using Base
 using JSON
 
-export Point
-
 # Constants
 @linux_only begin
     const RED     = "\x1b[31m"

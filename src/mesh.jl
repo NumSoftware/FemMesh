@@ -211,66 +211,6 @@ function reorder!(mesh::Mesh; sort_degrees=true, reversed=false)
 end
 
 
-# TESTING
-function get_surface_alt(cells::Array{Cell,1})
-    # Actually slower....
-    # Get all points
-    pointsd = Dict{UInt64, Point}()
-    for cell in cells
-        for point in cell.points
-            pointsd[hash(point)] = point
-        end
-    end
-    points = values(pointsd)
-
-    # Get incidence matrix (shares) (fast)
-    np = length(points)
-    N = [ Cell[] for i=1:np]
-    for cell in cells
-        for pt in cell.points
-            push!(N[pt.id], cell)
-        end
-    end
-
-    @show 1
-    # Get matrix of cells faces
-    F = [ get_faces(cell) for cell in cells]
-    nc = length(cells)
-    #CF = Array(Array{Array{Int64,1},1}, nc)
-    CF = Array(Array{UInt64,1}, nc)
-    for cell in cells # fast
-        #CF[cell.id] = [ sort([pt.id for pt in face.points]) for face in F[cell.id]]
-        CF[cell.id] = [ hash(face) for face in F[cell.id]]
-    end
-
-    @show 2
-    # Get cells boundary flag matrix
-    CB = [ trues(length(CF[cell.id])) for cell in cells]
-    for cell in cells
-        for (i,fcon) in enumerate(CF[cell.id])
-            for pid in fcon
-                for cl in N[pid]
-                    if cl.id == cell.id; continue end
-                    if fcon in CF[cl.id]
-                        CB[cell.id][i] = false
-                    end
-                end
-            end
-        end
-    end
-
-    @show 3
-    # Get list of boundary faces (almost fast)
-    facets = Cell[]
-    for cell in cells
-        for (i,face) in enumerate(F[cell.id])
-            if CB[cell.id][i]
-                push!(facets, face)
-            end
-        end
-    end
-    return facets
-end
 
 # Updates numbering, faces and edges in a Mesh object
 function update!(mesh::Mesh; verbose::Bool=false, genfacets::Bool=true, genedges::Bool=false)
@@ -321,14 +261,25 @@ Generates a mesh based on an array of geometry blocks:
 generate_mesh(blocks, [verbose=true,] [genfacets=true,] [genedges=false,] [initial_mesh=nothing]) -> mesh_object
 ```
 """
-function generate_mesh(blocks::Array; verbose::Bool=true, genfacets::Bool=true, genedges::Bool=false, initial_mesh=nothing)
+function Mesh(items::Union{Block, Array}...; verbose::Bool=true, genfacets::Bool=true, genedges::Bool=false)
+
+    blocks = []
+    for bl in items
+        if isa(bl, Block)
+            push!(blocks, bl)
+        else
+            append!(blocks, bl)
+        end
+    end
+
     nblocks = length(blocks)
     if verbose
         println(BOLD, CYAN, "Mesh generation:", DEFAULT)
         println("  analyzing $nblocks block(s)") 
     end
 
-    mesh = initial_mesh==nothing? Mesh(): initial_mesh
+    #mesh = initial_mesh==nothing? Mesh(): initial_mesh
+    mesh = Mesh()
 
     # Split blocks
     for (i,b) in enumerate(blocks)
@@ -372,36 +323,42 @@ function generate_mesh(blocks::Array; verbose::Bool=true, genfacets::Bool=true, 
     return mesh
 end
 
-"""
-Generates a mesh object based on a comma separated list of block objects:
-```
-generate_mesh(blocks..., [verbose=true,] [genfacets=true,] [genedges=false,] [initial_mesh=nothing]) -> mesh_object
-```
-"""
-function generate_mesh(blocks::Union{Block, Array}...; verbose::Bool=true, genfacets::Bool=true, genedges::Bool=false)
-    flat = []
-    for bl in blocks
-        if isa(bl, Block)
-            push!(flat, bl)
-        else
-            append!(flat, bl)
-        end
-    end
-    generate_mesh(flat, verbose=verbose, genfacets=genfacets, genedges=genedges)
-end
 
-"""
-Generates a mesh object based on an initial mesh and a comma separated list of block objects:
-```
-generate_mesh(initial_mesh, blocks..., [verbose=true,] [genfacets=true,] [genedges=false,] [initial_mesh=nothing]) -> mesh_object
-```
-"""
-function generate_mesh(initial_mesh::Mesh, blocks::Block...; verbose::Bool=true, genfacets::Bool=true, genedges::Bool=false)
-    generate_mesh([blocks...], verbose=verbose, genfacets=genfacets, genedges=genedges, initial_mesh=initial_mesh)
+function generate_mesh(items::Union{Block, Array}...; verbose::Bool=true, genfacets::Bool=true, genedges::Bool=false)
+    return Mesh(items..., verbose=verbose, genfacets=genfacets, genedges=genedges)
 end
 
 
-#precompile(generate_mesh, (Array,))
+#"""
+#Generates a mesh object based on a comma separated list of block objects:
+#```
+#generate_mesh(blocks..., [verbose=true,] [genfacets=true,] [genedges=false,] [initial_mesh=nothing]) -> mesh_object
+#```
+#"""
+#function generate_mesh(items::Union{Block, Array}...; verbose::Bool=true, genfacets::Bool=true, genedges::Bool=false)
+    #flat = []
+    #for bl in items
+        #if isa(bl, Block)
+            #push!(flat, bl)
+        #else
+            #append!(flat, bl)
+        #end
+    #end
+    #generate_mesh(flat, verbose=verbose, genfacets=genfacets, genedges=genedges)
+#end
+
+#"""
+#Generates a mesh object based on an initial mesh and a comma separated list of block objects:
+#```
+#generate_mesh(initial_mesh, blocks..., [verbose=true,] [genfacets=true,] [genedges=false,] [initial_mesh=nothing]) -> mesh_object
+#```
+#"""
+#function generate_mesh(initial_mesh::Mesh, blocks::Block...; verbose::Bool=true, genfacets::Bool=true, genedges::Bool=false)
+    #generate_mesh([blocks...], verbose=verbose, genfacets=genfacets, genedges=genedges, initial_mesh=initial_mesh)
+#end
+
+
+
 #if VERSION >= v"0.4.0-dev+6521" 
     #precompile(generate_mesh, (Block,))
     #precompile(generate_mesh, (Array,))
@@ -791,3 +748,68 @@ include("filters.jl")
 include("extrude.jl") 
 include("smooth.jl") 
 include("disjoin.jl") 
+
+
+
+
+
+# TESTING
+function get_surface_alt(cells::Array{Cell,1})
+    # Actually slower....
+    # Get all points
+    pointsd = Dict{UInt64, Point}()
+    for cell in cells
+        for point in cell.points
+            pointsd[hash(point)] = point
+        end
+    end
+    points = values(pointsd)
+
+    # Get incidence matrix (shares) (fast)
+    np = length(points)
+    N = [ Cell[] for i=1:np]
+    for cell in cells
+        for pt in cell.points
+            push!(N[pt.id], cell)
+        end
+    end
+
+    @show 1
+    # Get matrix of cells faces
+    F = [ get_faces(cell) for cell in cells]
+    nc = length(cells)
+    #CF = Array(Array{Array{Int64,1},1}, nc)
+    CF = Array(Array{UInt64,1}, nc)
+    for cell in cells # fast
+        #CF[cell.id] = [ sort([pt.id for pt in face.points]) for face in F[cell.id]]
+        CF[cell.id] = [ hash(face) for face in F[cell.id]]
+    end
+
+    @show 2
+    # Get cells boundary flag matrix
+    CB = [ trues(length(CF[cell.id])) for cell in cells]
+    for cell in cells
+        for (i,fcon) in enumerate(CF[cell.id])
+            for pid in fcon
+                for cl in N[pid]
+                    if cl.id == cell.id; continue end
+                    if fcon in CF[cl.id]
+                        CB[cell.id][i] = false
+                    end
+                end
+            end
+        end
+    end
+
+    @show 3
+    # Get list of boundary faces (almost fast)
+    facets = Cell[]
+    for cell in cells
+        for (i,face) in enumerate(F[cell.id])
+            if CB[cell.id][i]
+                push!(facets, face)
+            end
+        end
+    end
+    return facets
+end

@@ -23,6 +23,9 @@ include("shape.jl")
 
 #using Shape
 export Point, Cell, hash, get_coords, get_point, get_faces, cell_metric, cell_quality
+export update!
+import Base.getindex
+export getindex
 
 # Point
 # =====
@@ -80,6 +83,7 @@ function get_coords(points::Array{Point,1}, ndim::Int64=3)
 end
 
 
+
 # Cell
 # ====
 
@@ -124,13 +128,21 @@ end
 
 # Return all points in cells
 function get_points(cells::Array{Cell,1})
-    pointsd = Dict{UInt64, Point}()
+    #pointsd = Dict{UInt64, Point}()
+    #for cell in cells
+        #for point in cell.points
+            #pointsd[hash(point)] = point
+        #end
+    #end
+    #points = [ values(pointsd)... ]
+
+    points = Set{Point}()
     for cell in cells
         for point in cell.points
-            pointsd[hash(point)] = point
+            push!(points, point)
         end
     end
-    points = [ values(pointsd)... ]
+    return [point for point in points]
 end
 
 # Updates cell internal data
@@ -138,6 +150,29 @@ function update!(c::Cell)
     c.quality = cell_quality(c)
     return nothing
 end
+
+
+# Index operator for a collection of elements
+function getindex(cells::Array{Cell,1}, s::Symbol)
+    if s == :solids
+        cr = [ is_solid(cell.shape) for cell in cells]
+        return cells[cr]
+    end
+    if s == :lines
+        cr = [ is_line(cell.shape) for cell in cells]
+        return cells[cr]
+    end
+    if s == :joints
+        cr = [ is_joint(cell.shape) for cell in cells]
+        return cells[cr]
+    end
+    if s == :points
+        return get_points(cells)
+    end
+    error("Cell getindex: Invalid symbol $s")
+end
+
+
 
 type Bins
     bins::Array{Array{Cell,1},3}

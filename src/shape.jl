@@ -825,25 +825,25 @@ function deriv_func(::Typed{TET10}, R::Array{Float64,1})
 end
 
 
-IP_FEM = [
-    LIN2    => [0 => LIN_IP2,  2 => LIN_IP2,  3 => LIN_IP3,   4 => LIN_IP4                   ],
-    LIN3    => [0 => LIN_IP2,  2 => LIN_IP2,  3 => LIN_IP3,   4 => LIN_IP4                   ],
-    LIN4    => [0 => LIN_IP3,  2 => LIN_IP2,  3 => LIN_IP3,   4 => LIN_IP4                   ],
-    TRI3    => [0 => TRI_IP1,  1 => TRI_IP1,  3 => TRI_IP3,   6 => TRI_IP6                   ],
-    TRI6    => [0 => TRI_IP3,  3 => TRI_IP3,  6 => TRI_IP6                                   ],
-    TRI9    => [0 => TRI_IP6,  3 => TRI_IP3,  6 => TRI_IP6                                   ],
-    TRI10   => [0 => TRI_IP6,  3 => TRI_IP3,  6 => TRI_IP6                                   ],
-    LINK2   => [0 => LIN_IP2,  2 => LIN_IP2,  3 => LIN_IP3,   4 => LIN_IP4                   ],
-    LINK3   => [0 => LIN_IP3,  2 => LIN_IP2,  3 => LIN_IP3,   4 => LIN_IP4                   ],
-    QUAD4   => [0 => QUAD_IP2, 4 => QUAD_IP2, 9 => QUAD_IP3, 16 => QUAD_IP4                  ],
-    QUAD8   => [0 => QUAD_IP3, 4 => QUAD_IP2, 9 => QUAD_IP3, 16 => QUAD_IP4                  ],
-    QUAD12  => [0 => QUAD_IP4, 4 => QUAD_IP2, 9 => QUAD_IP3, 16 => QUAD_IP4                  ],
-    QUAD16  => [0 => QUAD_IP4, 4 => QUAD_IP2, 9 => QUAD_IP3, 16 => QUAD_IP4                  ],
-    TET4    => [0 => TET_IP4,  1 => TET_IP1,  4 => TET_IP4,   5 => TET_IP5,  11 => TET_IP11  ],
-    TET10   => [0 => TET_IP4,  1 => TET_IP1,  4 => TET_IP4,   5 => TET_IP5,  11 => TET_IP11  ],
-    HEX8    => [0 => HEX_IP2,  8 => HEX_IP2, 27 => HEX_IP3                                   ],
-    HEX20   => [0 => HEX_IP3,  8 => HEX_IP2, 27 => HEX_IP3                                   ]
-]
+IP_FEM = Dict(
+    LIN2    => Dict( 0 => LIN_IP2,  2 => LIN_IP2,  3 => LIN_IP3,   4 => LIN_IP4                   ),
+    LIN3    => Dict( 0 => LIN_IP2,  2 => LIN_IP2,  3 => LIN_IP3,   4 => LIN_IP4                   ),
+    LIN4    => Dict( 0 => LIN_IP3,  2 => LIN_IP2,  3 => LIN_IP3,   4 => LIN_IP4                   ),
+    TRI3    => Dict( 0 => TRI_IP1,  1 => TRI_IP1,  3 => TRI_IP3,   6 => TRI_IP6                   ),
+    TRI6    => Dict( 0 => TRI_IP3,  3 => TRI_IP3,  6 => TRI_IP6                                   ),
+    TRI9    => Dict( 0 => TRI_IP6,  3 => TRI_IP3,  6 => TRI_IP6                                   ),
+    TRI10   => Dict( 0 => TRI_IP6,  3 => TRI_IP3,  6 => TRI_IP6                                   ),
+    LINK2   => Dict( 0 => LIN_IP2,  2 => LIN_IP2,  3 => LIN_IP3,   4 => LIN_IP4                   ),
+    LINK3   => Dict( 0 => LIN_IP3,  2 => LIN_IP2,  3 => LIN_IP3,   4 => LIN_IP4                   ),
+    QUAD4   => Dict( 0 => QUAD_IP2, 4 => QUAD_IP2, 9 => QUAD_IP3, 16 => QUAD_IP4                  ),
+    QUAD8   => Dict( 0 => QUAD_IP3, 4 => QUAD_IP2, 9 => QUAD_IP3, 16 => QUAD_IP4                  ),
+    QUAD12  => Dict( 0 => QUAD_IP4, 4 => QUAD_IP2, 9 => QUAD_IP3, 16 => QUAD_IP4                  ),
+    QUAD16  => Dict( 0 => QUAD_IP4, 4 => QUAD_IP2, 9 => QUAD_IP3, 16 => QUAD_IP4                  ),
+    TET4    => Dict( 0 => TET_IP4,  1 => TET_IP1,  4 => TET_IP4,   5 => TET_IP5,  11 => TET_IP11  ),
+    TET10   => Dict( 0 => TET_IP4,  1 => TET_IP1,  4 => TET_IP4,   5 => TET_IP5,  11 => TET_IP11  ),
+    HEX8    => Dict( 0 => HEX_IP2,  8 => HEX_IP2, 27 => HEX_IP3                                   ),
+    HEX20   => Dict( 0 => HEX_IP3,  8 => HEX_IP2, 27 => HEX_IP3                                   )
+)
 
 function get_ip_coords(shape::ShapeType, nips=0)
     if !haskey(IP_FEM, shape)
