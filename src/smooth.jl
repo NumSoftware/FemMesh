@@ -38,6 +38,7 @@ function cellcoords(c::Cell)
 end
 
 # Basic coordinates are defined considering an area/volume equal to 1.0
+# TODO: change to reference_coords
 function basic_coords(shape::ShapeType) #check
     if shape == TRI3
         #return √2*[0. 0; 1 0 ; 0 1]
@@ -52,6 +53,13 @@ function basic_coords(shape::ShapeType) #check
     end
     if shape == QUAD4
         return [ 0. 0.; 1. 0.; 1. 1. ; 0. 1. ]
+    end
+    if shape == TET4
+        a = (6.*√2.)^(1./3.)
+        return [   0.        0.          0. ; 
+                   a         0.          0. ;
+                 a/2.  √3./2.*a          0. ;
+                 a/2.  √3./6.*a  1./3.*√6*a ]
     end
     if shape == QUAD8 ; 
         return [ 0. 0; 1 0; 1 1 ; 0 1; 0.5 0; 1 0.5; 0.5 1; 0 0.5 ]

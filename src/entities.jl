@@ -172,16 +172,15 @@ function getindex(cells::Array{Cell,1}, s::Symbol)
     error("Cell getindex: Invalid symbol $s")
 end
 
-
-
 type Bins
     bins::Array{Array{Cell,1},3}
     bbox::Array{Float64,2}
     lbin::Float64
-    function Bins()
+    function Bins(nx=0, ny=0, nz=0, bbox=nothing)
         this = new()
-        this.bins = Array(Array{Cell,1}, 0, 0, 0)
+        this.bins = Array(Array{Cell,1}, nx, nx, nx)
         this.bbox = zeros(0,0)
+        # this.lbin = ..
         return this
     end
 end
@@ -224,6 +223,35 @@ function bounding_box(cell::Cell)
         if point.z>maxz; maxz = point.z end
     end
     return [ minx miny minz; maxx maxy maxz ]
+end
+
+function get_bin_cells(bins::Bins, p::Point) # returns an array of cells: TODO: untested function
+    minx, miny, minz = bins.bbox[1,:]
+    lbin = bins.lbin
+    ix = floor(Int, (p.x - minx)/lbin) + 1
+    iy = floor(Int, (p.y - miny)/lbin) + 1
+    iz = floor(Int, (p.z - minz)/lbin) + 1
+    return bins.bins[ix, iy, iz]
+end
+
+function add_cell(bins::Bins, cell::Cell) # TODO: untested function
+    minx, miny, minz = bins.bbox[1,:]
+    lbin = bins.lbin
+    bbox = bounding_box(cell)
+    X, Y, Z  = bbox[:,1], bbox[:,2], bbox[:,3]
+    verts    = [ [x y z] for z in Z, y in Y, x in X ]
+    cell_pos = Set()
+    for V in verts
+        x, y, z = V
+        ix = floor(Int, (x - minx)/lbin) + 1
+        iy = floor(Int, (y - miny)/lbin) + 1
+        iz = floor(Int, (z - minz)/lbin) + 1
+        push!(cell_pos, (ix, iy, iz))
+    end
+
+    for (ix, iy, iz) in cell_pos
+        push!(bins.bins[ix, iy, iz], cell)
+    end
 end
 
 # Grepares a group of bins that contain given cells

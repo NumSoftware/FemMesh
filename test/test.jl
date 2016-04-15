@@ -82,3 +82,33 @@ facts("\nMesh smoothing") do
     smooth!(mesh, eps=1e-3, epsmin=1e-2, verbose=verbose)
     @fact mesh.quality --> roughly(0.94, atol=1e-2)
 end
+
+facts("\nMesh with embedded cells") do
+    bl = Block3D( [0 0 0; 1 1 1], nx=8, ny=8, nz=8, shape=HEX8)
+    bli = BlockInset( [0 0 0; 1 1 1] )
+    mesh = generate_mesh(bl, bli, verbose=verbose)
+    save(mesh, "out.vtk", verbose=verbose)
+    @fact length(mesh.cells[:lines]) --> 8
+
+    bl = Block3D( [0 0 0; 1 1 1], nx=8, ny=8, nz=8, shape=HEX20)
+    bli = BlockInset( [0 0 0; 1 1 1] )
+    mesh = generate_mesh(bl, bli, verbose=verbose)
+    save(mesh, "out.vtk", verbose=verbose)
+    @fact length(mesh.cells[:lines]) --> 8
+
+    rm("out.vtk")
+end
+
+facts("\nMesh extrude") do
+    bl = Block2D( [0 0; 1 1], nx=3, ny=3, shape=QUAD4)
+    mesh = generate_mesh(bl, verbose=verbose)
+    mesh = extrude(mesh, axis=[0,0,1], len=4, n=10)
+    save(mesh, "out.vtk", verbose=verbose)
+    @fact length(mesh.cells) --> 90
+
+    bl = Block2D( [0 0; 1 1], nx=3, ny=3, shape=QUAD4)
+    ble = extrude(bl, axis=[0,0,1], len=4, n=10)
+    mesh = generate_mesh(ble, verbose=verbose)
+    save(mesh, "out.vtk", verbose=verbose)
+    @fact length(mesh.cells) --> 90
+end

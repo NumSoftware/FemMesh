@@ -21,13 +21,13 @@
 
 include("quadrature.jl")
 
-export get_shape_tag, get_vtk_type, get_shape_from_vtk, get_ndim, get_name
+export get_shape_tag, get_vtk_type, get_shape_from_vtk, get_ndim, get_name, get_basic_shape
 export LIN2, LIN3, TRI3, TRI6, QUAD4, QUAD8, TET4, TET10, HEX8, HEX20 
 export LINK1, LINK2, LINK3, LIN4, TRI9, TRI10, QUAD9, QUAD12, QUAD16
 export ShapeType
 export shape_func, deriv_func, local_coords
 export get_ip_coords
-export is_solid, is_line, is_joint, is_inside
+export is_solid, is_line, is_joint, is_joint1D, is_inside
 export inverse_map, extrapolator
 export coords_tri6, coords_tri9, coords_tri10, coords_quad4, coords_quad8 #...
 
@@ -88,6 +88,20 @@ end
 
 function get_name(shape::ShapeType)
     SHAPE_NAME[shape]
+end
+
+function get_basic_shape(shape::ShapeType)
+    # Returs the basic shape of another
+    
+    if shape in [ LIN2, LIN3, LIN4 ] return LIN2 end
+    if shape in [ TRI3, TRI6, TRI9, TRI10 ] return TRI3 end
+    if shape in [ QUAD4, QUAD8, QUAD12, QUAD16 ] return QUAD4 end
+    if shape in [ TET4, TET10 ] return TET4 end
+    if shape in [ HEX8, HEX20 ] return HEX8 end
+
+    if shape > 100 return shape-100 end # for joint shapes
+
+    return shape # any other shape
 end
 
 function get_vtk_type(shape::ShapeType)
@@ -230,7 +244,6 @@ function get_local_coords(st::ShapeType)
 end
 
 
-#immutable type Typed{N} end
 immutable Typed{N} end
 
 shape_func(shape::ShapeType, R::Array{Float64,1}) = shape_func(Typed{shape}(), R)
@@ -726,32 +739,32 @@ function shape_func(::Typed{TET10}, R::Array{Float64,1})
     #                       t
     #                       |
     #                       |
-    #                       | 3
+    #                       | 4
     #                       @,
     #                      /|`
     #                      ||  `,
     #                     / |    ',
     #                     | |      \
     #                    /  |       `.
-    #                    |  |         `,  9
-    #                   /   @ 7         `@
+    #                    |  |         `,  10
+    #                   /   @ 8         `@
     #                   |   |             \
     #                  /    |              `.
     #                  |    |                ',
-    #               8 @     |                  \
-    #                 |     @.,,_       6       `.
-    #                |     / 0   ``'-.,,@_        `.
-    #                |    /              ``''-.,,_  ', 2
+    #               9 @     |                  \
+    #                 |     @.,,_       7       `.
+    #                |     / 1   ``'-.,,@_        `.
+    #                |    /              ``''-.,,_  ', 3
     #               |    /                        ``'@.,,,
     #               |   '                       ,.-``     ``''- s
-    #              |  ,@ 4                 _,-'`
+    #              |  ,@ 5                 _,-'`
     #              ' /                 ,.'`
     #             | /             _.@``
-    #             '/          ,-'`   5
+    #             '/          ,-'`   6
     #            |/      ,.-``
     #            /  _,-``
     #          .@ '`
-    #         / 1
+    #         / 2
     #        /
     #       /
     #      r
@@ -842,7 +855,15 @@ IP_FEM = Dict(
     TET4    => Dict( 0 => TET_IP4,  1 => TET_IP1,  4 => TET_IP4,   5 => TET_IP5,  11 => TET_IP11  ),
     TET10   => Dict( 0 => TET_IP4,  1 => TET_IP1,  4 => TET_IP4,   5 => TET_IP5,  11 => TET_IP11  ),
     HEX8    => Dict( 0 => HEX_IP2,  8 => HEX_IP2, 27 => HEX_IP3                                   ),
-    HEX20   => Dict( 0 => HEX_IP3,  8 => HEX_IP2, 27 => HEX_IP3                                   )
+    HEX20   => Dict( 0 => HEX_IP3,  8 => HEX_IP2, 27 => HEX_IP3                                   ),
+
+    JLIN2   => Dict( 0 => LIN_IP2,  2 => LIN_IP2,  3 => LIN_IP3,   4 => LIN_IP4                   ),
+    JLIN3   => Dict( 0 => LIN_IP2,  2 => LIN_IP2,  3 => LIN_IP3,   4 => LIN_IP4                   ),
+    JLIN4   => Dict( 0 => LIN_IP3,  2 => LIN_IP2,  3 => LIN_IP3,   4 => LIN_IP4                   ),
+    JTRI3   => Dict( 0 => TRI_IP3,  3 => TRI_IP3,  6 => TRI_IP6                                   ),
+    JTRI6   => Dict( 0 => TRI_IP3,  3 => TRI_IP3,  6 => TRI_IP6                                   ),
+    JQUAD4  => Dict( 0 => QUAD_IP2, 4 => QUAD_IP2, 9 => QUAD_IP3, 16 => QUAD_IP4                  ),
+    JQUAD8  => Dict( 0 => QUAD_IP3, 4 => QUAD_IP2, 9 => QUAD_IP3, 16 => QUAD_IP4                  )
 )
 
 function get_ip_coords(shape::ShapeType, nips=0)
@@ -927,13 +948,16 @@ function is_line(shape::ShapeType)
     shape in (LIN2, LIN3, LIN4) 
 end
 
+function is_joint1D(shape::ShapeType)
+    shape>50 && shape<60
+end
+
 function is_joint(shape::ShapeType)
-    shape>50? true : false
+    shape>100
 end
 
 function is_solid(shape::ShapeType)
-    # exclude line and link (contact) cells
-    !is_line(shape) && !is_joint(shape) ? true : false
+    shape<50 && !(shape in (LIN2, LIN3, LIN4, POLYV) )
 end
 
 function inverse_map(shape::ShapeType, coords::Array{Float64,2}, X0::Array{Float64,1}, Tol=1.0e-7)

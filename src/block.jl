@@ -414,13 +414,15 @@ function split_block(bl::Block2D, msh::Mesh)
     error("block: Can not discretize using shape $shape")
 end
 
+# Split for 3D meshes
 
 function split_block(bl::Block3D, msh::Mesh)
     nx, ny, nz = bl.nx, bl.ny, bl.nz
-    shape  = bl.shape
-    bshape = size(bl.coords,1)==8? HEX8:HEX20 # block shape
+    shape  = bl.shape 
+    shape == TET10 && error("block: Cannot generate mesh with TET10 cells jet")
+    bshape = size(bl.coords,1)==8? HEX8:HEX20 # block shape (not cell shape)
 
-    if shape==HEX8
+    if shape==HEX8 || shape==TET4
         p_arr = Array(Point, nx+1, ny+1, nz+1)
         for k = 1:nz+1
             for j = 1:ny+1
@@ -449,18 +451,27 @@ function split_block(bl::Block3D, msh::Mesh)
         for k = 1:nz
             for j = 1:ny
                 for i = 1:nx
-                    conn = [
-                        p_arr[i  , j  , k  ],
-                        p_arr[i+1, j  , k  ],
-                        p_arr[i+1, j+1, k  ],
-                        p_arr[i  , j+1, k  ],
-                        p_arr[i  , j  , k+1],
-                        p_arr[i+1, j  , k+1],
-                        p_arr[i+1, j+1, k+1],
-                        p_arr[i  , j+1, k+1]]
+                    p1 = p_arr[i  , j  , k  ]
+                    p2 = p_arr[i+1, j  , k  ]
+                    p3 = p_arr[i+1, j+1, k  ]
+                    p4 = p_arr[i  , j+1, k  ]
+                    p5 = p_arr[i  , j  , k+1]
+                    p6 = p_arr[i+1, j  , k+1]
+                    p7 = p_arr[i+1, j+1, k+1]
+                    p8 = p_arr[i  , j+1, k+1]
 
-                    cell = Cell(shape, conn, bl.tag)
-                    push!(msh.cells, cell)
+                    if shape==HEX8
+                        cell = Cell(shape, [p1, p2, p3, p4, p5, p6, p7, p8], bl.tag)
+                        push!(msh.cells, cell)
+                    end
+                    if shape==TET4
+                        push!( msh.cells, Cell(shape, [p2, p4, p1, p8], bl.tag) )
+                        push!( msh.cells, Cell(shape, [p2, p1, p5, p8], bl.tag) )
+                        push!( msh.cells, Cell(shape, [p2, p5, p6, p8], bl.tag) )
+                        push!( msh.cells, Cell(shape, [p2, p6, p7, p8], bl.tag) )
+                        push!( msh.cells, Cell(shape, [p2, p3, p4, p8], bl.tag) )
+                        push!( msh.cells, Cell(shape, [p2, p7, p3, p8], bl.tag) )
+                    end
                 end
             end
         end

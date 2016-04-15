@@ -21,8 +21,7 @@
 
 # This file includes the code for adding joints between cells
 
-#include("mesh.jl")
-export disjoin!
+export split!
 
 function joint_shape(shape::ShapeType)
     if shape == LIN2  ; return JLIN2  end
@@ -36,7 +35,7 @@ function joint_shape(shape::ShapeType)
 end
 
 # Adds joint cells over all shared faces
-function disjoin!(mesh::Mesh)
+function split!(mesh::Mesh)
     cells  = mesh.cells
     solids = filter( c -> is_solid(c.shape), cells)
 
@@ -44,11 +43,10 @@ function disjoin!(mesh::Mesh)
 
     # Splitting
     for c in solids
-        is_solid(c.shape) || continue
         for (i,p) in enumerate(c.points)
             newp = Point(p.x, p.y, p.z)
             p.id = 0 # set id=0 as a flag for points to be removed
-            newp.extra = c.id
+            #newp.extra = c.id
             push!(newpoints, newp)
             c.points[i] = newp
         end
@@ -104,37 +102,26 @@ function disjoin!(mesh::Mesh)
 
     for c in cells
         if c.shape in (LINK2, LINK3)
-            njpoints = elem.shape==LINK2? 2 : 3
-            ncpoints = length(c.points)  # number of points of crossed cell
-            hs    = sum([ hash(p) for p in c.points[1:end-njpoints]])
+            njpoints = c.shape==LINK2? 2 : 3
+            ncpoints = length(c.points) - njpoints  # number of points of crossed cell
+            hs    = sum([ hash(p) for p in c.points[1:ncpoints]])
             ccell = cdict[hs]  # crossed cell
             c.points[1:ncpoints] = ccell.points[:]
         end
     end
 
-    # Numbering new joint cells
-    #n = length(cells)
-    #for (i,c) in enumerate(jcells)
-        #c.id = n+i
-    #end
+    spoints = Set{Point}()
+    for c in mesh.cells
+        for p in c.points
+            push!(spoints, p)
+        end
+    end
 
-    # Updating old points numbers
-    #points = filter( p -> p.id!=0, mesh.points)
-    #for (i,p) in enumerate(points)
-        #p.id = i
-    #end
-
-    # Updating new points numbers
-    #n = length(points)
-    #for (i,p) in enumerate(newpoints)
-        #p.id = n+i
-    #end
-
-    # Updating mesh
-    points      = filter( p -> p.id!=0, mesh.points)
-    mesh.points = vcat(points, newpoints)
+    mesh.points = collect(spoints)
     mesh.cells  = vcat(cells, jcells)
+
     update!(mesh)
+    reorder!(mesh)
 
     return mesh
     

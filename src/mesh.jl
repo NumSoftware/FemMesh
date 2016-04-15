@@ -125,27 +125,30 @@ function reorder!(mesh::Mesh; sort_degrees=true, reversed=false)
     # Get all mesh edges
     all_edges = Dict{UInt64, Cell}()
     for cell in mesh.cells
+
+        # adding cell edges
+        if is_solid(cell.shape)
+            for edge in get_edges(cell)
+                hs = hash(edge)
+                all_edges[hs] = edge
+            end
+            continue
+        end
+
         # exception for embedded cells
         if cell.shape in (LINK2, LINK3)
+            #sh = cell.shape==LINK2? LIN2 : LIN3
             edge = Cell(LIN2, [ cell.points[1], cell.points[end-1] ])
             hs = hash(edge)
             all_edges[hs] = edge
             continue
         end
 
-        # exception for line cells
-        if cell.shape in (LIN2, LIN3)
-            edge = Cell(cell.shape, cell.points)
-            hs = hash(edge)
-            all_edges[hs] = edge
-            continue
-        end
+        # all other cells
+        edge = Cell(cell.shape, cell.points)
+        hs = hash(edge)
+        all_edges[hs] = edge
 
-        # adding cell edges
-        for edge in get_edges(cell)
-            hs = hash(edge)
-            all_edges[hs] = edge
-        end
     end
 
     # Get points neighbors
@@ -168,15 +171,18 @@ function reorder!(mesh::Mesh; sort_degrees=true, reversed=false)
 
     # list of degrees per point
     degrees = Int64[ length(list) for list in neighs]
-    _, idx  = findmin(degrees)
+    mindeg, idx  = findmin(degrees)
+    @assert mindeg>0
 
     N = [ mesh.points[idx] ] # new list of cells
     R = [ mesh.points[idx] ] # first levelset
-    R0 = [ ] # last levelset
-    
+
+    R0 = [ ] # to be the last levelset
+
     while length(N) < npoints
         # Generating current levelset A
         A = Set{Point}([ ])
+
         for p in R
             for q in neighs[p.id]
                 if q in R0 || q in R continue end
@@ -258,11 +264,12 @@ end
 """
 Generates a mesh based on an array of geometry blocks:
 ```
-generate_mesh(blocks, [verbose=true,] [genfacets=true,] [genedges=false,] [initial_mesh=nothing]) -> mesh_object
+Mesh(blocks, [verbose=true,] [genfacets=true,] [genedges=false,] [initial_mesh=nothing]) -> mesh_object
 ```
 """
 function Mesh(items::Union{Block, Array}...; verbose::Bool=true, genfacets::Bool=true, genedges::Bool=false)
 
+    # Flatten items list into list of blocks
     blocks = []
     for bl in items
         if isa(bl, Block)
@@ -323,11 +330,17 @@ function Mesh(items::Union{Block, Array}...; verbose::Bool=true, genfacets::Bool
     return mesh
 end
 
+# precompilation
+#precompile(Mesh, (Union{Block,Array},)) 
+#precompile(Mesh, (Block2D,))
+#precompile(Mesh, (Block3D,))
+#precompile(Mesh, (Array,))
+#precompile(split_block, (Block3D, Mesh))
+
 
 function generate_mesh(items::Union{Block, Array}...; verbose::Bool=true, genfacets::Bool=true, genedges::Bool=false)
     return Mesh(items..., verbose=verbose, genfacets=genfacets, genedges=genedges)
 end
-
 
 #"""
 #Generates a mesh object based on a comma separated list of block objects:
@@ -357,12 +370,6 @@ end
     #generate_mesh([blocks...], verbose=verbose, genfacets=genfacets, genedges=genedges, initial_mesh=initial_mesh)
 #end
 
-
-
-#if VERSION >= v"0.4.0-dev+6521" 
-    #precompile(generate_mesh, (Block,))
-    #precompile(generate_mesh, (Array,))
-#end
 
 
 """
@@ -573,6 +580,7 @@ function load_mesh_vtk(filename)
     end
 
     update!(mesh)
+    close(file)
 
     return mesh
 end
@@ -747,9 +755,7 @@ end
 include("filters.jl") 
 include("extrude.jl") 
 include("smooth.jl") 
-include("disjoin.jl") 
-
-
+include("split.jl") 
 
 
 
