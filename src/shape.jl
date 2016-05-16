@@ -282,6 +282,30 @@ function deriv_func(::Typed{LIN3}, R::Array{Float64,1})
     return D
 end
 
+function shape_func(::Typed{LIN4}, R::Array{Float64,1})
+    #   (-1)            '   (+1)
+    #    @------@-----@------@  --> r
+    #    0      2     3      1
+
+    r = R[1]
+    N = Array(Float64, 4)
+    N[1] = 1./16.*( -9.*r^3 + 9.*r*r +     r - 1.)
+    N[2] = 1./16.*(  9.*r^3 + 9.*r*r -     r - 1.)
+    N[3] = 1./16.*( 27.*r^3 - 9.*r*r - 27.*r + 9.)
+    N[4] = 1./16.*(-27.*r^3 - 9.*r*r + 27.*r + 9.)
+    return N
+end
+
+function deriv_func(::Typed{LIN4}, R::Array{Float64,1})
+    r = R[1]
+    D = Array(Float64, 1, 4)
+    D[1,1] = 1./16.*( -27.*r*r + 18.*r + 1. )
+    D[1,2] = 1./16.*(  27.*r*r + 18.*r - 1. )
+    D[1,3] = 1./16.*(  81.*r*r - 18.*r - 27.)
+    D[1,4] = 1./16.*( -81.*r*r - 18.*r + 27.)
+    return D
+end
+
 function shape_func(::Typed{TRI3}, R::Array{Float64,1})
     #    s
     #    ^
@@ -434,24 +458,55 @@ function deriv_func(::Typed{QUAD8}, R::Array{Float64,1})
     rp1=1.0+r; rm1=1.0-r
     sp1=1.0+s; sm1=1.0-s
 
-    D[1,1] = - 0.25 * sm1 * (rm1 + rm1 + sm1 - 3.0)
-    D[1,2] =   0.25 * sm1 * (rp1 + rp1 + sm1 - 3.0)
-    D[1,3] =   0.25 * sp1 * (rp1 + rp1 + sp1 - 3.0)
-    D[1,4] = - 0.25 * sp1 * (rm1 + rm1 + sp1 - 3.0)
-    D[1,5] = - r * sm1
-    D[1,6] =   0.50 * (1.0 - s * s)
-    D[1,7] = - r * sp1
-    D[1,8] = - 0.5 * (1.0 - s * s)
+    D[1,1] = -0.25 * sm1 * (rm1 + rm1 + sm1 - 3.0)
+    D[1,2] =  0.25 * sm1 * (rp1 + rp1 + sm1 - 3.0)
+    D[1,3] =  0.25 * sp1 * (rp1 + rp1 + sp1 - 3.0)
+    D[1,4] = -0.25 * sp1 * (rm1 + rm1 + sp1 - 3.0)
+    D[1,5] = -r * sm1
+    D[1,6] =  0.50 * (1.0 - s * s)
+    D[1,7] = -r * sp1
+    D[1,8] = -0.5 * (1.0 - s * s)
 
-    D[2,1] = - 0.25 * rm1 * (sm1 + rm1 + sm1 - 3.0)
-    D[2,2] = - 0.25 * rp1 * (sm1 + rp1 + sm1 - 3.0)
-    D[2,3] =   0.25 * rp1 * (sp1 + rp1 + sp1 - 3.0)
-    D[2,4] =   0.25 * rm1 * (sp1 + rm1 + sp1 - 3.0)
-    D[2,5] = - 0.50 * (1.0 - r * r)
-    D[2,6] = - s * rp1
-    D[2,7] =   0.50 * (1.0 - r * r)
-    D[2,8] = - s * rm1
+    D[2,1] = -0.25 * rm1 * (sm1 + rm1 + sm1 - 3.0)
+    D[2,2] = -0.25 * rp1 * (sm1 + rp1 + sm1 - 3.0)
+    D[2,3] =  0.25 * rp1 * (sp1 + rp1 + sp1 - 3.0)
+    D[2,4] =  0.25 * rm1 * (sp1 + rm1 + sp1 - 3.0)
+    D[2,5] = -0.50 * (1.0 - r * r)
+    D[2,6] = -s * rp1
+    D[2,7] =  0.50 * (1.0 - r * r)
+    D[2,8] = -s * rm1
     return D
+end
+
+function shape_func(::Typed{QUAD9}, R::Array{Float64,1})
+    #     4           7            3
+    #       @---------@----------@
+    #       |               (1,1)|
+    #       |       s ^          |
+    #       |         |          |
+    #       |         | 9        |
+    #     8 @         +----> r   @ 6
+    #       |       (0,0)        |
+    #       |                    |
+    #       |                    |
+    #       |(-1,-1)             |
+    #       @---------@----------@
+    #     1           5            2
+    #
+    r, s = R[1:2]
+    N = Array(Float64,9)
+    rp1=1.0+r; rm1=1.0-r;
+    sp1=1.0+s; sm1=1.0-s;
+    N[1] =  0.25*r*s*sm1*rm1
+    N[2] =  0.25*r*s*sm1*rp1
+    N[3] =  0.25*r*s*sp1*rp1
+    N[4] =  0.25*r*s*sp1*rm1
+    N[5] = -0.50*s*sm1*rp1*rm1
+    N[6] = -0.50*r*sp1*sm1*rp1
+    N[7] = -0.50*s*sp1*rp1*rm1
+    N[8] = -0.50*r*sp1*sm1*rm1
+    N[9] = sp1*sm1*rp1*rm1
+    return N
 end
 
 
