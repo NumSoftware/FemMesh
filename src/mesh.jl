@@ -217,7 +217,6 @@ function reorder!(mesh::Mesh; sort_degrees=true, reversed=false)
 end
 
 
-
 # Updates numbering, faces and edges in a Mesh object
 function update!(mesh::Mesh; verbose::Bool=false, genfacets::Bool=true, genedges::Bool=false)
 
@@ -341,35 +340,6 @@ end
 function generate_mesh(items::Union{Block, Array}...; verbose::Bool=true, genfacets::Bool=true, genedges::Bool=false)
     return Mesh(items..., verbose=verbose, genfacets=genfacets, genedges=genedges)
 end
-
-#"""
-#Generates a mesh object based on a comma separated list of block objects:
-#```
-#generate_mesh(blocks..., [verbose=true,] [genfacets=true,] [genedges=false,] [initial_mesh=nothing]) -> mesh_object
-#```
-#"""
-#function generate_mesh(items::Union{Block, Array}...; verbose::Bool=true, genfacets::Bool=true, genedges::Bool=false)
-    #flat = []
-    #for bl in items
-        #if isa(bl, Block)
-            #push!(flat, bl)
-        #else
-            #append!(flat, bl)
-        #end
-    #end
-    #generate_mesh(flat, verbose=verbose, genfacets=genfacets, genedges=genedges)
-#end
-
-#"""
-#Generates a mesh object based on an initial mesh and a comma separated list of block objects:
-#```
-#generate_mesh(initial_mesh, blocks..., [verbose=true,] [genfacets=true,] [genedges=false,] [initial_mesh=nothing]) -> mesh_object
-#```
-#"""
-#function generate_mesh(initial_mesh::Mesh, blocks::Block...; verbose::Bool=true, genfacets::Bool=true, genedges::Bool=false)
-    #generate_mesh([blocks...], verbose=verbose, genfacets=genfacets, genedges=genedges, initial_mesh=initial_mesh)
-#end
-
 
 
 """
@@ -756,7 +726,6 @@ include("filters.jl")
 include("extrude.jl") 
 include("smooth.jl") 
 include("split.jl") 
-
 
 
 # TESTING
