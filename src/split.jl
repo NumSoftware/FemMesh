@@ -120,7 +120,12 @@ function split!(mesh::Mesh)
     mesh.points = collect(spoints)
     mesh.cells  = vcat(cells, jcells)
 
-    update!(mesh)
+    # check for generation of edges
+    genedges = length(mesh.edges) > 0
+    mesh.edges = []
+
+    # update and reorder mesh
+    update!(mesh, genedges=genedges)
     reorder!(mesh)
 
     return mesh
