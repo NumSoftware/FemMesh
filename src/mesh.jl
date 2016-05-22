@@ -259,6 +259,20 @@ function quality!(mesh::Mesh)
     mesh.qmin    = minimum(Q)
 end
 
+# flattens a list of nested lists
+function flatten(x, y)
+    ty = typeof(x)
+    if ty <: Tuple || ty <: Array
+        for item in x
+            flatten(item, y)
+        end
+    else
+        push!(y, x)
+    end
+    return y
+end
+flatten(x)=flatten(x, [])
+
 
 """
 Generates a mesh based on an array of geometry blocks:
@@ -266,15 +280,23 @@ Generates a mesh based on an array of geometry blocks:
 Mesh(blocks, [verbose=true,] [genfacets=true,] [genedges=false,] [initial_mesh=nothing]) -> mesh_object
 ```
 """
-function Mesh(items::Union{Block, Array}...; verbose::Bool=true, genfacets::Bool=true, genedges::Bool=false)
+function Mesh(items::Union{Block, Mesh, Array}...; verbose::Bool=true, genfacets::Bool=true, genedges::Bool=false)
 
-    # Flatten items list into list of blocks
+    # New mesh object
+    mesh = Mesh()
+
+    # Flatten items list
+    fitems = flatten(items)
+
+    # Get list of blocks and update mesh objects
     blocks = []
-    for bl in items
-        if isa(bl, Block)
-            push!(blocks, bl)
-        else
-            append!(blocks, bl)
+    for item in fitems
+        if isa(item, Block)
+            push!(blocks, item)
+        elseif isa(item, Mesh)
+            append!(mesh.points, item.points)
+            append!(mesh.cells, item.cells)
+            mesh.bpoints = merge(mesh.bpoints, item.bpoints)
         end
     end
 
@@ -284,17 +306,14 @@ function Mesh(items::Union{Block, Array}...; verbose::Bool=true, genfacets::Bool
         println("  analyzing $nblocks block(s)") 
     end
 
-    #mesh = initial_mesh==nothing? Mesh(): initial_mesh
-    mesh = Mesh()
-
-    # Split blocks
+    # Split blocks: generates points and cells
     for (i,b) in enumerate(blocks)
         b.id = i
         split_block(b, mesh)
         verbose && print("  spliting block ",i,"...\r")
     end
 
-    # Updates numbering, qualitu, facets and edges
+    # Updates numbering, quality, facets and edges
     update!(mesh, verbose=verbose, genfacets=genfacets, genedges=genedges)
 
     # Reorder nodal numbering
@@ -338,6 +357,7 @@ end
 
 
 function generate_mesh(items::Union{Block, Array}...; verbose::Bool=true, genfacets::Bool=true, genedges::Bool=false)
+    println("generate_mesh function deprecated. Use Mesh instead")
     return Mesh(items..., verbose=verbose, genfacets=genfacets, genedges=genedges)
 end
 
@@ -512,45 +532,123 @@ function load_mesh_vtk(filename)
     end
     idx += 2
 
-    # read type of cells
-    check_embedded = false
+    # read type of cells (cont.)
+    has_polyvertex = false
     for i=1:ncells
         vtk_shape = parse(data[idx])
-        shape = get_shape_from_vtk( vtk_shape, length(conns[i]), ndim )
+        if vtk_shape == POLYV
+            shape = POLYV
+        else
+            shape = get_shape_from_vtk( vtk_shape, length(conns[i]), ndim )
+        end
         cell  = Cell(shape, conns[i])
         push!(mesh.cells, cell)
         idx  += 1
-        if shape == POLYV check_embedded = true end
+        if shape == POLYV   has_polyvertex = true end
     end
 
-    # Setting embeddeds
-    if check_embedded
+    # end of reading
+    close(file)
+
+    # Fixing shape field for polyvertex cells
+    if has_polyvertex
         # mount dictionary of cells
         cdict = Dict{UInt64, Cell}() 
         for cell in mesh.cells
-            conn = [ point.id for point in cell.points]
-            hs = hash(conn)
+            #conn = [ point.id for point in cell.points]
+            #hs = hash(conn)
+            hs = hash(cell)
             cdict[hs] = cell
         end
-        # fix shape type for embeddeds
+
+        # check cells
         for cell in mesh.cells
-            if cell.shape == POLYV && length(cell.points)>=5
-                conn = [ point.id for point in cell.points]
-                hs2 = hash(conn[1:end-2])
-                if haskey(cdict, hs2) 
-                    cell.shape = LINK2
-                    continue
+            if cell.shape == POLYV 
+                n = length(cell.points)
+                # look for joints1D and fix shape
+                if n>=5
+                    #conn = [ point.id for point in cell.points]
+                    #hss = hash(conn[1:end-2])
+                    hss = hash( [ cell.points[i] for i=1:n-2] )
+                    if haskey(cdict, hss) 
+                        cell.shape = LINK2
+                        hs0   = hash( [ cell.points[i] for i=n-1:n] )
+                        hcell = cdict[hss]
+                        lcell = cdict[hs0]
+                        cell.linked_cells = [hcell, lcell]
+                        hcell.crossed = true
+                        continue
+                    end
+                    #hss = hash(conn[1:end-3])
+                    hss = hash( [ cell.points[i] for i=1:n-3] )
+                    if haskey(cdict, hss) 
+                        cell.shape = LINK3
+                        hs0   = hash( [ cell.points[i] for i=n-2:n] )
+                        hcell = cdict[hss]
+                        lcell = cdict[hs0]
+                        cell.linked_cells = [hcell, lcell]
+                        hcell.crossed = true
+                        continue
+                    end
                 end
-                hs3 = hash(conn[1:end-3])
-                if haskey(cdict, hs3) 
-                    cell.shape = LINK3
+
+                # look for joints and fix shape
+                if n%2==0 && n>=4
+                    delta = 0.0
+                    for i=1:div(n,2)
+                        p1 = cell.points[i]
+                        p2 = cell.points[div(n,2)+i]
+                        delta += abs(p1.x - p2.x)
+                        delta += abs(p1.y - p2.y)
+                        delta += abs(p1.z - p2.z)
+                    end
+                    if delta<1e-10
+                        cell.shape = get_shape_from_vtk(POLYV, n, ndim)
+                        continue
+                    end
+                end
+
+                # remaining polyvertex cells
+                cell.shape = get_shape_from_vtk(POLYV, n, ndim)
+            end
+        end
+
+        # Update linked cells in joints
+
+        # check if there are joints
+        has_joints = false
+        for cell in mesh.cells
+            if is_joint(cell.shape )
+                has_joints = true
+                break
+            end
+        end
+
+        if has_joints
+            # generate dict of faces
+            facedict = Dict{UInt64, Cell}()
+            for cell in mesh.cells
+                for face in get_faces(cell)
+                    hs = hash(face)
+                    f  = get(facedict, hs, nothing)
+                    facedict[hs] = face
+                end
+            end
+
+            for cell in mesh.cells
+                if is_joint(cell.shape)
+                    n = length(cell.points)
+                    hs1 = hash( [ cell.points[i] for i=1:div(n,2)] )
+                    hs2 = hash( [ cell.points[i] for i=div(n,2)+1:n] )
+                    cell1 = facedict[hs1].ocell
+                    cell2 = facedict[hs2].ocell
+                    cell.linked_cells = [ cell1, cell2 ]
                 end
             end
         end
     end
 
-    update!(mesh)
-    close(file)
+    update!(mesh, genedges=true)
 
     return mesh
 end

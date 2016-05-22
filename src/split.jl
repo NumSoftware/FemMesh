@@ -89,6 +89,7 @@ function split!(mesh::Mesh)
 
         jshape = joint_shape(f1.shape)
         cell = Cell(jshape, con, "")
+        cell.linked_cells = [f1.ocell, f2.ocell]
         push!(jcells, cell)
     end
 

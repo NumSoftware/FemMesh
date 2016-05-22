@@ -195,7 +195,7 @@ function split_curve(coords::Array{Float64,2}, bl::BlockInset, closed::Bool, msh
     # Constants
     shape   = bl.shape
     npoints = shape==LIN2? 2 : 3
-    lnkshape = shape==LIN2? LINK2 : LINK3
+    jntshape = shape==LIN2? LINK2 : LINK3
     curvetype = bl.curvetype
 
     # Initial conditions
@@ -254,10 +254,6 @@ function split_curve(coords::Array{Float64,2}, bl::BlockInset, closed::Bool, msh
 
         itcount+=n ##
 
-        # R     = inverse_map(ccell.shape, ccell_coords, X) ##
-        # bdist = bdistance(ccell.shape, R) ##
-        #@printf(" %d  &  %10.6f  &  %10.6f  & %10.6f  & %10.6f \\\\\n", 0, s, X[1], X[2], bdist)
-
         for i=1:n
 
             step *= 0.5
@@ -272,14 +268,7 @@ function split_curve(coords::Array{Float64,2}, bl::BlockInset, closed::Bool, msh
 
             R     = inverse_map(ccell.shape, ccell_coords, X)
             bdist = bdistance(ccell.shape, R)
-            #@printf(" %d  &  %10.6f  &  %10.6f  & %10.6f  & %10.6f \\\\\n", i, s, X[1], X[2], bdist)
         end
-
-
-        # println()
-        # ds = (1-s)/2
-        # @printf(" %d  &  %10.6f  &  %2d  &  %10.6f  & %10.6f  & %10.6f \\\\\n", 1, ds, n, s, X[1], X[2])
-        # println()
 
         # Check if end was reached
         if s > len - εn
@@ -322,15 +311,14 @@ function split_curve(coords::Array{Float64,2}, bl::BlockInset, closed::Bool, msh
         push!(msh.cells, lcell)
 
         # Create a continuous joint element
-        #lnkpts  = [ ccell.points, lcell.points ]
-        lnkpts  = vcat( ccell.points, lcell.points )
-        lnkcell = Cell(lnkshape, lnkpts, bl.tag)
-        push!(msh.cells, lnkcell)
+        jntpts  = vcat( ccell.points, lcell.points )
+        jntcell = Cell(jntshape, jntpts, bl.tag)
+        push!(msh.cells, jntcell)
+        jntcell.linked_cells = [ccell, lcell]
 
         ccell.crossed = true
 
         if end_reached
-            #@show itcount
             return
         end
 

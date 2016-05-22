@@ -120,9 +120,13 @@ function get_shape_from_vtk(vtk_type::Int64, npoints::Int64, ndim::Int64)
     elseif npoints==2   return LINK2
     elseif npoints==3   return LINK3
     elseif npoints==4   return JLIN2
-    elseif npoints==6   return JLIN3
-    elseif npoints==8   return JLIN4
-    elseif npoints==9   return TRI9
+    elseif npoints==6   
+        if ndim==2 return JLIN3 end
+        if ndim==3 return JTRI3 end
+    elseif npoints==8
+        if ndim==2 return JLIN4  end
+        if ndim==3 return JQUAD4 end
+    elseif npoints==9   return QUAD9  # what about TRI9?
     elseif npoints==10  return TRI10
     elseif npoints==12  
         if ndim==2 return QUAD12 end

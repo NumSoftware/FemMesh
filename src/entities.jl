@@ -22,7 +22,7 @@
 include("shape.jl")
 
 #using Shape
-export Point, Cell, hash, get_coords, get_point, get_faces, cell_metric, cell_quality
+export Point, Cell, hash, get_coords, get_point, get_faces, cell_extent, cell_quality
 export update!
 import Base.getindex
 export getindex
@@ -61,6 +61,14 @@ import Base.hash
 #hash(p::Point) = hash((p.x, p.y, p.z))
 hash(p::Point) = hash( (p.x==0.0?0.0:p.x, p.y==0.0?0.0:p.y, p.z==0.0?0.0:p.z) ) # comparisons used to avoid signed zero
 
+function hash(points::Array{Point,1}) 
+    hs = 0x000000000::UInt64
+    for p in points
+        hs += hash(p)
+    end
+    return hs
+end
+
 getcoords(p::Point) = [p.x, p.y, p.z]
 
 function get_point(points::Dict{UInt64,Point}, C::Array{Float64,1})
@@ -95,14 +103,15 @@ type Cell
     ndim   ::Integer
     quality::Float64              # quality index: surf/(reg_surf) 
     crossed::Bool                 # flag if cell crossed by linear inclusion
-    ocell  ::Union{Cell,Void}  # owner cell in the case of a face
-    extra  ::Integer
+    ocell  ::Union{Cell,Void}     # owner cell in the case of a face
+    linked_cells::Array{Cell,1}   # neighbor cells in case of joint cell
     function Cell(shape::ShapeType, points::Array{Point,1}, tag::AbstractString="", ocell=nothing)
         this = new(shape, points, tag, -1)
         this.ndim = 0
         this.quality = 0.0
         this.crossed = false
         this.ocell   = ocell
+        this.linked_cells = []
         return this
     end
 end
@@ -447,7 +456,7 @@ function norm2(J::Array{Float64,2})
 end
 
 # Returns the volume/area/length of a cell, returns zero if jacobian<=0 at any ip
-function cell_metric(c::Cell)
+function cell_extent(c::Cell)
     IP = get_ip_coords(c.shape)
     nip = size(IP,1)
     nldim = get_ndim(c.shape) # cell basic dimension 
@@ -505,12 +514,12 @@ function cell_aspect_ratio(c::Cell)
     end
 
     # cell surface
-    fmetrics = [ cell_metric(f) for f in faces ]
+    fmetrics = [ cell_extent(f) for f in faces ]
     surf = sum(fmetrics)
     ar = minimum(fmetrics)/maximum(fmetrics)
 
     # quality calculation
-    metric = cell_metric(c) # volume or area
+    metric = cell_extent(c) # volume or area
     rsurf  = regular_surface(metric, c.shape)
     return rsurf/surf
 end
@@ -526,11 +535,11 @@ function cell_quality(c::Cell)
     # cell surface
     surf = 0.0
     for f in faces
-        surf += cell_metric(f)
+        surf += cell_extent(f)
     end
 
     # quality calculation
-    metric = cell_metric(c) # volume or area
+    metric = cell_extent(c) # volume or area
     rsurf  = regular_surface(metric, c.shape)
 
     c.quality = rsurf/surf # << updates cell property!!!
@@ -539,7 +548,7 @@ end
 
 function cell_aspect_ratio(c::Cell)
     faces = get_faces(c)
-    len = [ cell_metric(f) for f in faces ]
+    len = [ cell_extent(f) for f in faces ]
     c.quality = minimum(len)/maximum(len)
     return c.quality
 end

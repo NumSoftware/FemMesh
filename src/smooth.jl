@@ -500,7 +500,7 @@ function force_bc(mesh::Mesh, E::Float64, nu::Float64, α::Float64)
         # get coordinates matrix
         np = length(c.points)
         C0 = cellcoords(c)
-        V  = cell_metric(c)
+        V  = cell_extent(c) # area or volume
 
         T = cell_orientation(c)
         factor = V^(1./ndim)
@@ -542,8 +542,16 @@ function smooth!(mesh::Mesh; verbose=true, alpha::Float64=0.3, target::Float64=0
 
     verbose && println(BOLD, CYAN, "Mesh smoothing:", DEFAULT)
 
+    # check for not allowed cells
+    for c in mesh.cells
+        if is_joint1D(c.shape) || is_joint(c.shape) || is_line(c.shape)
+            error("smooth!: joint, joint1D nor line cells are allowed for smoothing: $(get_name(shape))")
+        end
+    end
+
+    # Elastic constants
+    #nu = 0.1
     E  = 1.0
-    nu = 0.1
     nu = 0.0
 
     ndim = mesh.ndim
