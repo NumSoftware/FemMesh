@@ -475,7 +475,7 @@ function split_block(bl::Block3D, msh::Mesh)
                 end
             end
         end
-    elseif shape == HEX20
+    elseif shape == HEX20 || shape == TET10
         p_arr = Array(Point, 2*nx+1, 2*ny+1, 2*nz+1)
         for k = 1:2*nz+1
             for j = 1:2*ny+1
@@ -532,8 +532,18 @@ function split_block(bl::Block3D, msh::Mesh)
                         p_arr[i+2, j+2, k+1],
                         p_arr[i  , j+2, k+1]]
 
-                    cell = Cell(shape, conn, bl.tag)
-                    push!(msh.cells, cell)
+                    if shape == HEX20
+                        cell = Cell(shape, conn, bl.tag)
+                        push!(msh.cells, cell)
+                    end
+                    if shape == TET10
+                        push!( msh.cells, Cell(shape, [p2, p4, p1, p8], bl.tag) )
+                        push!( msh.cells, Cell(shape, [p2, p1, p5, p8], bl.tag) )
+                        push!( msh.cells, Cell(shape, [p2, p5, p6, p8], bl.tag) )
+                        push!( msh.cells, Cell(shape, [p2, p6, p7, p8], bl.tag) )
+                        push!( msh.cells, Cell(shape, [p2, p3, p4, p8], bl.tag) )
+                        push!( msh.cells, Cell(shape, [p2, p7, p3, p8], bl.tag) )
+                    end
                 end
             end
         end

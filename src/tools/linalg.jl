@@ -159,7 +159,7 @@ macro scale(expr)
         error("@scale: =, +=, -= operator expected, found $(expr.head)")
     end
 
-    Y = expr.args[1]
+    Y   = expr.args[1]
     rhs = expr.args[2]
 
     if typeof(rhs)==Expr
@@ -179,11 +179,8 @@ macro scale(expr)
 
     if β == 0.0
         return quote
-            n = length($(esc(X)))
-            @assert n==length($(esc(Y)))
-            @inbounds for i=1:n
-                $(esc(Y))[i] = $(esc(α))*$(esc(X))[i]
-            end
+            $(esc(Y))[:] = 0.0
+            BLAS.axpy!( $(esc(α))*$s, $(esc(X)), $(esc(Y)) )
         end
     else
         return :( BLAS.axpy!( $(esc(α))*$s, $(esc(X)), $(esc(Y)) ) )

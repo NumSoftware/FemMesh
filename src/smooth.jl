@@ -322,22 +322,21 @@ function normal_to_faces(faces::Array{Cell, 1})
 end
 
 
-function faces_normal(faces::Array{Cell,1})
+function faces_normal(faces::Array{Cell,1}, eps_face)
     ndim = 1 + get_ndim(faces[1].shape)
-    EPS  = 1.e-5
     
     #normals = Set{Array{Float64,1}}()
     normals = Array{Float64,1}[]
 
     for f in faces
-        C  = get_coords(f, ndim) + EPS
+        C  = get_coords(f, ndim) + eps_face
         I = ones(size(C,1))
         N = pinv(C)*I # best fit normal
 
-        if norm(C*N - I) < EPS
+        if norm(C*N - I) < eps_face
             N = N/norm(N)
             #check if the normal already exists
-            if all( [ norm(N-NN)>1e-6 for NN in normals ]) 
+            if all( [ norm(N-NN)>eps_face for NN in normals ]) 
                 push!(normals, N)
             end
         else
@@ -356,7 +355,7 @@ type sNode
 end
 
 # Mount global matrix A
-function mountA(mesh::Mesh, fixed::Bool, conds)
+function mountA(mesh::Mesh, fixed::Bool, conds, eps_face)
     # get border faces
     ndim = mesh.ndim
     border_fcs = get_surface(mesh.cells)
@@ -398,7 +397,7 @@ function mountA(mesh::Mesh, fixed::Bool, conds)
             end
         end
 
-        node.normals = faces_normal(node.faces)
+        node.normals = faces_normal(node.faces, eps_face)
         nnorm        = length(node.normals)
         if nnorm==1 || nnorm==2
             n += nnorm
@@ -538,7 +537,7 @@ function force_bc(mesh::Mesh, E::Float64, nu::Float64, α::Float64)
 end
 
 function smooth!(mesh::Mesh; verbose=true, alpha::Float64=0.3, target::Float64=0.97, fixed::Bool=false, maxit::Int64=100, epsmin::Float64=1e-3,
-    eps::Float64=1e-4, save_steps::Bool=false, filekey::AbstractString="smooth", conds=nothing)
+    eps::Float64=1e-4, eps_face=1e-5, save_steps::Bool=false, filekey::AbstractString="smooth", conds=nothing)
 
     verbose && println(BOLD, CYAN, "Mesh smoothing:", DEFAULT)
 
@@ -567,7 +566,7 @@ function smooth!(mesh::Mesh; verbose=true, alpha::Float64=0.3, target::Float64=0
     verbose && println("  hist: ", hist(Q, 0.5:0.05:1.0)[2])
 
     # Lagrange multipliers matrix
-    A   = mountA(mesh, fixed, conds) 
+    A   = mountA(mesh, fixed, conds, eps_face) 
     nbc = size(A,1)
 
     for i=1:maxit

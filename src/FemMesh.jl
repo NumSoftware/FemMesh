@@ -37,7 +37,6 @@ generate_mesh, copy, move, array, rotate, polar, extrude.
 """
 module FemMesh
 
-using Base
 using JSON
 
 # Constants

@@ -119,6 +119,18 @@ function get_neighbors(cells::Array{Cell,1})
 
 end
 
+# Return the elements patch for each node
+function get_patch(mesh::Mesh)
+    patches = [ Cell[] for i=1:length(mesh.points) ]
+    for cell in cells
+        for point in cell.points
+            push!(patches[point.id], cell)
+        end
+    end
+
+    return patches
+end
+
 # Reverse Cuthill–McKee algorithm (RCM) 
 function reorder!(mesh::Mesh; sort_degrees=true, reversed=false)
 
@@ -135,9 +147,8 @@ function reorder!(mesh::Mesh; sort_degrees=true, reversed=false)
             continue
         end
 
-        # exception for embedded cells
+        # joint1D cells
         if cell.shape in (LINK2, LINK3)
-            #sh = cell.shape==LINK2? LIN2 : LIN3
             edge = Cell(LIN2, [ cell.points[1], cell.points[end-1] ])
             hs = hash(edge)
             all_edges[hs] = edge
@@ -247,7 +258,6 @@ function update!(mesh::Mesh; verbose::Bool=false, genfacets::Bool=true, genedges
         verbose && print("  finding edges...\r")
         mesh.edges = get_edges(mesh.faces)
     end
-
 
     return nothing
 end
@@ -414,7 +424,26 @@ function save(mesh::Mesh, filename::AbstractString; verbose::Bool=true)
     end
     println(f)
 
+    # Write point data
+    println(f, "POINT_DATA ", npoints)
+
+    # Write point numbers
+    println(f, "SCALARS ", "Point-ID", " int 1")
+    println(f, "LOOKUP_TABLE default")
+    for point in mesh.points
+        @printf f "%5d" point.id
+    end
+    println(f, )
+
     println(f, "CELL_DATA ", ncells)
+
+    # Write cell numbers
+    println(f, "SCALARS ", "Cell-ID", " int 1")
+    println(f, "LOOKUP_TABLE default")
+    for cell in mesh.cells  #naelems
+        @printf f "%5d" cell.id
+    end
+    println(f, )
 
     # Write cells quality
     println(f, "SCALARS quality float 1")
