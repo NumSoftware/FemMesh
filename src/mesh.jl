@@ -229,7 +229,7 @@ end
 
 
 # Updates numbering, faces and edges in a Mesh object
-function update!(mesh::Mesh; verbose::Bool=false, genfacets::Bool=true, genedges::Bool=false)
+function update!(mesh::Mesh; verbose::Bool=false, genfacets::Bool=true, genedges::Bool=true)
 
     # Get ndim
     ndim = 2
@@ -290,7 +290,7 @@ Generates a mesh based on an array of geometry blocks:
 Mesh(blocks, [verbose=true,] [genfacets=true,] [genedges=false,] [initial_mesh=nothing]) -> mesh_object
 ```
 """
-function Mesh(items::Union{Block, Mesh, Array}...; verbose::Bool=true, genfacets::Bool=true, genedges::Bool=false)
+function Mesh(items::Union{Block, Mesh, Array}...; verbose::Bool=true, genfacets::Bool=true, genedges::Bool=false, reorder=true)
 
     # New mesh object
     mesh = Mesh()
@@ -327,8 +327,10 @@ function Mesh(items::Union{Block, Mesh, Array}...; verbose::Bool=true, genfacets
     update!(mesh, verbose=verbose, genfacets=genfacets, genedges=genedges)
 
     # Reorder nodal numbering
-    verbose && print("  reordering points...\r")
-    reorder!(mesh)
+    if reorder
+        verbose && print("  reordering points...\r")
+        reorder!(mesh)
+    end
 
     if verbose
         npoints = length(mesh.points)
@@ -431,7 +433,7 @@ function save(mesh::Mesh, filename::AbstractString; verbose::Bool=true)
     println(f, "SCALARS ", "Point-ID", " int 1")
     println(f, "LOOKUP_TABLE default")
     for point in mesh.points
-        @printf f "%5d" point.id
+        @printf f "%5d " point.id
     end
     println(f, )
 
@@ -441,7 +443,7 @@ function save(mesh::Mesh, filename::AbstractString; verbose::Bool=true)
     println(f, "SCALARS ", "Cell-ID", " int 1")
     println(f, "LOOKUP_TABLE default")
     for cell in mesh.cells  #naelems
-        @printf f "%5d" cell.id
+        @printf f "%5d " cell.id
     end
     println(f, )
 

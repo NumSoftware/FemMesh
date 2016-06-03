@@ -40,7 +40,7 @@ type BlockTruss <: Block
     tag::AbstractString
     id::Int64
 
-    function BlockTruss(coords::Array{Float64,2}, conns::Array{Int64,2}; shape=LIN2, tag="", id=-1)
+    function BlockTruss(coords, conns::Array{Int64,2}; shape=LIN2, tag="", id=-1)
         ncols = size(coords,2)
         if !(ncols in (2,3)); error("Invalid coordinates matrix for BlockTruss") end
         if ncols==2
@@ -65,7 +65,7 @@ type BlockCoords <: Block
     tag::AbstractString
     id::Int64
 
-    function BlockCoords(coords::Array{Float64,2}, conns::Array{Int64,2}; tag="", id=-1)
+    function BlockCoords(coords, conns::Array{Int64,2}; tag="", id=-1)
         ncols = size(coords,2)
         if !(ncols in (2,3)); error("Invalid coordinates matrix for BlockCoords") end
         if ncols==2
