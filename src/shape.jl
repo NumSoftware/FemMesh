@@ -77,7 +77,7 @@ SHAPE_TAG = [ LIN2  => 102, LIN3   => 103, LIN4 => 104,
 
 SHAPE_NAME = [ LIN2  => "LIN2" , LIN3   => "LIN3"  , LIN4   => "LIN4", 
                TRI3  => "TRI3" , TRI6   => "TRI6"  , TRI9   => "TRI9", TRI10 => "TRI10", 
-               QUAD4 => "QUAD4", QUAD8  => "QUAD8" , 
+               QUAD4 => "QUAD4", QUAD8  => "QUAD8" , QUAD9  => "QUAD9", QUAD12  => "QUAD12", QUAD16 => "QUAD16",
                TET4  => "TET4" , TET10  => "TET10" , HEX8   => "HEX8", HEX20 => "HEX20", 
                QUAD9 => "QUAD9", QUAD12 => "QUAD12", QUAD16 => "QUAD16", 
                LINK1 => "LINK1", LINK2  => "LINK2" , LINK3  => "LINK3" ]
@@ -209,14 +209,39 @@ coords_quad8 =
   -1.0  0.0  1.0 ]
 
 coords_hex8 = 
-[ -1.0 -1.0  0.0  1.0
-   1.0 -1.0  0.0  1.0
-   1.0  1.0  0.0  1.0
-  -1.0  1.0  0.0  1.0
+[ -1.0 -1.0 -1.0  1.0
+   1.0 -1.0 -1.0  1.0
+   1.0  1.0 -1.0  1.0
+  -1.0  1.0 -1.0  1.0
   -1.0 -1.0  1.0  1.0
    1.0 -1.0  1.0  1.0
    1.0  1.0  1.0  1.0
   -1.0  1.0  1.0  1.0 ]
+
+coords_hex20 = 
+[ -1.0 -1.0 -1.0  1.0
+   1.0 -1.0 -1.0  1.0
+   1.0  1.0 -1.0  1.0
+  -1.0  1.0 -1.0  1.0
+  -1.0 -1.0  1.0  1.0
+   1.0 -1.0  1.0  1.0
+   1.0  1.0  1.0  1.0
+  -1.0  1.0  1.0  1.0 
+ 
+   0.0 -1.0 -1.0  1.0
+   1.0  0.0 -1.0  1.0
+   0.0  1.0 -1.0  1.0
+  -0.0  0.0 -1.0  1.0
+   0.0 -1.0  1.0  1.0
+   1.0  0.0  1.0  1.0
+   0.0  1.0  1.0  1.0
+  -0.0  0.0  1.0  1.0
+
+  -1.0 -1.0  0.0  1.0
+   1.0 -1.0  0.0  1.0
+   1.0  1.0  0.0  1.0
+  -1.0  1.0  0.0  1.0
+  ]
 
 coords_tet4 = 
 [  0.0  0.0  0.0  1.0 
@@ -242,8 +267,10 @@ function get_local_coords(st::ShapeType)
     elseif st == LIN3   return coords_lin3
     elseif st == QUAD4  return coords_quad4
     elseif st == TET10  return coords_tet10
+    elseif st == HEX20  return coords_hex20
     end
-    @show st
+
+    error("get_local_coords: No local coordinates implemented for element")
     return 0
 end
 
@@ -511,6 +538,59 @@ function shape_func(::Typed{QUAD9}, R::Array{Float64,1})
     N[8] = -0.50*r*sp1*sm1*rm1
     N[9] = sp1*sm1*rp1*rm1
     return N
+end
+
+function deriv_func(::Typed{QUAD9}, R::Array{Float64,1})
+    r, s = R[1:2]
+    D = Array(Float64, 2,9)
+    rp1=1.0+r; rm1=1.0-r
+    sp1=1.0+s; sm1=1.0-s
+
+    #RP = 1. + r
+    #RM = 1. - r
+    #SP = 1. + s
+    #SM = 1. - s
+	D[1,1] = (r + r - 1.0) * s * (s - 1.0) / 4.0
+	D[1,2] = (r + r + 1.0) * s * (s - 1.0) / 4.0
+	D[1,3] = (r + r + 1.0) * s * (s + 1.0) / 4.0
+	D[1,4] = (r + r - 1.0) * s * (s + 1.0) / 4.0
+	D[1,5] = -(r + r) * s * (s - 1.0) / 2.0
+	D[1,6] = -(r + r + 1.0) * (s*s - 1.0) / 2.0
+	D[1,7] = -(r + r) * s * (s + 1.0) / 2.0
+	D[1,8] = -(r + r - 1.0) * (s*s - 1.0) / 2.0
+	D[1,9] = 2.0 * r * (s*s - 1.0)
+
+	D[2,1] = r * (r - 1.0) * (s + s - 1.0) / 4.0
+	D[2,2] = r * (r + 1.0) * (s + s - 1.0) / 4.0
+	D[2,3] = r * (r + 1.0) * (s + s + 1.0) / 4.0
+	D[2,4] = r * (r - 1.0) * (s + s + 1.0) / 4.0
+	D[2,5] = -(r*r - 1.0) * (s + s - 1.0) / 2.0
+	D[2,6] = -r * (r + 1.0) * (s + s) / 2.0
+	D[2,7] = -(r*r - 1.0) * (s + s + 1.0) / 2.0
+	D[2,8] = -r * (r - 1.0) * (s + s) / 2.0
+	D[2,9] = 2.0 * s * (r*r - 1.0)
+
+	#D[1,1] = (r + rm1) * s * sm1 / 4.0
+	#D[1,2] = (r + rp1) * s * sm1 / 4.0
+	#D[1,3] = (r + rp1) * s * sp1 / 4.0
+	#D[1,4] = (r + rm1) * s * sp1 / 4.0
+	#D[1,5] = -(r + r) * s * (sm1) / 2.0
+	#D[1,6] = -(r + rp1) * (s*s - 1.0) / 2.0
+	#D[1,7] = -(r + r) * s * (sp1) / 2.0
+	#D[1,8] = -(r + rm1) * (s*s - 1.0) / 2.0
+	#D[1,9] = 2.0 * r * (s*s - 1.0)
+#
+	#D[2,1] = r * rm1 * (s + sm1) / 4.0
+	#D[2,2] = r * rp1 * (s + sm1) / 4.0
+	#D[2,3] = r * rp1 * (s + sp1) / 4.0
+	#D[2,4] = r * rm1 * (s + sp1) / 4.0
+	#D[2,5] = -(r*r - 1.0) * (s + sm1) / 2.0
+	#D[2,6] = -r * (rp1) * (s + s) / 2.0
+	#D[2,7] = -(r*r - 1.0) * (s + sp1) / 2.0
+	#D[2,8] = -r * (rm1) * (s + s) / 2.0
+	#D[2,9] = 2.0 * s * (r*r - 1.0)
+
+    return D
 end
 
 
@@ -907,8 +987,9 @@ IP_FEM = Dict(
     TRI10   => Dict( 0 => TRI_IP6,  3 => TRI_IP3,  6 => TRI_IP6                                   ),
     LINK2   => Dict( 0 => LIN_IP2,  2 => LIN_IP2,  3 => LIN_IP3,   4 => LIN_IP4                   ),
     LINK3   => Dict( 0 => LIN_IP3,  2 => LIN_IP2,  3 => LIN_IP3,   4 => LIN_IP4                   ),
-    QUAD4   => Dict( 0 => QUAD_IP2, 4 => QUAD_IP2, 9 => QUAD_IP3, 16 => QUAD_IP4                  ),
+    QUAD4   => Dict( 0 => QUAD_IP2, 1 => QUAD_IP1, 4 => QUAD_IP2, 9 => QUAD_IP3, 16 => QUAD_IP4                  ),
     QUAD8   => Dict( 0 => QUAD_IP3, 4 => QUAD_IP2, 9 => QUAD_IP3, 16 => QUAD_IP4                  ),
+    QUAD9   => Dict( 0 => QUAD_IP3, 4 => QUAD_IP2, 9 => QUAD_IP3, 16 => QUAD_IP4                  ),
     QUAD12  => Dict( 0 => QUAD_IP4, 4 => QUAD_IP2, 9 => QUAD_IP3, 16 => QUAD_IP4                  ),
     QUAD16  => Dict( 0 => QUAD_IP4, 4 => QUAD_IP2, 9 => QUAD_IP3, 16 => QUAD_IP4                  ),
     TET4    => Dict( 0 => TET_IP4,  1 => TET_IP1,  4 => TET_IP4,   5 => TET_IP5,  11 => TET_IP11  ),
@@ -968,6 +1049,7 @@ function get_ndim(shape::ShapeType)
     if shape == TRI10 ; return 2 end
     if shape == QUAD4 ; return 2 end
     if shape == QUAD8 ; return 2 end
+    if shape == QUAD9 ; return 2 end
     if shape == QUAD12; return 2 end
     if shape == QUAD16; return 2 end
     if shape == TET4  ; return 3 end
@@ -992,6 +1074,7 @@ function get_nnodes(shape::ShapeType)
     if shape == TRI10 ; return 10 end
     if shape == QUAD4 ; return  4 end
     if shape == QUAD8 ; return  8 end
+    if shape == QUAD9 ; return  9 end
     if shape == QUAD12; return 12 end
     if shape == QUAD16; return 16 end
     if shape == TET4  ; return  4 end

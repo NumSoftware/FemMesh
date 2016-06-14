@@ -144,6 +144,12 @@ function reorder!(mesh::Mesh; sort_degrees=true, reversed=false)
                 hs = hash(edge)
                 all_edges[hs] = edge
             end
+            #check for lagrangian elements
+            if cell.shape==QUAD9
+                edge = Cell(POLYV, [ cell.points[1], cell.points[end] ] )
+                hs   = hash(edge)
+                all_edges[hs] = edge
+            end
             continue
         end
 
@@ -257,6 +263,11 @@ function update!(mesh::Mesh; verbose::Bool=false, genfacets::Bool=true, genedges
     if genedges && ndim==3
         verbose && print("  finding edges...\r")
         mesh.edges = get_edges(mesh.faces)
+    end
+
+    # Quality
+    if length(mesh.cells)<=1000
+        quality!(mesh)
     end
 
     return nothing

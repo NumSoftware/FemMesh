@@ -419,7 +419,7 @@ end
 function split_block(bl::Block3D, msh::Mesh)
     nx, ny, nz = bl.nx, bl.ny, bl.nz
     shape  = bl.shape 
-    shape == TET10 && error("block: Cannot generate mesh with TET10 cells jet")
+    #shape == TET10 && error("block: Cannot generate mesh with TET10 cells jet")
     bshape = size(bl.coords,1)==8? HEX8:HEX20 # block shape (not cell shape)
 
     if shape==HEX8 || shape==TET4
@@ -480,9 +480,11 @@ function split_block(bl::Block3D, msh::Mesh)
         for k = 1:2*nz+1
             for j = 1:2*ny+1
                 for i = 1:2*nx+1
-                    if iseven(i) && iseven(j) continue end
-                    if iseven(j) && iseven(k) continue end
-                    if iseven(k) && iseven(i) continue end
+                    if shape==HEX20
+                        if iseven(i) && iseven(j) continue end
+                        if iseven(j) && iseven(k) continue end
+                        if iseven(k) && iseven(i) continue end
+                    end
 
                     r = (1.0/nx)*(i-1) - 1.0
                     s = (1.0/ny)*(j-1) - 1.0
@@ -537,12 +539,44 @@ function split_block(bl::Block3D, msh::Mesh)
                         push!(msh.cells, cell)
                     end
                     if shape == TET10
-                        push!( msh.cells, Cell(shape, [p2, p4, p1, p8], bl.tag) )
-                        push!( msh.cells, Cell(shape, [p2, p1, p5, p8], bl.tag) )
-                        push!( msh.cells, Cell(shape, [p2, p5, p6, p8], bl.tag) )
-                        push!( msh.cells, Cell(shape, [p2, p6, p7, p8], bl.tag) )
-                        push!( msh.cells, Cell(shape, [p2, p3, p4, p8], bl.tag) )
-                        push!( msh.cells, Cell(shape, [p2, p7, p3, p8], bl.tag) )
+
+                        p1  = p_arr[i  , j  , k  ]
+                        p2  = p_arr[i+2, j  , k  ]
+                        p3  = p_arr[i+2, j+2, k  ]
+                        p4  = p_arr[i  , j+2, k  ]
+                        p5  = p_arr[i  , j  , k+2]
+                        p6  = p_arr[i+2, j  , k+2]
+                        p7  = p_arr[i+2, j+2, k+2]
+                        p8  = p_arr[i  , j+2, k+2]
+
+                        p9  = p_arr[i+1, j  , k  ]
+                        p10 = p_arr[i+2, j+1, k  ]
+                        p11 = p_arr[i+1, j+2, k  ]
+                        p12 = p_arr[i  , j+1, k  ]
+                        p13 = p_arr[i+1, j  , k+2]
+                        p14 = p_arr[i+2, j+1, k+2]
+                        p15 = p_arr[i+1, j+2, k+2]
+                        p16 = p_arr[i  , j+1, k+2]
+
+                        p17 = p_arr[i  , j  , k+1]
+                        p18 = p_arr[i+2, j  , k+1]
+                        p19 = p_arr[i+2, j+2, k+1]
+                        p20 = p_arr[i  , j+2, k+1]
+
+                        p21 = p_arr[i+1, j+1, k  ]
+                        p22 = p_arr[i+1, j+1, k+2]
+                        p23 = p_arr[i+1, j  , k+1]
+                        p24 = p_arr[i+2, j+1, k+1]
+                        p25 = p_arr[i+1, j+2, k+1]
+                        p26 = p_arr[i  , j+1, k+1]
+                        p27 = p_arr[i+1, j+1, k+1]
+
+                        push!( msh.cells, Cell(shape, [p2, p4, p1, p8, p21, p12, p9, p27, p20, p26], bl.tag) )
+                        push!( msh.cells, Cell(shape, [p2, p1, p5, p8, p9, p17, p23, p27, p26, p16], bl.tag) )
+                        push!( msh.cells, Cell(shape, [p2, p5, p6, p8, p23, p13, p18, p27, p16, p22], bl.tag) )
+                        push!( msh.cells, Cell(shape, [p2, p6, p7, p8, p18, p14, p24, p27, p22, p15], bl.tag) )
+                        push!( msh.cells, Cell(shape, [p2, p3, p4, p8, p10, p11, p21, p27, p25, p20], bl.tag) )
+                        push!( msh.cells, Cell(shape, [p2, p7, p3, p8, p24, p19, p10, p27, p15, p25], bl.tag) )
                     end
                 end
             end

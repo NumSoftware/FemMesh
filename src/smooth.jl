@@ -61,8 +61,16 @@ function basic_coords(shape::ShapeType) #check
                  a/2.  √3./2.*a          0. ;
                  a/2.  √3./6.*a  1./3.*√6*a ]
     end
-    if shape == QUAD8 ; 
+    if shape == QUAD8
         return [ 0. 0; 1 0; 1 1 ; 0 1; 0.5 0; 1 0.5; 0.5 1; 0 0.5 ]
+    end
+    if shape == QUAD9
+        return [ 0. 0; 1 0; 1 1 ; 0 1; 0.5 0; 1 0.5; 0.5 1; 0 0.5; 0.5 0.5 ]
+    end
+    if shape == QUAD12
+        return [ 0. 0; 1 0; 1 1 ; 0 1; 
+        1/3 0.0; 1.0 1/3; 2/3 1.0; 0.0 2/3;
+        2/3 0.0; 1.0 2/3; 1/3 1.0; 0.0 1/3 ]
     end
     if shape == HEX8  
         return [ 0. 0. 0.; 1. 0. 0.; 1. 1. 0.; 0. 1. 0.; 0. 0. 1.; 1. 0. 1.; 1. 1. 1.; 0. 1. 1. ]
@@ -98,7 +106,7 @@ end
 function cell_orientation(cell::Cell)
     shape = cell.shape
 
-    if shape in [ TRI3, TRI6, TRI9, TRI10, QUAD4, QUAD8, QUAD12, QUAD16 ] 
+    if shape in [ TRI3, TRI6, TRI9, TRI10, QUAD4, QUAD8, QUAD9, QUAD12, QUAD16 ] 
         p1 = cell.points[1]
         p2 = cell.points[2]
 
@@ -130,6 +138,7 @@ function cell_orientation(cell::Cell)
         return [T1 T2 T3]
 
     end
+    error("cell_orientation: Not implemented for shape ", cell.shape)
 end
 
 

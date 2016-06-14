@@ -95,20 +95,21 @@ function rotate(bl::Block; base=[0.,0,0], axis=[0.,0,1], angle=90.0 )
     axis = axis/norm(axis)
     a, b, c = axis
     d = sqrt(b^2+c^2)
-    d==0.0 && ( d=1.0 )
 
     # unit vector for rotation
     l = cos(angle*pi/180)
     m = sin(angle*pi/180)
 
     # Rotation matrices
-    Rx  = [  1.    0.    0.
-             0.   c/d  -b/d 
-             0.   b/d   c/d ]
+    if d != 0.0
+        Rx  = [  1.    0.    0.
+                 0.   c/d  -b/d 
+                 0.   b/d   c/d ]
 
-    Rxi = [  1.    0.    0.
-             0.   c/d   b/d 
-             0.  -b/d   c/d ]
+        Rxi = [  1.    0.    0.
+                 0.   c/d   b/d 
+                 0.  -b/d   c/d ]
+    end
 
     Ry  = [   d    0.  -a
              0.    1.  0.
@@ -123,7 +124,11 @@ function rotate(bl::Block; base=[0.,0,0], axis=[0.,0,1], angle=90.0 )
              0.   0.   1. ]
 
     # all rotations matrix
-    R = Rxi*Ryi*Rz*Ry*Rx
+    if d != 0.0
+        R = Rxi*Ryi*Rz*Ry*Rx
+    else
+        R = Ryi*Rz*Ry
+    end
 
     # equation: p2 = base + R*(p-base)
     bl.coords = ( base .+ R*(bl.coords' .- base) )'

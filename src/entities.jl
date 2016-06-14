@@ -370,7 +370,9 @@ FACETS_IDXS = [
     TRI9   => ( (1, 2, 4, 7),             (2, 3, 5, 8),              (3, 1, 6, 9)                                                                                            ),
     QUAD4  => ( (1, 2),                   (2, 3),                    (3, 4),                   (4, 1)                                                                        ),
     QUAD8  => ( (1, 2, 5),                (2, 3, 6),                 (3, 4, 7),                (4, 1, 8)                                                                     ),
-    QUAD16 => ( (1, 2, 5),                (2, 3, 6),                 (3, 4, 7),                (4, 1, 8)                                                                     ),
+    QUAD9  => ( (1, 2, 5),                (2, 3, 6),                 (3, 4, 7),                (4, 1, 8)                                                                     ),
+    QUAD12 => ( (1, 2, 5, 9),             (2, 3, 6, 10),             (3, 4, 7, 11),            (4, 1, 8, 12)                                                                 ),
+    QUAD16 => ( (1, 2, 5, 9),             (2, 3, 6, 10),             (3, 4, 7, 11),            (4, 1, 8, 12)                                                                 ),
     TET4   => ( (1, 4, 3),                (1, 2, 4),                 (1, 3, 2),                (2, 3, 4)                                                                     ),
     TET10  => ( (1, 4, 3, 8, 10, 7),      (1, 2, 4, 5, 9, 8),        (1, 3, 2, 7, 6, 5),       (2, 3, 4, 6, 10, 9)                                                           ),
     HEX8   => ( (1, 5, 8, 4),             (2, 3, 7, 6),              (1, 2, 6, 5),             (3, 4, 8, 7),             (1, 4, 3, 2),              (5, 6, 7, 8)             ),
@@ -393,6 +395,8 @@ FACETS_SHAPE = [
     TRI9   => LIN4 ,
     QUAD4  => LIN2 ,
     QUAD8  => LIN3 ,
+    QUAD9  => LIN3 ,
+    QUAD12 => LIN4 ,
     QUAD16 => LIN4 ,
     TET4   => TRI3 ,
     TET10  => TRI6 ,
@@ -404,7 +408,12 @@ FACETS_SHAPE = [
 # gets all facets of a cell
 function get_faces(cell::Cell)
     faces  = Array(Cell,0)
-    if !haskey(FACETS_IDXS, cell.shape) return faces end
+    if !haskey(FACETS_IDXS, cell.shape) 
+        if is_solid(cell.shape)
+            error("get_faces: Facets for shape ($(cell.shape)) not implemented")
+        end
+        return faces 
+    end
 
     f_idxs = FACETS_IDXS[cell.shape]
 
@@ -486,7 +495,7 @@ function regular_surface(metric::Float64, shape::ShapeType)
         a = 2.*√( A/√3.)
         return 3*a
     end
-    if shape in [ QUAD4, QUAD8, QUAD12, QUAD16 ] 
+    if shape in [ QUAD4, QUAD8, QUAD9, QUAD12, QUAD16 ] 
         A = metric
         a = √A
         return 4*a
@@ -543,7 +552,7 @@ function cell_quality(c::Cell)
     rsurf  = regular_surface(metric, c.shape)
 
     c.quality = rsurf/surf # << updates cell property!!!
-    return c.quality
+    return min(c.quality, 1.0)
 end
 
 function cell_aspect_ratio(c::Cell)
