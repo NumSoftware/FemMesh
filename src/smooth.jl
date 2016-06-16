@@ -553,7 +553,7 @@ function smooth!(mesh::Mesh; verbose=true, alpha::Float64=0.3, target::Float64=0
     # check for not allowed cells
     for c in mesh.cells
         if is_joint1D(c.shape) || is_joint(c.shape) || is_line(c.shape)
-            error("smooth!: joint, joint1D nor line cells are allowed for smoothing: $(get_name(shape))")
+            error("smooth!: joint, joint1D nor line cells are allowed for smoothing: $(get_name(c.shape))")
         end
     end
 
