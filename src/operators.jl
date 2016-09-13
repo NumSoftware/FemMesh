@@ -66,6 +66,7 @@ end
 `array(block, [n=2,] [x=0.0,] [y=0.0,] [z=0.0])` 
 
 Creates `n-1` copies of a `block` separated by distances `x`, `y` and/or `z` along respective axes.
+Returns n objects.
 """
 function array(bl::Block; n=2, x=0.0, y=0.0, z=0.0)
     blocks = [ bl ]

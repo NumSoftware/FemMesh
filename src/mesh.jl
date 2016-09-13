@@ -529,9 +529,9 @@ function load_mesh_vtk(filename)
 
     # read points
     for i=1:npoints
-        x = parse(data[idx])
-        y = parse(data[idx+1])
-        z = parse(data[idx+2])
+        x = parse(Float64, data[idx])
+        y = parse(Float64, data[idx+1])
+        z = parse(Float64, data[idx+2])
         point = Point(x,y,z)
         point.id = i
         push!(mesh.points, point)
@@ -866,6 +866,7 @@ include("filters.jl")
 include("extrude.jl") 
 include("smooth.jl") 
 include("split.jl") 
+include("draw.jl") 
 
 
 # TESTING

@@ -22,14 +22,14 @@
 include("quadrature.jl")
 
 export get_shape_tag, get_vtk_type, get_shape_from_vtk, get_ndim, get_name, get_basic_shape
-export LIN2, LIN3, TRI3, TRI6, QUAD4, QUAD8, TET4, TET10, HEX8, HEX20 
+export LIN2, LIN3, TRI3, TRI6, QUAD4, QUAD8, TET4, TET10, HEX8, HEX20, WED6, WED15
 export LINK1, LINK2, LINK3, LIN4, TRI9, TRI10, QUAD9, QUAD12, QUAD16
 export ShapeType
 export shape_func, deriv_func, local_coords
 export get_ip_coords
 export is_solid, is_line, is_joint, is_joint1D, is_inside
 export inverse_map, extrapolator
-export coords_tri6, coords_tri9, coords_tri10, coords_quad4, coords_quad8 #...
+export coords_tri6, coords_tri9, coords_tri10, coords_quad4, coords_quad8, coords_wed6, coords_wed15 #...
 
 # Shapes compatible with VTK
 const POLYV = 2
@@ -43,6 +43,7 @@ const TET4  = 10
 const TET10 = 24
 const HEX8  = 12
 const HEX20 = 25
+const WED6  = 13
 
 # Shapes represented as polyvertex
 const LIN4   = 31
@@ -51,6 +52,7 @@ const TRI10  = 34
 const QUAD9  = 37
 const QUAD12 = 38
 const QUAD16 = 39
+const WED15  = 41
 
 # Embedded links
 const LINK1  = 51
@@ -79,6 +81,7 @@ SHAPE_NAME = [ LIN2  => "LIN2" , LIN3   => "LIN3"  , LIN4   => "LIN4",
                TRI3  => "TRI3" , TRI6   => "TRI6"  , TRI9   => "TRI9", TRI10 => "TRI10", 
                QUAD4 => "QUAD4", QUAD8  => "QUAD8" , QUAD9  => "QUAD9", QUAD12  => "QUAD12", QUAD16 => "QUAD16",
                TET4  => "TET4" , TET10  => "TET10" , HEX8   => "HEX8", HEX20 => "HEX20", 
+               WED6  => "WED6" , WED15  => "WED15" , 
                QUAD9 => "QUAD9", QUAD12 => "QUAD12", QUAD16 => "QUAD16", 
                LINK1 => "LINK1", LINK2  => "LINK2" , LINK3  => "LINK3" ]
 
@@ -98,6 +101,7 @@ function get_basic_shape(shape::ShapeType)
     if shape in [ QUAD4, QUAD8, QUAD12, QUAD16 ] return QUAD4 end
     if shape in [ TET4, TET10 ] return TET4 end
     if shape in [ HEX8, HEX20 ] return HEX8 end
+    if shape in [ WED6, WED15] return WED8 end
 
     if shape > 100 return shape-100 end # for joint shapes
 
@@ -131,6 +135,8 @@ function get_shape_from_vtk(vtk_type::Int64, npoints::Int64, ndim::Int64)
     elseif npoints==12  
         if ndim==2 return QUAD12 end
         if ndim==3 return JTRI6  end
+    elseif npoints==15  
+        if ndim==3 return WED15  end
     elseif npoints==16
         if ndim==2 return QUAD16 end
         if ndim==3 return JQUAD8 end
@@ -262,12 +268,40 @@ coords_tet10 =
    0.5  0.0  0.5  1.0 
    0.0  0.5  0.5  1.0 ]
 
+coords_wed6 = 
+[ 0.0  0.0 -1.0  1.0
+  1.0  0.0 -1.0  1.0
+  0.0  1.0 -1.0  1.0
+  0.0  0.0  1.0  1.0
+  1.0  0.0  1.0  1.0
+  0.0  1.0  1.0  1.0 ]
+
+coords_wed15 = 
+[ 0.0  0.0 -1.0  1.0
+  1.0  0.0 -1.0  1.0
+  0.0  1.0 -1.0  1.0
+  0.0  0.0  1.0  1.0
+  1.0  0.0  1.0  1.0
+  0.0  1.0  1.0  1.0
+
+  0.5  0.0 -1.0  1.0
+  0.5  0.5 -1.0  1.0
+  0.0  0.5 -1.0  1.0
+  0.5  0.0  1.0  1.0
+  0.5  0.5  1.0  1.0
+  0.0  0.5  1.0  1.0
+  0.0  0.0  0.0  1.0
+  1.0  0.0  0.0  1.0
+  0.0  1.0  0.0  1.0 ]
+
 function get_local_coords(st::ShapeType)
     if     st == LIN2   return coords_lin2
     elseif st == LIN3   return coords_lin3
     elseif st == QUAD4  return coords_quad4
     elseif st == TET10  return coords_tet10
     elseif st == HEX20  return coords_hex20
+    elseif st == WED6   return coords_wed6
+    elseif st == WED15  return coords_wed15
     end
 
     error("get_local_coords: No local coordinates implemented for element")
@@ -976,7 +1010,112 @@ function deriv_func(::Typed{TET10}, R::Array{Float64,1})
     return D
 end
 
+function shape_func(::Typed{WED6}, R::Array{Float64,1})
+    r, s, t = R[1:3]
+    N = Array(Float64,6)
+    N[1] = 0.5*(1.0-r-s-t+r*t+s*t)
+    N[2] = 0.5*(r-r*t)
+    N[3] = 0.5*(s-s*t)
+    N[4] = 0.5*(1.0-r-s+t-r*t-s*t)
+    N[5] = 0.5*(r+r*t)
+    N[6] = 0.5*(s+s*t)
+    return N
+end
 
+function deriv_func(::Typed{WED6}, R::Array{Float64,1})
+    r, s, t = R
+    D = Array(Float64, 3, 6)
+    D[1,1] = 0.5*(-1.0+t);  D[2,1] = 0.5*(-1.0+t);  D[3,1] = 0.5*(-1.0+r+s)
+    D[1,2] = 0.5*(1.0-t) ;  D[2,2] = 0.0         ;  D[3,2] = 0.5*(-r)
+    D[1,3] = 0.0         ;  D[2,3] = 0.5*(1.0-t) ;  D[3,3] = 0.5*(-s)
+    D[1,4] = 0.5*(-1.0-t);  D[2,4] = 0.5*(-1.0-t);  D[3,4] = 0.5*(1.0-r-s)
+    D[1,5] = 0.5*(1.0+t) ;  D[2,5] = 0.0         ;  D[3,5] = 0.5*(r)
+    D[1,6] = 0.0         ;  D[2,6] = 0.5*(1.0+t) ;  D[3,6] = 0.5*(s)
+
+    return D
+end
+
+function shape_func(::Typed{WED15}, R::Array{Float64,1})
+    r, s, t = R[1:3]
+    N = Array(Float64,15)
+    N[1]  = 0.5*(-2.0*(r^2.0)*t-4.0*r*s*t-r*(t^2+0)-2.0*(s^2.0)*t-s*(t^2.0)+2.0*(r^2.0)+4.0*r*s+3.0*r*t+2.0*(s^2.0)+3.0*s*t+(t^2.0)-2.0*r-2.0*s-t) 
+    N[2]  = 0.5*(-2.0*(r^2.0)*t+r*(t^2.0)+2.0*(r^2.0)+r*t-2*r)
+    N[3]  = 0.5*(-2.0*(s^2.0)*t+s*(t^2.0)+2.0*(s^2.0)+s*t-2.0*s)
+    N[4]  = 0.5*(2.0*(r^2.0)*t+4.0*r*s*t-r*(t^2.0)+2.0*(s^2.0)*t-s*(t^2.0)+2.0*(r^2.0)+4.0*r*s-3.0*r*t+2.0*(s^2.0)-3.0*s*t+(t^2.0)-2.0*r-2.0*s+t)
+    N[5]  = 0.5*(2.0*(r^2.0)*t+r*(t^2.0)+2.0*(r^2.0)-r*t-2.0*r)
+    N[6]  = 0.5*(2.0*(s^2.0)*t+s*(t^2.0)+2.0*(s^2.0)-s*t-2.0*s)
+    N[7]  = (2.0*(r^2.0)*t+2*r*s*t-2.0*(r^2.0)-2.0*r*s-2.0*r*t+2*r)
+    N[8]  = (-2.0*r*s*t+2.0*r*s)
+    N[9]  = (2.0*r*s*t+2.0*(s^2.0)*t-2.0*r*s-2.0*(s^2.0)-2.0*s*t+2.0*s)
+    N[10] = (-2.0*(r^2.0)*t-2.0*r*s*t-2.0*(r^2.0)-2.0*r*s+2.0*r*t+2.0*r)
+    N[11] = (2.0*r*s*t+2.0*r*s)
+    N[12] = (-2.0*r*s*t-2.0*(s^2.0)*t-2.0*r*s-2*(s^2.0)+2.0*s*t+2.0*s)
+    N[13] = (r*(t^2.0)+s*(t^2.0)-(t^2.0)-r-s+1.0)
+    N[14] = (-r*(t^2.0)+r)
+    N[15] = (-s*(t^2.0)+s)
+    return N
+end
+
+function deriv_func(::Typed{WED15}, R::Array{Float64,1})
+    r, s, t = R
+    D = Array(Float64, 3, 15)
+    # Derivatives with respect to r
+    D[1, 1] = 0.5*(-4.0*r*t-4.0*s*t-(t^2.0)+4.0*r+4.0*s+3.0*t-2.0)
+    D[1, 2] = 0.5*(-4.0*r*t+(t^2.0)+4.0*r+t-2)
+    D[1, 3] = 0.0
+    D[1, 4] = 0.5*(4.0*r*t+4.0*s*t-(t^2.0)+4.0*r+4.0*s-3.0*t-2.0)
+    D[1, 5] = 0.5*(4.0*r*t+(t^2.0)+4.0*r-t-2.0)
+    D[1, 6] = 0.0 
+    D[1, 7] = (4.0*r*t+2.0*s*t-4.0*r-2.0*s-2.0*t+2.0) 
+    D[1, 8] = (-2.0*s*t+2.0*s)
+    D[1, 9] = (2.0*s*t-2.0*s)
+    D[1,10] = (-4.0*r*t-2.0*s*t-4.0*r-2.0*s+2.0*t+2.0)
+    D[1,11] = (2.0*s*t+2.0*s)
+    D[1,12] = (-2.0*s*t-2.0*s)
+    D[1,13] = ((t^2.0)-1.0)
+    D[1,14] = ((-t^2.0)+1.0)
+    D[1,15] = 0.0
+   
+    # Derivatives with respect to s
+    D[2, 1] = 0.5*(-4.0*r*t-4.0*s*t-(t^2.0)+4.0*r+4.0*s+3.0*t-2)
+    D[2, 2] = 0.0
+    D[2, 3] = 0.5*(-4.0*s*t+(t^2.0)+4*s+t-2.0)
+    D[2, 4] = 0.5*(4.0*r*t+4.0*s*t-(t^2.0)+4.0*r+4.0*s-3.0*t-2.0)
+    D[2, 5] = 0.0
+    D[2, 6] = 0.5*(4.0*s*t+(t^2.0)+4.0*s-t-2.0)
+    D[2, 7] = (2.0*r*t-2.0*r)
+    D[2, 8] = (-2.0*r*t+2.0*r)
+    D[2, 9] = (2.0*r*t+4.0*s*t-2.0*r-4.0*s-2.0*t+2.0)
+    D[2,10] = (-2.0*r*t-2.0*r)
+    D[2,11] = (2.0*r*t+2.0*r)
+    D[2,12] = (-2.0*r*t-4.0*s*t-2.0*r-4.0*s+2.0*t+2.0)
+    D[2,13] = ((t^2.0)-1.0)
+    D[2,14] = 0.0
+    D[2,15] = ((-t^2.0)+1.0) 
+
+
+    # Derivatives with respect to t
+    D[3, 1] = 0.5*(-2.0*(r^2.0)-4.0*r*s-2.0*r*t-2.0*(s^2.0)-2.0*s*t+3.0*r+3.0*s+2.0*t-1.0)
+    D[3, 2] = 0.5*(-2.0*(r^2.0)+2.0*r*t+r)
+    D[3, 3] = 0.5*(-2.0*(s^2.0)+2*s*t+s)
+    D[3, 4] = 0.5*(2.0*(r^2.0)+4.0*r*s-2.0*r*t+2.0*(s^2.0)-2.0*s*t-3.0*r-3.0*s+2.0*t+1)
+    D[3, 5] = 0.5*(2.0*(r^2)+2.0*r*t-r)
+    D[3, 6] = 0.5*(2*(s^2.0)+2*s*t-s)
+    D[3, 7] = (2.0*(r^2.0)+2.0*r*s-2*r)
+    D[3, 8] = (-2.0*r*s)
+    D[3, 9] = (2.0*r*s+2.0*(s^2.0)-2.0*s)
+    D[3,10] = (2.0*r-2.0*(r^2.0)-2.0*r*s)
+    D[3,11] = (2.0*r*s)
+    D[3,12] = (2.0*s-2.0*s*r-2.0*(s^2.0))
+    D[3,13] = (-2.0*t+2.0*t*r+2.0*t*s)
+    D[3,14] = (-2.0*r*t)
+    D[3,15] = (-2.0*s*t)
+
+    return D
+end
+
+
+# Number of integration points per element
 IP_FEM = Dict(
     LIN2    => Dict( 0 => LIN_IP2,  2 => LIN_IP2,  3 => LIN_IP3,   4 => LIN_IP4                   ),
     LIN3    => Dict( 0 => LIN_IP2,  2 => LIN_IP2,  3 => LIN_IP3,   4 => LIN_IP4                   ),
@@ -987,7 +1126,7 @@ IP_FEM = Dict(
     TRI10   => Dict( 0 => TRI_IP6,  3 => TRI_IP3,  6 => TRI_IP6                                   ),
     LINK2   => Dict( 0 => LIN_IP2,  2 => LIN_IP2,  3 => LIN_IP3,   4 => LIN_IP4                   ),
     LINK3   => Dict( 0 => LIN_IP3,  2 => LIN_IP2,  3 => LIN_IP3,   4 => LIN_IP4                   ),
-    QUAD4   => Dict( 0 => QUAD_IP2, 1 => QUAD_IP1, 4 => QUAD_IP2, 9 => QUAD_IP3, 16 => QUAD_IP4                  ),
+    QUAD4   => Dict( 0 => QUAD_IP2, 1 => QUAD_IP1, 4 => QUAD_IP2, 9 => QUAD_IP3, 16 => QUAD_IP4   ),
     QUAD8   => Dict( 0 => QUAD_IP3, 4 => QUAD_IP2, 9 => QUAD_IP3, 16 => QUAD_IP4                  ),
     QUAD9   => Dict( 0 => QUAD_IP3, 4 => QUAD_IP2, 9 => QUAD_IP3, 16 => QUAD_IP4                  ),
     QUAD12  => Dict( 0 => QUAD_IP4, 4 => QUAD_IP2, 9 => QUAD_IP3, 16 => QUAD_IP4                  ),
@@ -996,6 +1135,8 @@ IP_FEM = Dict(
     TET10   => Dict( 0 => TET_IP4,  1 => TET_IP1,  4 => TET_IP4,   5 => TET_IP5,  11 => TET_IP11  ),
     HEX8    => Dict( 0 => HEX_IP2,  8 => HEX_IP2, 27 => HEX_IP3                                   ),
     HEX20   => Dict( 0 => HEX_IP3,  8 => HEX_IP2, 27 => HEX_IP3                                   ),
+    WED6    => Dict( 0 => WED_IP9,  2 => WED_IP2,  9 => WED_IP9,  18 => WED_IP18                  ),
+    WED15   => Dict( 0 => WED_IP9,  2 => WED_IP2,  9 => WED_IP9,  18 => WED_IP18                  ),
 
     JLIN2   => Dict( 0 => LIN_IP2,  2 => LIN_IP2,  3 => LIN_IP3,   4 => LIN_IP4                   ),
     JLIN3   => Dict( 0 => LIN_IP2,  2 => LIN_IP2,  3 => LIN_IP3,   4 => LIN_IP4                   ),
@@ -1029,6 +1170,7 @@ function bdistance(shape::ShapeType, R::Array{Float64,1})
     if shape in [ QUAD4, QUAD8, QUAD12, QUAD16 ]  return min(1.0 - abs(r), 1.0 - abs(s)) end
     if shape in [ TET4, TET10 ] return min(r, s, t, 1.0-r-s-t) end
     if shape in [ HEX8, HEX20 ] return min(1.0 - abs(r), 1.0 - abs(s), 1.0 - abs(t)) end
+    if shape in [ WED6, WED15 ] return min(r, s, 1.0-r-s, 1.0-abs(t)) end
     #if shape in [ QUAD4, QUAD8, QUAD12, QUAD16 ]  return min(1.0 - r*r, 1.0 - s*s) end
     #if shape in [ HEX8, HEX20 ] return min(1.0 - r*r, 1.0 - s*s, 1.0 - t*t) end
     error("No boundary distance for shape ($shape)")
@@ -1056,6 +1198,8 @@ function get_ndim(shape::ShapeType)
     if shape == TET10 ; return 3 end
     if shape == HEX8  ; return 3 end
     if shape == HEX20 ; return 3 end
+    if shape == WED6  ; return 3 end
+    if shape == WED15 ; return 3 end
     error("Unknown shape ($shape)")
 end
 
@@ -1081,10 +1225,11 @@ function get_nnodes(shape::ShapeType)
     if shape == TET10 ; return 10 end
     if shape == HEX8  ; return  8 end
     if shape == HEX20 ; return 20 end
+    if shape == WED6  ; return  6 end
+    if shape == WED15 ; return 15 end
     if shape>100;       return get_nnodes(shape-100)*2 end
     error("Unknown shape ($shape)")
 end
-
 
 function is_line(shape::ShapeType)
     shape in (LIN2, LIN3, LIN4) 
