@@ -18,7 +18,8 @@
 #    along with FemMesh.  If not, see <http://www.gnu.org/licenses/>.        #
 ##############################################################################
 
-VERSION >= v"0.4.0-dev+6521" && __precompile__()
+#VERSION >= v"0.4.0-dev+6521" && __precompile__()
+__precompile__()
 
 """
 **FemMesh.jl**
