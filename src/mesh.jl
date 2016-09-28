@@ -507,7 +507,7 @@ function load_mesh_vtk(filename)
     mesh = Mesh()
 
     # read nodal information
-    alltext = readall(filename)
+    alltext = readstring(filename)
     data    = split(alltext)
 
     # read header
