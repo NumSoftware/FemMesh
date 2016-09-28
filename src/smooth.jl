@@ -97,16 +97,21 @@ function basic_coords(shape::ShapeType) #check
                  1.0 1.0 0.5;
                  0.0 1.0 0.5 ]
     end
-
+    if shape == WED6
+        a = (4./√3.)^(1./3.)
+        return [ 0.  0.  0.; a  0.  0.; a/2.  a/2*√3  0. ;
+                 0.  0.   a; a  0.   a; a/2.  a/2*√3   a ]
+    end
 
     error("No basic coordinates for shape $shape")
 end
 
 # Returns a rotation matrix for a cell based in their first points
 function cell_orientation(cell::Cell)
-    shape = cell.shape
+    shape   = cell.shape
+    geo_dim = get_ndim(shape)
 
-    if shape in [ TRI3, TRI6, TRI9, TRI10, QUAD4, QUAD8, QUAD9, QUAD12, QUAD16 ] 
+    if geo_dim == 2
         p1 = cell.points[1]
         p2 = cell.points[2]
 
@@ -117,13 +122,13 @@ function cell_orientation(cell::Cell)
         return [ l1  -m1; m1  l1 ]
     end
 
-    if shape in [ TET4, TET10, HEX8, HEX20 ] 
+    if geo_dim == 3
         p1 = cell.points[1]
         p2 = cell.points[2]
-        if shape in [ TET4, TET10 ]
-            p3 = cell.points[3]
-        else
+        if shape == HEX8 || shape == HEX20
             p3 = cell.points[4]
+        else
+            p3 = cell.points[3]
         end
 
         T1 = [ p2.x - p1.x, p2.y - p1.y, p2.z - p1.z ]

@@ -85,7 +85,7 @@ function draw_cell3d(c::Cell)
 end
 
 function draw(mesh::Mesh, filename=""; axis=true, points=false, pointlabels=false, celllabels=false, quality=false)
-    @windows_only eval(Expr(:using, :PyPlot))
+    if is_windows() eval(Expr(:using, :PyPlot)) end
 
     @pyimport matplotlib.pyplot as plt
     @pyimport matplotlib.path as path

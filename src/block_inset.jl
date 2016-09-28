@@ -52,7 +52,7 @@ type BlockInset <: Block
             if !(0<=curvetype<=3); error("Wrong curve type") end
             ctype = curvetype
         else
-            cases = ["polyline"=>0, "closed polyline"=>1, "lagrangian"=>2, "Bezier"=>3, "bezier"=>3]
+            cases = Dict("polyline"=>0, "closed polyline"=>1, "lagrangian"=>2, "Bezier"=>3, "bezier"=>3)
             ctype = get(cases, curvetype, -1)
             if ctype==-1; error("Wrong curve type") end
         end
@@ -179,7 +179,7 @@ function get_point(s::Float64, coords::Array{Float64,2}, curvetype::ShapeType)
     if curvetype<=2; 
         return interLagrange(s, coords) 
     else
-        return cubicBezier  (s, coords) 
+        return cubicBezier(s, coords) 
     end
 end
 

@@ -84,7 +84,7 @@ macro gemm(expr)
     
     tA = 'N'
     if typeof(A) == Expr 
-        if A.head == symbol("'"); 
+        if A.head == Symbol("'"); 
             tA = 'T' 
             A  = A.args[1]
         end
@@ -92,7 +92,7 @@ macro gemm(expr)
 
     tB = 'N'
     if typeof(B) == Expr
-        if B.head == symbol("'"); 
+        if B.head == Symbol("'"); 
             tB = 'T' 
             B  = B.args[1]
         end
@@ -134,7 +134,7 @@ macro gemv(expr)
     
     tA = 'N'
     if typeof(A) == Expr 
-        if A.head == symbol("'"); 
+        if A.head == Symbol("'"); 
             tA = 'T' 
             A  = A.args[1]
         end

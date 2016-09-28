@@ -756,7 +756,7 @@ function load_mesh_json(filename; format="json")
 
     # Generating faces
     mesh.faces = get_surface(mesh.cells)
-    surf_dict = [ hash(F) => F for F in mesh.faces]
+    surf_dict = Dict(hash(F) => F for F in mesh.faces)
 
     all_faces = Face[]
     for (i,C) in enumerate(mesh.cells)

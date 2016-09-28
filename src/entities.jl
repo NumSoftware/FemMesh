@@ -364,7 +364,7 @@ function find_cell(X::Array{Float64,1}, cells::Array{Cell,1}, bins::Bins, Tol::F
 end
 
 # Dictionary of faces indexes
-FACETS_IDXS = [
+FACETS_IDXS = Dict(
     TRI3   => ( (1, 2),                   (2, 3),                    (3, 1)                                                                                                  ),
     TRI6   => ( (1, 2, 4),                (2, 3, 5),                 (3, 1, 6)                                                                                               ),
     TRI9   => ( (1, 2, 4, 7),             (2, 3, 5, 8),              (3, 1, 6, 9)                                                                                            ),
@@ -379,20 +379,20 @@ FACETS_IDXS = [
     HEX20  => ( (1, 5, 8, 4,17,16,20,12), (2, 3, 7, 6, 10,19,14,18), (1, 2, 6, 5, 9,18,13,17), (3, 4, 8, 7,11,20,15,19), (1, 4, 3, 2,12,11, 10, 9), (5, 6, 7, 8,13,14,15,16) ),
     WED6   => ( (1, 4, 6, 3), (1, 2, 5, 4), (2, 3, 6, 5), (1, 3, 2), (4, 5, 6)),
     WED15  => ( (1, 4, 6, 3, 13, 12, 15, 9), (1, 2, 5, 4, 7, 14, 10, 13), (2, 3, 6, 5, 8, 15, 11, 14), (1, 3, 2, 9, 8, 7), (4, 5, 6, 10, 11, 12)),
-    ]
+    )
 
 # Dictionary of edge indexes for 3D shapes
-EDGES_IDXS = [
+EDGES_IDXS = Dict(
     TET4   => ( (1, 2),    (2, 3),      (3, 1),     (1, 4),      (2, 4),      (3, 4)       ),
     TET10  => ( (1, 2, 5), (2, 3, 6),   (3, 1, 7),  (1, 4, 8),   (2, 4, 9),   (3, 4, 10)   ),
     HEX8   => ( (1, 2),    (2, 3),      (3, 4),     (4, 1),      (5, 6),      (6, 7),      (7, 8),      (8, 5),      (1, 5),      (2, 6),      (3, 7),     (4, 8)     ),
     HEX20  => ( (1, 2, 9), (2, 3, 10),  (3, 4, 11), (4, 1, 12),  (5, 6, 13),  (6, 7, 14),  (7, 8, 15),  (8, 5, 16),  (1, 5, 17),  (2, 6, 18),  (3, 7, 19), (4, 8, 20) ),
     WED6   => ( (1, 2),    (2, 3),      (3, 1),     (4, 5),      (5, 6),      (6, 4),      (1, 4),      (2, 5),      (3, 6)  ),
     WED15  => ( (1, 2, 7), (2, 3, 8),   (3, 1, 9),  (4, 5, 10),  (5, 6, 11),  (6, 4, 12),  (1, 4, 13),  (2, 5, 14),  (3, 6, 15)  ),
-    ]
+    )
 
 # Dictionary of corresponding faces type
-FACETS_SHAPE = [
+FACETS_SHAPE = Dict(
     QUAD4  => LIN2 ,
     TRI3   => LIN2 ,
     TRI6   => LIN3 ,
@@ -408,7 +408,7 @@ FACETS_SHAPE = [
     HEX20  => QUAD8,
     WED6   => (TRI3, QUAD4),
     WED15  => (TRI6, QUAD8),
-]
+)
 
 
 # gets all facets of a cell
@@ -533,7 +533,7 @@ function regular_surface(metric::Float64, shape::ShapeType)
 end
 
 
-# Returns the cell aspect ratio
+#= Returns the cell aspect ratio
 function cell_aspect_ratio(c::Cell)
     # get faces
     faces = get_faces(c)
@@ -550,7 +550,7 @@ function cell_aspect_ratio(c::Cell)
     metric = cell_extent(c) # volume or area
     rsurf  = regular_surface(metric, c.shape)
     return rsurf/surf
-end
+end =#
 
 # Returns the cell quality ratio as reg_surf/surf
 function cell_quality(c::Cell)
