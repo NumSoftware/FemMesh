@@ -70,20 +70,20 @@ const JQUAD8 = 100 + QUAD8
 
 typealias ShapeType Int64
 
-SHAPE_TAG = [ LIN2  => 102, LIN3   => 103, LIN4 => 104, 
+SHAPE_TAG = Dict( LIN2  => 102, LIN3   => 103, LIN4 => 104, 
               TRI3  => 703, TRI6   => 706, TRI9 => 709, TRI10  => 710, 
               QUAD4 => 904, QUAD8  => 908, 
               TET4  => 704, TET10  => 710, HEX8  => 408, HEX20 => 420, 
               QUAD9 => 909, QUAD12 => 912, QUAD16 => 916, 
-              LINK1 => 201, LINK2  => 202, LINK3  => 203 ]
+              LINK1 => 201, LINK2  => 202, LINK3  => 203 )
 
-SHAPE_NAME = [ LIN2  => "LIN2" , LIN3   => "LIN3"  , LIN4   => "LIN4", 
+SHAPE_NAME = Dict( LIN2  => "LIN2" , LIN3   => "LIN3"  , LIN4   => "LIN4", 
                TRI3  => "TRI3" , TRI6   => "TRI6"  , TRI9   => "TRI9", TRI10 => "TRI10", 
                QUAD4 => "QUAD4", QUAD8  => "QUAD8" , QUAD9  => "QUAD9", QUAD12  => "QUAD12", QUAD16 => "QUAD16",
                TET4  => "TET4" , TET10  => "TET10" , HEX8   => "HEX8", HEX20 => "HEX20", 
                WED6  => "WED6" , WED15  => "WED15" , 
                QUAD9 => "QUAD9", QUAD12 => "QUAD12", QUAD16 => "QUAD16", 
-               LINK1 => "LINK1", LINK2  => "LINK2" , LINK3  => "LINK3" ]
+               LINK1 => "LINK1", LINK2  => "LINK2" , LINK3  => "LINK3" )
 
 function get_shape_tag(shape::ShapeType)
     return SHAPE_TAG[shape]

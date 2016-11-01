@@ -553,7 +553,7 @@ end
 function smooth!(mesh::Mesh; verbose=true, alpha::Float64=0.3, target::Float64=0.97, fixed::Bool=false, maxit::Int64=100, epsmin::Float64=1e-3,
     eps::Float64=1e-4, eps_face=1e-5, save_steps::Bool=false, filekey::AbstractString="smooth", conds=nothing)
 
-    verbose && println(BOLD, CYAN, "Mesh smoothing:", DEFAULT)
+    verbose && printcolor(:cyan, "Mesh smoothing:\n")
 
     # check for not allowed cells
     for c in mesh.cells

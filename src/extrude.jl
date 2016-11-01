@@ -86,7 +86,7 @@ Extrudes a 2D `mesh` generating a 3D mesh based on a direction `axis`, a lenght 
 Only meshes with cell shapes QUAD4 and QUAD8 are allowed.
 """
 function extrude(mesh::Mesh; axis=[0.,0.,1.], len::Number=1.0, n::Int=1, verbose::Bool=true, genedges::Bool=false)
-    verbose && println(BOLD, CYAN, "Mesh extrude:", DEFAULT)
+    verbose && printcolor(:cyan, "Mesh extrude:\n")
 
     V = axis/norm(axis)
     δ = len/n
@@ -229,7 +229,7 @@ end
 
 
 function extrude2(mesh::Mesh; axis=[0.,0.,1.], len::Number=1.0, n::Int=1, verbose::Bool=true, genedges::Bool=false)
-    verbose && println(BOLD, CYAN, "Mesh extrude:", DEFAULT)
+    verbose && printcolor(:cyan, "Mesh extrude:\n")
 
     length(inicells)>0 || error("Extrude: Cannot extrude mesh with no cells.")
 

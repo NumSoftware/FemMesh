@@ -323,7 +323,7 @@ function Mesh(items::Union{Block, Mesh, Array}...; verbose::Bool=true, genfacets
 
     nblocks = length(blocks)
     if verbose
-        println(BOLD, CYAN, "Mesh generation:", DEFAULT)
+        printcolor(:cyan, "Mesh generation:\n")
         println("  analyzing $nblocks block(s)") 
     end
 
@@ -485,7 +485,7 @@ function save(mesh::Mesh, filename::AbstractString; verbose::Bool=true)
     end
 
     if verbose
-        println(GREEN, "  file $filename written (Mesh)", DEFAULT)
+        printcolor(:green, "  file $filename written (Mesh)\n")
     end
 
     close(f)

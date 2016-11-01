@@ -62,6 +62,9 @@ else
     const DEFAULT = "" 
 end
 
+# Alias to print with color
+printcolor = print_with_color
+
 # Types
 typealias Vect Array{Float64, 1}
 typealias Matx Array{Float64, 2}
