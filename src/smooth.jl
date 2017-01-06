@@ -21,6 +21,7 @@
 
 # This file contains the code for smoothing meshes
 
+using StatsBase
 export smooth!, laplacian_smooth!
 
 # Returns a matrix with the cell coordinates
@@ -214,7 +215,7 @@ function matrixK(cell::Cell, ndim::Int64, E::Float64, nu::Float64)
         @gemm J = dNdR*C
         @gemm dNdX = inv(J)*dNdR
         detJ = det(J)
-        detJ > 0.0 || error("Negative jacobian determinant in cell $(cell.id)")
+        detJ < 0.0 && error("Negative jacobian determinant in cell $(cell.id)")
         matrixB(ndim, dNdX, detJ, B)
 
         # compute K
@@ -575,9 +576,9 @@ function smooth!(mesh::Mesh; verbose=true, alpha::Float64=0.3, target::Float64=0
     Q = Float64[ c.quality for c in mesh.cells]
     q    = mesh.quality
     qmin = minimum(Q)
-    dev  = stdm(Q, q)
+    dev  = stdm(Q, q) 
     verbose && @printf("  it: %2d  qmin: %7.5f  qavg: %7.5f  dev: %7.5f", 0, qmin, q, dev)
-    verbose && println("  hist: ", hist(Q, 0.5:0.05:1.0)[2])
+    verbose && println("  hist: ", fit(Histogram, Q, 0.5:0.05:1.0).weights)
 
     # Lagrange multipliers matrix
     A   = mountA(mesh, fixed, conds, eps_face) 
@@ -627,7 +628,7 @@ function smooth!(mesh::Mesh; verbose=true, alpha::Float64=0.3, target::Float64=0
         dev  = stdm(Q, q)
 
         verbose && @printf("  it: %2d  qmin: %7.5f  qavg: %7.5f  dev: %7.5f", i, qmin, q, dev)
-        verbose && println("  hist: ", hist(Q, 0.5:0.05:1.0)[2])
+        verbose && println("  hist: ", fit(Histogram, Q, 0.5:0.05:1.0).weights)
 
         if Δq<eps && Δqmin<epsmin
             break
@@ -699,7 +700,7 @@ function laplacian_smooth!(mesh::Mesh; alpha::Float64=1.0, maxit::Int64=100, ver
     dev  = stdm(Q, q)
     save_steps && save(mesh, "$filekey-0.vtk", verbose=false)
     verbose && @printf("  it: %2d  qmin: %7.5f  qavg: %7.5f  dev: %7.5f", 0, qmin, q, dev)
-    verbose && println("  hist: ", hist(Q, 0.5:0.05:1.0)[2])
+    verbose && println("  hist: ", fit(Histogram, Q, 0.5:0.05:1.0).weights)
 
     # find center point and update point position
     for i=1:maxit
@@ -757,7 +758,7 @@ function laplacian_smooth!(mesh::Mesh; alpha::Float64=1.0, maxit::Int64=100, ver
         dev  = stdm(Q, q)
 
         verbose && @printf("  it: %2d  qmin: %7.5f  qavg: %7.5f  dev: %7.5f", i, qmin, q, dev)
-        verbose && println("  hist: ", hist(Q, 0.5:0.05:1.0)[2])
+        verbose && println("  hist: ", fit(Histogram, Q, 0.5:0.05:1.0).weights)
 
         if Δq<eps && Δqmin<epsmin
             break

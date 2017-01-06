@@ -147,7 +147,7 @@ facts("\nMesh split using joints") do
     bli = BlockInset( [ 0 0; 1 1] )
     mesh = Mesh(bl, bli, verbose=verbose)
     mesh = split!(mesh)
-    save(mesh, "out1.vtk", verbose=verbose)
+    #save(mesh, "out1.vtk", verbose=verbose)
     @fact length(mesh.cells) --> 80
 
     bl  = Block3D( [0 0 0; 1.0 2.0 1.0], nx=2, ny=4, nz=2, shape=TET4)
@@ -156,8 +156,8 @@ facts("\nMesh split using joints") do
     mesh = split!(mesh)
     save(mesh, "out.vtk", verbose=verbose)
     mesh = Mesh("out.vtk")
-    save(mesh, "out2.vtk")
+    #save(mesh, "out2.vtk")
     @fact length(mesh.cells) --> 264
 
-    #rm("out.vtk")
+    rm("out.vtk")
 end

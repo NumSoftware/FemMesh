@@ -73,24 +73,26 @@ end
 function draw_cell3d(c::Cell)
     if c.shape in (TRI3, QUAD4)
         verts = [ Float64[p.x, p.y, p.z] for p in c.points ]
-        verts = push!([], verts)
+        #verts = push!([], verts)
     elseif c.shape == TRI6
         verts = [ Float64[p.x, p.y, p.z] for p in c.points[ [1,4,2,5,3,6] ] ]
-        verts = push!([], verts)
+        #verts = push!([], verts)
     elseif c.shape == QUAD8
         verts = [ Float64[p.x, p.y, p.z] for p in c.points[ [1,5,2,6,3,7,4,8] ] ]
-        verts = push!([], verts)
+        #verts = push!([], verts)
     end
     return verts
 end
 
-function draw(mesh::Mesh, filename=""; axis=true, points=false, pointlabels=false, celllabels=false, quality=false)
+function draw(mesh::Mesh, filename=""; axis=true, points=false, pointlabels=false, celllabels=false, quality=false, lims=nothing,
+    cmap=nothing)
     if is_windows() eval(Expr(:using, :PyPlot)) end
 
     @pyimport matplotlib.pyplot as plt
     @pyimport matplotlib.path as path
     Path = path.pymember("Path")
     @pyimport matplotlib.patches as patches
+    @pyimport matplotlib.collections as collections
 
     @pyimport matplotlib.colors as colors
     @pyimport matplotlib.colorbar as colorbar
@@ -134,7 +136,7 @@ function draw(mesh::Mesh, filename=""; axis=true, points=false, pointlabels=fals
         ax[:set_xlim]( meanX-L/2, meanX+L/2)
         ax[:set_ylim]( meanY-L/2, meanY+L/2)
         ax[:set_zlim]( meanZ-L/2, meanZ+L/2)
-        ax[:scatter](limX, limY, limZ, color="w", marker="o")
+        ax[:scatter](limX, limY, limZ, color="w", marker="o", alpha=0.0)
 
         # Labels
         ax[:set_xlabel]("x")
@@ -155,6 +157,7 @@ function draw(mesh::Mesh, filename=""; axis=true, points=false, pointlabels=fals
         ax[:set_ylim](limY[1], limY[2])
 
         # Labels
+        #plt.plot([1,2]
         plt.xlabel("x")
         plt.ylabel("y")
         if axis == false
@@ -170,41 +173,73 @@ function draw(mesh::Mesh, filename=""; axis=true, points=false, pointlabels=fals
 
     cm = colors.LinearSegmentedColormap("my_colormap",cdict,256)
 
+    if cmap==nothing
+        cmap = cm
+    end
+
     # Draw cells
     facecolor = "aliceblue"
-    cbnorm = colors.Normalize(vmin=0.8, vmax=1)
+    if lims==nothing
+        lims = [mesh.qmin, 1.0]
+    end
+    cbnorm = colors.Normalize(vmin=lims[1], vmax=lims[2])
     if ndim==3
-        for cell in get_surface(mesh.cells)
+        all_verts = []
+        surface = get_surface(mesh.cells)
+        for cell in surface
             verts = draw_cell3d(cell)
-            if quality facecolor = cm(cell.ocell.quality) end
+            #if quality facecolor = cm(cell.ocell.quality) end
             if is_line(cell.shape) facecolor="none" end
-            poly = art3d.Poly3DCollection(verts, facecolor=facecolor)
-            ax[:add_collection3d]( poly )
+
+            push!(all_verts, verts)
+            #poly = art3d.Poly3DCollection(verts, facecolor=facecolor)
+            #ax[:add_collection3d]( poly )
+        end
+        colors = [cell.ocell.quality for cell in surface ]
+        cltn   = art3d.Poly3DCollection(all_verts, cmap=cmap)
+        cltn[:set_array](colors)
+        cltn[:set_clim](lims)
+        ax[:add_collection3d](cltn)
+        if quality
+            plt.colorbar(cltn)
         end
     else
+        all = []
         for cell in mesh.cells
             if cell.shape>50 continue end
             verts, codes = draw_cell2d(cell)
             path  = Path(verts, codes)
-            if quality facecolor = cm(cbnorm(cell.quality)) end
+            #if quality facecolor = cm(cbnorm(cell.quality)) end
             lw = 0.5
             if is_line(cell.shape) 
                 facecolor="none" 
                 lw = 3
             end
             patch = patches.PathPatch(path, facecolor=facecolor, lw=lw)
-            ax[:add_patch](patch)
+            #ax[:add_patch](patch)
+            push!(all, patch)
         end
+        #colors = [cbnorm(cell.quality) for cell in mesh.cells ]
+        colors = [cell.quality for cell in mesh.cells ]
+        cltn   = collections.PatchCollection(all, cmap=cmap)
+        cltn[:set_array](colors)
+        cltn[:set_clim](lims)
+        ax[:add_collection](cltn)
+        if quality
+            plt.colorbar(cltn)
+        end
+
     end
 
     # Colorbar
-    if quality
+    if false # quality
         #fig = plt.figure()
         ax1 = fig[:add_axes]([0.9, 0.1, 0.05, 0.8])
         ax1[:locator_params](tight=true, nbins=5)
         #cax = plt.inset_axes(ax, width="8%", height="70%", loc=4)
         cb = colorbar.ColorbarBase(ax1, cmap=cm, norm=cbnorm, orientation="vertical")
         cb[:set_label]("Cell quality")
+
     end
 
     # Draw points
@@ -212,7 +247,7 @@ function draw(mesh::Mesh, filename=""; axis=true, points=false, pointlabels=fals
         if ndim==3
             ax[:scatter](X, Y, Z, color="k", marker="o")
         else
-            plt.plot(X, Y, "o", color="black", marker="o", markersize=4)
+            plt.plot(X, Y, color="black", marker="o", markersize=4)
         end
     end
 
