@@ -297,6 +297,7 @@ coords_wed15 =
 function get_local_coords(st::ShapeType)
     if     st == LIN2   return coords_lin2
     elseif st == LIN3   return coords_lin3
+    elseif st == TRI6   return coords_tri6
     elseif st == QUAD4  return coords_quad4
     elseif st == TET10  return coords_tet10
     elseif st == HEX20  return coords_hex20
