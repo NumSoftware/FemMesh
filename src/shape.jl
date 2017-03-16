@@ -31,6 +31,110 @@ export is_solid, is_line, is_joint, is_joint1D, is_inside
 export inverse_map, extrapolator
 export coords_tri6, coords_tri9, coords_tri10, coords_quad4, coords_quad8, coords_wed6, coords_wed15 #...
 
+@enum(ShapeType,
+# Shapes compatible with VTK
+POLYV = 2,
+LIN2  = 3,
+LIN3  = 21,
+TRI3  = 5,
+TRI6  = 22,
+QUAD4 = 9,
+QUAD8 = 23,
+TET4  = 10,
+TET10 = 24,
+HEX8  = 12,
+HEX20 = 25,
+WED6  = 13,
+# Shapes represented as polyvertex
+LIN4   = 31,
+TRI9   = 33,
+TRI10  = 34,
+QUAD9  = 37,
+QUAD12 = 38,
+QUAD16 = 39,
+WED15  = 41,
+# Embedded links
+LINK1  = 51,
+LINK2  = 52,
+LINK3  = 53,
+# Conventional joints
+JLIN2  = 100 + 3,
+JLIN3  = 100 + 21,
+JLIN4  = 100 + 31,
+JTRI3  = 100 + 5,
+JTRI6  = 100 + 22,
+JQUAD4 = 100 + 9,
+JQUAD8 = 100 + 23,
+)
+
+function is_line(shape::ShapeType)
+    shape in (LIN2, LIN3, LIN4) 
+end
+
+function is_joint1D(shape::ShapeType)
+    Int(shape)>50 && Int(shape)<60
+end
+
+function is_joint(shape::ShapeType)
+    Int(shape)>100
+end
+
+function is_solid(shape::ShapeType)
+    Int(shape)<50 && !(shape in (LIN2, LIN3, LIN4, POLYV) )
+end
+
+function get_ndim(shape::ShapeType)
+    # Returns the local dimension based on the shape geometry.
+    # It does not match necessarily the space where the shape is used.
+    
+    if shape == LIN2  ; return 1 end
+    if shape == LIN3  ; return 1 end
+    if shape == LIN4  ; return 1 end
+    if shape == LINK2 ; return 1 end
+    if shape == LINK3 ; return 1 end
+    if shape == TRI3  ; return 2 end
+    if shape == TRI6  ; return 2 end
+    if shape == TRI9  ; return 2 end
+    if shape == TRI10 ; return 2 end
+    if shape == QUAD4 ; return 2 end
+    if shape == QUAD8 ; return 2 end
+    if shape == QUAD9 ; return 2 end
+    if shape == QUAD12; return 2 end
+    if shape == QUAD16; return 2 end
+    return 3
+    error("Unknown shape ($shape)")
+end
+
+function get_nnodes(shape::ShapeType)
+    # Returns the local dimension based on the shape geometry.
+    # It does not match necessarily the space where the shape is used.
+    
+    if shape == LIN2  ; return  2 end
+    if shape == LIN3  ; return  3 end
+    if shape == LIN4  ; return  4 end
+    if shape == LINK2 ; return  2 end
+    if shape == LINK3 ; return  3 end
+    if shape == TRI3  ; return  3 end
+    if shape == TRI6  ; return  6 end
+    if shape == TRI9  ; return  9 end
+    if shape == TRI10 ; return 10 end
+    if shape == QUAD4 ; return  4 end
+    if shape == QUAD8 ; return  8 end
+    if shape == QUAD9 ; return  9 end
+    if shape == QUAD12; return 12 end
+    if shape == QUAD16; return 16 end
+    if shape == TET4  ; return  4 end
+    if shape == TET10 ; return 10 end
+    if shape == HEX8  ; return  8 end
+    if shape == HEX20 ; return 20 end
+    if shape == WED6  ; return  6 end
+    if shape == WED15 ; return 15 end
+    if shape>100;       return get_nnodes(Int(shape)-100)*2 end
+    error("Unknown shape ($shape)")
+end
+
+
+#=
 # Shapes compatible with VTK
 const POLYV = 2
 const LIN2  = 3
@@ -69,6 +173,7 @@ const JQUAD4 = 100 + QUAD4
 const JQUAD8 = 100 + QUAD8
 
 typealias ShapeType Int64
+=#
 
 SHAPE_TAG = Dict( LIN2  => 102, LIN3   => 103, LIN4 => 104, 
               TRI3  => 703, TRI6   => 706, TRI9 => 709, TRI10  => 710, 
@@ -103,22 +208,20 @@ function get_basic_shape(shape::ShapeType)
     if shape in [ HEX8, HEX20 ] return HEX8 end
     if shape in [ WED6, WED15] return WED8 end
 
-    if shape > 100 return shape-100 end # for joint shapes
+    if Int(shape) > 100 return Int(shape)-100 end # for joint shapes
 
     return shape # any other shape
 end
 
-function get_vtk_type(shape::ShapeType)
-    if shape>50
-        return POLYV # vtk_poly_vertex
-    end
-
-    return shape # Conventional
+function get_vtk_type(shape::ShapeType)::Int
+    vtk_type = Int(shape)
+    vtk_type < 50 && return vtk_type # Conventional
+    return Int(POLYV)                # vtk_poly_vertex
 end
 
-function get_shape_from_vtk(vtk_type::Int64, npoints::Int64, ndim::Int64)
+function get_shape_from_vtk(vtk_type::Int64, npoints::Int64, ndim::Int64)::ShapeType
 
-    if vtk_type!=2 return vtk_type end # diff from poly_vertex
+    if vtk_type!=2 return ShapeType(vtk_type) end # diff from poly_vertex
 
     if     npoints==1   return LINK1
     elseif npoints==2   return LINK2
@@ -144,7 +247,8 @@ function get_shape_from_vtk(vtk_type::Int64, npoints::Int64, ndim::Int64)
     elseif npoints==20  return JTRI10
     end
 
-    return POLYV
+    error("get_shape_from_vtk: Unknown shape for vtk_type $vtk_type and npoints $npoints with ndim $ndim")
+    #return POLYV
 
 end
 
@@ -305,17 +409,17 @@ function get_local_coords(st::ShapeType)
     elseif st == WED15  return coords_wed15
     end
 
-    error("get_local_coords: No local coordinates implemented for element")
+    error("get_local_coords: No local coordinates implemented for shape $st")
     return 0
 end
 
 
-immutable Typed{N} end
+#immutable Typed{N} end
 
-shape_func(shape::ShapeType, R::Array{Float64,1}) = shape_func(Typed{shape}(), R)
-deriv_func(shape::ShapeType, R::Array{Float64,1}) = deriv_func(Typed{shape}(), R)
+shape_func(shape::ShapeType, R::Array{Float64,1}) = shape_func(Val{shape}, R)
+deriv_func(shape::ShapeType, R::Array{Float64,1}) = deriv_func(Val{shape}, R)
 
-function shape_func(::Typed{LIN2}, R::Array{Float64,1})
+function shape_func(::Type{Val{LIN2}}, R::Array{Float64,1})
     r = R[1]
     N = Array(Float64, 2)
     N[1] = 0.5*(1-r)
@@ -323,14 +427,14 @@ function shape_func(::Typed{LIN2}, R::Array{Float64,1})
     return N
 end
 
-function deriv_func(::Typed{LIN2}, R::Array{Float64,1})
+function deriv_func(::Type{Val{LIN2}}, R::Array{Float64,1})
     D = Array(Float64, 1, 2)
     D[1,1] = -0.5
     D[1,2] =  0.5
     return D
 end
 
-function shape_func(::Typed{LIN3}, R::Array{Float64,1})
+function shape_func(::Type{Val{LIN3}}, R::Array{Float64,1})
     r = R[1]
     N = Array(Float64, 3)
     N[1] = 0.5*(r*r - r)
@@ -339,7 +443,7 @@ function shape_func(::Typed{LIN3}, R::Array{Float64,1})
     return N
 end
 
-function deriv_func(::Typed{LIN3}, R::Array{Float64,1})
+function deriv_func(::Type{Val{LIN3}}, R::Array{Float64,1})
     r = R[1]
     D = Array(Float64, 1, 3)
     D[1, 1] = r - 0.5
@@ -348,10 +452,10 @@ function deriv_func(::Typed{LIN3}, R::Array{Float64,1})
     return D
 end
 
-function shape_func(::Typed{LIN4}, R::Array{Float64,1})
+function shape_func(::Type{Val{LIN4}}, R::Array{Float64,1})
     #   (-1)            '   (+1)
     #    @------@-----@------@  --> r
-    #    0      2     3      1
+    #    1      3     4      2
 
     r = R[1]
     N = Array(Float64, 4)
@@ -362,7 +466,7 @@ function shape_func(::Typed{LIN4}, R::Array{Float64,1})
     return N
 end
 
-function deriv_func(::Typed{LIN4}, R::Array{Float64,1})
+function deriv_func(::Type{Val{LIN4}}, R::Array{Float64,1})
     r = R[1]
     D = Array(Float64, 1, 4)
     D[1,1] = 1./16.*( -27.*r*r + 18.*r + 1. )
@@ -372,7 +476,7 @@ function deriv_func(::Typed{LIN4}, R::Array{Float64,1})
     return D
 end
 
-function shape_func(::Typed{TRI3}, R::Array{Float64,1})
+function shape_func(::Type{Val{TRI3}}, R::Array{Float64,1})
     #    s
     #    ^
     #    |
@@ -398,7 +502,7 @@ function shape_func(::Typed{TRI3}, R::Array{Float64,1})
     return N
 end
 
-function deriv_func(::Typed{TRI3}, R::Array{Float64,1})
+function deriv_func(::Type{Val{TRI3}}, R::Array{Float64,1})
     r, s = R
     D = Array(Float64, 2, 3)
     D[1,1] = -1.0;    D[2,1] = -1.0
@@ -407,7 +511,7 @@ function deriv_func(::Typed{TRI3}, R::Array{Float64,1})
     return D
 end
 
-function shape_func(::Typed{TRI6}, R::Array{Float64,1})
+function shape_func(::Type{Val{TRI6}}, R::Array{Float64,1})
     #    s
 
 
@@ -440,7 +544,7 @@ function shape_func(::Typed{TRI6}, R::Array{Float64,1})
     return N
 end
 
-function deriv_func(::Typed{TRI6}, R::Array{Float64,1})
+function deriv_func(::Type{Val{TRI6}}, R::Array{Float64,1})
     r, s = R
 
     D = Array(Float64, 2, 6)
@@ -454,7 +558,7 @@ function deriv_func(::Typed{TRI6}, R::Array{Float64,1})
     return D
 end
 
-function shape_func(::Typed{QUAD4}, R::Array{Float64,1})
+function shape_func(::Type{Val{QUAD4}}, R::Array{Float64,1})
     #     4                        3
     #       @--------------------@
     #       |               (1,1)|
@@ -478,7 +582,7 @@ function shape_func(::Typed{QUAD4}, R::Array{Float64,1})
     return N
 end
 
-function deriv_func(::Typed{QUAD4}, R::Array{Float64,1})
+function deriv_func(::Type{Val{QUAD4}}, R::Array{Float64,1})
     r, s = R[1:2]
     D = Array(Float64, 2, 4)
     D[1,1] = 0.25*(-1.0+s);   D[2,1] = 0.25*(-1.0+r)
@@ -488,7 +592,7 @@ function deriv_func(::Typed{QUAD4}, R::Array{Float64,1})
     return D
 end
 
-function shape_func(::Typed{QUAD8}, R::Array{Float64,1})
+function shape_func(::Type{Val{QUAD8}}, R::Array{Float64,1})
     #     4           7            3
     #       @---------@----------@
     #       |               (1,1)|
@@ -518,7 +622,7 @@ function shape_func(::Typed{QUAD8}, R::Array{Float64,1})
     return N
 end
 
-function deriv_func(::Typed{QUAD8}, R::Array{Float64,1})
+function deriv_func(::Type{Val{QUAD8}}, R::Array{Float64,1})
     r, s = R[1:2]
     D = Array(Float64, 2, 8)
     rp1=1.0+r; rm1=1.0-r
@@ -544,7 +648,7 @@ function deriv_func(::Typed{QUAD8}, R::Array{Float64,1})
     return D
 end
 
-function shape_func(::Typed{QUAD9}, R::Array{Float64,1})
+function shape_func(::Type{Val{QUAD9}}, R::Array{Float64,1})
     #     4           7            3
     #       @---------@----------@
     #       |               (1,1)|
@@ -575,7 +679,7 @@ function shape_func(::Typed{QUAD9}, R::Array{Float64,1})
     return N
 end
 
-function deriv_func(::Typed{QUAD9}, R::Array{Float64,1})
+function deriv_func(::Type{Val{QUAD9}}, R::Array{Float64,1})
     r, s = R[1:2]
     D = Array(Float64, 2,9)
     rp1=1.0+r; rm1=1.0-r
@@ -629,7 +733,7 @@ function deriv_func(::Typed{QUAD9}, R::Array{Float64,1})
 end
 
 
-function shape_func(::Typed{QUAD12}, R::Array{Float64,1})
+function shape_func(::Type{Val{QUAD12}}, R::Array{Float64,1})
     #  
     #    4      11       7        3
     #      @-----@-------@------@
@@ -668,7 +772,7 @@ function shape_func(::Typed{QUAD12}, R::Array{Float64,1})
     return N
 end
 
-function deriv_func(::Typed{QUAD12}, R::Array{Float64,1})
+function deriv_func(::Type{Val{QUAD12}}, R::Array{Float64,1})
     r, s = R[1:2]
     D = Array(Float64, 2, 12)
 
@@ -705,7 +809,7 @@ function deriv_func(::Typed{QUAD12}, R::Array{Float64,1})
     return D
 end
 
-function shape_func(::Typed{HEX8}, R::Array{Float64,1})
+function shape_func(::Type{Val{HEX8}}, R::Array{Float64,1})
     # Local IDs
     #                  Nodes                                   Faces
     #     z
@@ -739,7 +843,7 @@ function shape_func(::Typed{HEX8}, R::Array{Float64,1})
     return N
 end
 
-function deriv_func(::Typed{HEX8}, R::Array{Float64,1})
+function deriv_func(::Type{Val{HEX8}}, R::Array{Float64,1})
     r, s, t = R
     st = s*t
     rt = r*t
@@ -758,7 +862,7 @@ function deriv_func(::Typed{HEX8}, R::Array{Float64,1})
     return D
 end
 
-function shape_func(::Typed{HEX20}, R::Array{Float64,1})
+function shape_func(::Type{Val{HEX20}}, R::Array{Float64,1})
     # Local IDs
     #                   Vertices                               Faces
     #     t
@@ -809,7 +913,7 @@ function shape_func(::Typed{HEX20}, R::Array{Float64,1})
     return N
 end
 
-function deriv_func(::Typed{HEX20}, R::Array{Float64,1})
+function deriv_func(::Type{Val{HEX20}}, R::Array{Float64,1})
     r, s, t = R
 
     rp1=1.0+r; rm1=1.0-r
@@ -886,7 +990,7 @@ function deriv_func(::Typed{HEX20}, R::Array{Float64,1})
     return D
 end
 
-function shape_func(::Typed{TET4}, R::Array{Float64,1})
+function shape_func(::Type{Val{TET4}}, R::Array{Float64,1})
     r, s, t = R
 
     N = Array(Float64,4)
@@ -897,7 +1001,7 @@ function shape_func(::Typed{TET4}, R::Array{Float64,1})
     return N
 end
 
-function deriv_func(::Typed{TET4}, R::Array{Float64,1})
+function deriv_func(::Type{Val{TET4}}, R::Array{Float64,1})
     r, s, t = R
 
     D = Array(Float64, 3, 4)
@@ -908,7 +1012,7 @@ function deriv_func(::Typed{TET4}, R::Array{Float64,1})
     return D
 end
 
-function shape_func(::Typed{TET10}, R::Array{Float64,1})
+function shape_func(::Type{Val{TET10}}, R::Array{Float64,1})
 
     #                       t
     #                       |
@@ -967,7 +1071,7 @@ function shape_func(::Typed{TET10}, R::Array{Float64,1})
     return N
 end
 
-function deriv_func(::Typed{TET10}, R::Array{Float64,1})
+function deriv_func(::Type{Val{TET10}}, R::Array{Float64,1})
     r, s, t = R
 
     D = Array(Float64, 3, 10)
@@ -1011,7 +1115,7 @@ function deriv_func(::Typed{TET10}, R::Array{Float64,1})
     return D
 end
 
-function shape_func(::Typed{WED6}, R::Array{Float64,1})
+function shape_func(::Type{Val{WED6}}, R::Array{Float64,1})
     r, s, t = R[1:3]
     N = Array(Float64,6)
     N[1] = 0.5*(1.0-r-s-t+r*t+s*t)
@@ -1023,7 +1127,7 @@ function shape_func(::Typed{WED6}, R::Array{Float64,1})
     return N
 end
 
-function deriv_func(::Typed{WED6}, R::Array{Float64,1})
+function deriv_func(::Type{Val{WED6}}, R::Array{Float64,1})
     r, s, t = R
     D = Array(Float64, 3, 6)
     D[1,1] = 0.5*(-1.0+t);  D[2,1] = 0.5*(-1.0+t);  D[3,1] = 0.5*(-1.0+r+s)
@@ -1036,7 +1140,7 @@ function deriv_func(::Typed{WED6}, R::Array{Float64,1})
     return D
 end
 
-function shape_func(::Typed{WED15}, R::Array{Float64,1})
+function shape_func(::Type{Val{WED15}}, R::Array{Float64,1})
     r, s, t = R[1:3]
     N = Array(Float64,15)
     N[1]  = 0.5*(-2.0*(r^2.0)*t-4.0*r*s*t-r*(t^2+0)-2.0*(s^2.0)*t-s*(t^2.0)+2.0*(r^2.0)+4.0*r*s+3.0*r*t+2.0*(s^2.0)+3.0*s*t+(t^2.0)-2.0*r-2.0*s-t) 
@@ -1057,7 +1161,7 @@ function shape_func(::Typed{WED15}, R::Array{Float64,1})
     return N
 end
 
-function deriv_func(::Typed{WED15}, R::Array{Float64,1})
+function deriv_func(::Type{Val{WED15}}, R::Array{Float64,1})
     r, s, t = R
     D = Array(Float64, 3, 15)
     # Derivatives with respect to r
@@ -1175,77 +1279,6 @@ function bdistance(shape::ShapeType, R::Array{Float64,1})
     #if shape in [ QUAD4, QUAD8, QUAD12, QUAD16 ]  return min(1.0 - r*r, 1.0 - s*s) end
     #if shape in [ HEX8, HEX20 ] return min(1.0 - r*r, 1.0 - s*s, 1.0 - t*t) end
     error("No boundary distance for shape ($shape)")
-end
-
-function get_ndim(shape::ShapeType)
-    # Returns the local dimension based on the shape geometry.
-    # It does not match necessarily the space where the shape is used.
-    
-    if shape == LIN2  ; return 1 end
-    if shape == LIN3  ; return 1 end
-    if shape == LIN4  ; return 1 end
-    if shape == LINK2 ; return 1 end
-    if shape == LINK3 ; return 1 end
-    if shape == TRI3  ; return 2 end
-    if shape == TRI6  ; return 2 end
-    if shape == TRI9  ; return 2 end
-    if shape == TRI10 ; return 2 end
-    if shape == QUAD4 ; return 2 end
-    if shape == QUAD8 ; return 2 end
-    if shape == QUAD9 ; return 2 end
-    if shape == QUAD12; return 2 end
-    if shape == QUAD16; return 2 end
-    if shape == TET4  ; return 3 end
-    if shape == TET10 ; return 3 end
-    if shape == HEX8  ; return 3 end
-    if shape == HEX20 ; return 3 end
-    if shape == WED6  ; return 3 end
-    if shape == WED15 ; return 3 end
-    error("Unknown shape ($shape)")
-end
-
-function get_nnodes(shape::ShapeType)
-    # Returns the local dimension based on the shape geometry.
-    # It does not match necessarily the space where the shape is used.
-    
-    if shape == LIN2  ; return  2 end
-    if shape == LIN3  ; return  3 end
-    if shape == LIN4  ; return  4 end
-    if shape == LINK2 ; return  2 end
-    if shape == LINK3 ; return  3 end
-    if shape == TRI3  ; return  3 end
-    if shape == TRI6  ; return  6 end
-    if shape == TRI9  ; return  9 end
-    if shape == TRI10 ; return 10 end
-    if shape == QUAD4 ; return  4 end
-    if shape == QUAD8 ; return  8 end
-    if shape == QUAD9 ; return  9 end
-    if shape == QUAD12; return 12 end
-    if shape == QUAD16; return 16 end
-    if shape == TET4  ; return  4 end
-    if shape == TET10 ; return 10 end
-    if shape == HEX8  ; return  8 end
-    if shape == HEX20 ; return 20 end
-    if shape == WED6  ; return  6 end
-    if shape == WED15 ; return 15 end
-    if shape>100;       return get_nnodes(shape-100)*2 end
-    error("Unknown shape ($shape)")
-end
-
-function is_line(shape::ShapeType)
-    shape in (LIN2, LIN3, LIN4) 
-end
-
-function is_joint1D(shape::ShapeType)
-    shape>50 && shape<60
-end
-
-function is_joint(shape::ShapeType)
-    shape>100
-end
-
-function is_solid(shape::ShapeType)
-    shape<50 && !(shape in (LIN2, LIN3, LIN4, POLYV) )
 end
 
 function inverse_map(shape::ShapeType, coords::Array{Float64,2}, X0::Array{Float64,1}, Tol=1.0e-7)

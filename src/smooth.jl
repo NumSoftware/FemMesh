@@ -643,7 +643,7 @@ end
 precompile(smooth!, (Mesh,) )
 
 function laplacian_smooth!(mesh::Mesh; alpha::Float64=1.0, maxit::Int64=100, verbose::Bool=true, epsmin::Float64=1e-3,
-    eps::Float64=1e-4, save_steps::Bool=false, filekey::AbstractString="smooth")
+    eps::Float64=1e-4, eps_face::Float64=1e-5, save_steps::Bool=false, filekey::AbstractString="smooth")
 
     ndim = mesh.ndim
 
@@ -679,7 +679,7 @@ function laplacian_smooth!(mesh::Mesh; alpha::Float64=1.0, maxit::Int64=100, ver
 
     # find normals for nodes
     for node in border_nodes
-        node.normals = faces_normal(node.faces)
+        node.normals = faces_normal(node.faces, eps_face)
     end
 
     # arrays of flags

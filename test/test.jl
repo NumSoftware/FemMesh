@@ -156,7 +156,7 @@ facts("\nMesh split using joints") do
     mesh = split!(mesh)
     save(mesh, "out.vtk", verbose=verbose)
     mesh = Mesh("out.vtk")
-    #save(mesh, "out2.vtk")
+    save(mesh, "out2.vtk")
     @fact length(mesh.cells) --> 264
 
     rm("out.vtk")

@@ -174,7 +174,7 @@ function split_block(bl::BlockInset, msh::Mesh)
     end
 end
 
-function get_point(s::Float64, coords::Array{Float64,2}, curvetype::ShapeType)
+function get_point(s::Float64, coords::Array{Float64,2}, curvetype::Int)
     s = s>1.0? 1.0 : s
     if curvetype<=2; 
         return interLagrange(s, coords) 

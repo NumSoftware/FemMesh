@@ -578,7 +578,7 @@ function load_mesh_vtk(filename)
     has_polyvertex = false
     for i=1:ncells
         vtk_shape = parse(data[idx])
-        if vtk_shape == POLYV
+        if vtk_shape == Int(POLYV)
             shape = POLYV
         else
             shape = get_shape_from_vtk( vtk_shape, length(conns[i]), ndim )
@@ -645,13 +645,13 @@ function load_mesh_vtk(filename)
                         delta += abs(p1.z - p2.z)
                     end
                     if delta<1e-10
-                        cell.shape = get_shape_from_vtk(POLYV, n, ndim)
+                        cell.shape = get_shape_from_vtk(Int(POLYV), n, ndim)
                         continue
                     end
                 end
 
                 # remaining polyvertex cells
-                cell.shape = get_shape_from_vtk(POLYV, n, ndim)
+                cell.shape = get_shape_from_vtk(Int(POLYV), n, ndim)
             end
         end
 
@@ -866,7 +866,7 @@ include("filters.jl")
 include("extrude.jl") 
 include("smooth.jl") 
 include("split.jl") 
-#include("draw.jl") 
+include("draw.jl") 
 
 
 # TESTING
