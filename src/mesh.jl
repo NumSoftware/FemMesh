@@ -144,6 +144,7 @@ function reorder!(mesh::Mesh; sort_degrees=true, reversed=false)
                 hs = hash(edge)
                 all_edges[hs] = edge
             end
+
             #check for lagrangian elements
             if cell.shape==QUAD9
                 edge = Cell(POLYV, [ cell.points[1], cell.points[end] ] )
@@ -168,6 +169,9 @@ function reorder!(mesh::Mesh; sort_degrees=true, reversed=false)
 
     end
 
+    #myedges = [ [ed.points[1].id, ed.points[2].id] for ed in values(all_edges)  ]
+    #@show myedges
+
     # Get points neighbors
     npoints = length(mesh.points)
     neighs  = Array{Point}[ [] for i in 1:npoints  ]
@@ -189,7 +193,12 @@ function reorder!(mesh::Mesh; sort_degrees=true, reversed=false)
     # list of degrees per point
     degrees = Int64[ length(list) for list in neighs]
     mindeg, idx  = findmin(degrees)
-    @assert mindeg>0
+
+    if mindeg == 0
+        # Case of overlapping elements where edges have at least a point with same coordinates
+        warn("reorder!: Reordering nodes failed! Check for overlapping cells.")
+        return
+    end
 
     N = [ mesh.points[idx] ] # new list of cells
     R = [ mesh.points[idx] ] # first levelset
@@ -220,11 +229,12 @@ function reorder!(mesh::Mesh; sort_degrees=true, reversed=false)
 
     end
 
-    # Update numbers in reverse order
+    # Reverse list of new nodes
     if reversed
         N = reverse(N)
     end
 
+    # Renumerating
     for (i,p) in enumerate(N)
         p.id = i
     end
@@ -467,12 +477,12 @@ function save(mesh::Mesh, filename::AbstractString; verbose::Bool=true)
     println(f, )
 
     # Write cell type as cell data
-    println(f, "SCALARS cell_type int 1")
-    println(f, "LOOKUP_TABLE default")
-    for cell in mesh.cells
-        println(f, cell.shape)
-    end
-    println(f, )
+    #println(f, "SCALARS cell_type int 1")
+    #println(f, "LOOKUP_TABLE default")
+    #for cell in mesh.cells
+        #println(f, Int64(cell.shape))
+    #end
+    #println(f, )
 
     # Write flag for crossed cells
     if has_crossed
@@ -866,7 +876,7 @@ include("filters.jl")
 include("extrude.jl") 
 include("smooth.jl") 
 include("split.jl") 
-include("draw.jl") 
+#include("draw.jl") 
 
 
 # TESTING
