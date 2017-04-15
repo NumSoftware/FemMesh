@@ -208,7 +208,7 @@ function get_basic_shape(shape::ShapeType)
     if shape in [ HEX8, HEX20 ] return HEX8 end
     if shape in [ WED6, WED15] return WED8 end
 
-    if Int(shape) > 100 return Int(shape)-100 end # for joint shapes
+    if Int(shape) > 100 return ShapeType(Int(shape)-100) end # for joint shapes
 
     return shape # any other shape
 end
@@ -1222,7 +1222,7 @@ end
 
 # Number of integration points per element
 IP_FEM = Dict(
-    LIN2    => Dict( 0 => LIN_IP2,  2 => LIN_IP2,  3 => LIN_IP3,   4 => LIN_IP4                   ),
+    LIN2    => Dict( 0 => LIN_IP2,  1 => ALL_IP1,  2 => LIN_IP2,  3 => LIN_IP3,   4 => LIN_IP4    ),
     LIN3    => Dict( 0 => LIN_IP2,  2 => LIN_IP2,  3 => LIN_IP3,   4 => LIN_IP4                   ),
     LIN4    => Dict( 0 => LIN_IP3,  2 => LIN_IP2,  3 => LIN_IP3,   4 => LIN_IP4                   ),
     TRI3    => Dict( 0 => TRI_IP1,  1 => TRI_IP1,  3 => TRI_IP3,   6 => TRI_IP6                   ),

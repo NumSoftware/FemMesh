@@ -700,7 +700,15 @@ function load_mesh_vtk(filename)
         end
     end
 
-    update!(mesh, genedges=true)
+    # update mesh and get faces and edges
+    update!(mesh)
+
+    # Update boundary points: bpoints
+    for f in mesh.faces
+        for p in f.points
+            mesh.bpoints[hash(p)] = p
+        end
+    end
 
     return mesh
 end
