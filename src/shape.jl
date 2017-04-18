@@ -259,8 +259,8 @@ coords_lin2 =
 
 coords_lin3 =
 [ -1.0  1.0 
-   0.0  1.0 
-   1.0  1.0 ]
+   1.0  1.0 
+   0.0  1.0 ]
 
 coords_tri6 =
 [ 0.0  0.0  1.0
@@ -1383,7 +1383,7 @@ function extrapolator(shape::ShapeType, nips::Int)
     I = eye(nips)
 
     # εip matrix: Local ip coordinates of integration points
-    εip = [ IP[:,1:ndim] zeros(nips) ]
+    εip = [ IP[:,1:ndim] ones(nips) ]
 
     #@show nips
     #@show nnodes
