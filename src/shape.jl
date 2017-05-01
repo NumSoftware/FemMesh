@@ -27,7 +27,7 @@ export LINK1, LINK2, LINK3, LIN4, TRI9, TRI10, QUAD9, QUAD12, QUAD16
 export ShapeType
 export shape_func, deriv_func, local_coords
 export get_ip_coords
-export is_solid, is_line, is_joint, is_joint1D, is_inside
+export is_solid, is_line, is_joint, is_joint1D, is_inside, shape_class
 export inverse_map, extrapolator
 export coords_tri6, coords_tri9, coords_tri10, coords_quad4, coords_quad8, coords_wed6, coords_wed15 #...
 
@@ -81,6 +81,22 @@ end
 
 function is_solid(shape::ShapeType)
     Int(shape)<50 && !(shape in (LIN2, LIN3, LIN4, POLYV) )
+end
+
+function shape_class(shape::ShapeType)
+    local class
+    if is_solid(shape)
+        class = :SOLID
+    elseif is_line(shape)
+        class = :LINE
+    elseif is_joint(shape)
+        class = :JOINT
+    elseif is_joint1D(shape)
+        class = :JOINT1D
+    else
+        error("cell_class: Unknown cell.")
+    end
+    return class
 end
 
 function get_ndim(shape::ShapeType)
@@ -174,6 +190,8 @@ const JQUAD8 = 100 + QUAD8
 
 typealias ShapeType Int64
 =#
+
+
 
 SHAPE_TAG = Dict( LIN2  => 102, LIN3   => 103, LIN4 => 104, 
               TRI3  => 703, TRI6   => 706, TRI9 => 709, TRI10  => 710, 

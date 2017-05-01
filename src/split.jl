@@ -22,6 +22,7 @@
 # This file includes the code for adding joints between cells
 
 export split!
+export generate_joint_cells!
 
 function joint_shape(shape::ShapeType)
     if shape == LIN2  ; return JLIN2  end
@@ -35,7 +36,7 @@ function joint_shape(shape::ShapeType)
 end
 
 # Adds joint cells over all shared faces
-function split!(mesh::Mesh)
+function generate_joint_cells!(mesh::Mesh)
     cells  = mesh.cells
     solids = filter( c -> is_solid(c.shape), cells)
 
@@ -133,5 +134,9 @@ function split!(mesh::Mesh)
     
 end
 
-
+# Deprecated function
+function split!(mesh::Mesh)
+    info("split function was deprecated. Use generate_joint_cells! function instead.")
+    generate_joint_cells!(mesh)
+end
 

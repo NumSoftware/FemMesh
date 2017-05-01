@@ -884,7 +884,9 @@ include("filters.jl")
 include("extrude.jl") 
 include("smooth.jl") 
 include("split.jl") 
-#include("draw.jl") 
+include("embedded.jl") 
+
+include("draw.jl") 
 
 
 # TESTING
