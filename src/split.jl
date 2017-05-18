@@ -32,6 +32,7 @@ function joint_shape(shape::ShapeType)
     if shape == TRI6  ; return JTRI6  end
     if shape == QUAD4 ; return JQUAD4 end
     if shape == QUAD8 ; return JQUAD8 end
+    if shape == QUAD9 ; return JQUAD9 end
     error("No joint for shape $shape")
 end
 

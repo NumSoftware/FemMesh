@@ -512,7 +512,13 @@ function get_shape_type(geo, npoints=0)
     return shapetype
 end
 
-function load_mesh_vtk(filename)
+function load_mesh_vtk(filename::String; verbose::Bool=true)
+
+    if verbose
+        printcolor(:cyan, "Mesh loading:\n")
+        print("  Reading VTK legacy format...\n")
+    end
+
     file = open(filename)
     mesh = Mesh()
 
@@ -710,6 +716,18 @@ function load_mesh_vtk(filename)
         end
     end
 
+    if verbose
+        npoints = length(mesh.points)
+        ncells  = length(mesh.cells)
+        nfaces  = length(mesh.faces)
+        nedges  = length(mesh.edges)
+        println("  ", mesh.ndim, "d found             ")
+        @printf "  %5d points read\n" npoints
+        @printf "  %5d cells read\n" ncells
+        @printf "  %5d faces obtained\n" nfaces
+        @printf "  %5d surface edges obtained\n" nedges
+    end
+
     return mesh
 end
 
@@ -802,10 +820,10 @@ end
 """
 `Mesh(filename)` constructs a mesh object based on a file in VTK legacy format or JSON format.
 """
-function Mesh(filename::AbstractString)
+function Mesh(filename::String; verbose::Bool=true)
     basename, ext = splitext(filename)
     if ext==".vtk"
-        return load_mesh_vtk(filename)
+        return load_mesh_vtk(filename, verbose=verbose)
     else # try JSON
         return load_mesh_json(filename)
     end

@@ -40,20 +40,21 @@ TRI3  = 5,
 TRI6  = 22,
 QUAD4 = 9,
 QUAD8 = 23,
+QUAD9 = 28, # VTK_BIQUADRATIC_QUAD
 TET4  = 10,
 TET10 = 24,
-HEX8  = 12,
+HEX8  = 12, # VTK_HEXAHEDRON
 HEX20 = 25,
-WED6  = 13,
+WED6  = 13, # VTK_WEDGE
+WED15 = 26, # VTK_QUADRATIC_WEDGE
+HEX27 = 29, # VTK_TRIQUADRATIC_HEXAHEDRON 
 # Shapes represented as polyvertex
-LIN4   = 31,
-TRI9   = 33,
-TRI10  = 34,
-QUAD9  = 37,
-QUAD12 = 38,
-QUAD16 = 39,
-WED15  = 41,
-# Embedded links
+LIN4   = 41,
+TRI9   = 43,
+TRI10  = 44,
+QUAD12 = 48,
+QUAD16 = 49,
+# Embedded links (1D joints)
 LINK1  = 51,
 LINK2  = 52,
 LINK3  = 53,
@@ -66,6 +67,14 @@ JTRI6  = 100 + 22,
 JQUAD4 = 100 + 9,
 JQUAD8 = 100 + 23,
 )
+
+# Other quadratic, isoparametric cells                                                                                                               
+# VTK_QUADRATIC_LINEAR_QUAD 30
+# VTK_QUADRATIC_LINEAR_WEDGE 31
+# VTK_BIQUADRATIC_QUADRATIC_WEDGE 32
+# VTK_BIQUADRATIC_QUADRATIC_HEXAHEDRON 33
+# VTK_BIQUADRATIC_TRIANGLE 34
+# see https://github.com/Kitware/VTK/tree/master/Common/DataModel
 
 function is_line(shape::ShapeType)
     shape in (LIN2, LIN3, LIN4) 
@@ -221,7 +230,7 @@ function get_basic_shape(shape::ShapeType)
     
     if shape in [ LIN2, LIN3, LIN4 ] return LIN2 end
     if shape in [ TRI3, TRI6, TRI9, TRI10 ] return TRI3 end
-    if shape in [ QUAD4, QUAD8, QUAD12, QUAD16 ] return QUAD4 end
+    if shape in [ QUAD4, QUAD8, QUAD9, QUAD12, QUAD16 ] return QUAD4 end
     if shape in [ TET4, TET10 ] return TET4 end
     if shape in [ HEX8, HEX20 ] return HEX8 end
     if shape in [ WED6, WED15] return WED8 end
@@ -251,13 +260,11 @@ function get_shape_from_vtk(vtk_type::Int64, npoints::Int64, ndim::Int64)::Shape
     elseif npoints==8
         if ndim==2 return JLIN4  end
         if ndim==3 return JQUAD4 end
-    elseif npoints==9   return QUAD9  # what about TRI9?
+    elseif npoints==9   return TRI9
     elseif npoints==10  return TRI10
     elseif npoints==12  
         if ndim==2 return QUAD12 end
         if ndim==3 return JTRI6  end
-    elseif npoints==15  
-        if ndim==3 return WED15  end
     elseif npoints==16
         if ndim==2 return QUAD16 end
         if ndim==3 return JQUAD8 end
@@ -272,155 +279,167 @@ end
 
 
 coords_lin2 =
-[ -1.0  1.0 
-   1.0  1.0 ]
+[ -1.0 
+   1.0 ]
 
 coords_lin3 =
-[ -1.0  1.0 
-   1.0  1.0 
-   0.0  1.0 ]
+[ -1.0
+   1.0
+   0.0]
 
 coords_tri6 =
-[ 0.0  0.0  1.0
-  1.0  0.0  1.0
-  0.0  1.0  1.0 
-  0.5  0.0  1.0 
-  0.5  0.5  1.0 
-  0.0  0.5  1.0 ]
+[ 0.0  0.0
+  1.0  0.0
+  0.0  1.0 
+  0.5  0.0 
+  0.5  0.5 
+  0.0  0.5 ]
 
 
 _1_3 = 1.0/3.0; _2_3 = 2.0/3.0
 
 coords_tri9 =
-[ 0.0   0.0  1.0
-  1.0   0.0  1.0
-  0.0   1.0  1.0
+[ 0.0   0.0 
+  1.0   0.0 
+  0.0   1.0 
   
-  _1_3   0.0  1.0
-  _2_3  _1_3  1.0
-   0.0  _2_3  1.0
+  _1_3   0.0
+  _2_3  _1_3
+   0.0  _2_3
   
-  _2_3   0.0  1.0
-  _1_3  _2_3  1.0
-   0.0  _1_3  1.0 ]
+  _2_3   0.0
+  _1_3  _2_3
+   0.0  _1_3 ]
 
 coords_tri10 =
-[ 0.0   0.0  1.0 
-  1.0   0.0  1.0 
-  0.0   1.0  1.0 
+[ 0.0   0.0  
+  1.0   0.0  
+  0.0   1.0  
   
-  _1_3   0.0  1.0 
-  _2_3  _1_3  1.0 
-   0.0  _2_3  1.0 
+  _1_3   0.0  
+  _2_3  _1_3  
+   0.0  _2_3  
   
-  _2_3   0.0  1.0 
-  _1_3  _2_3  1.0 
-   0.0  _1_3  1.0 
+  _2_3   0.0  
+  _1_3  _2_3  
+   0.0  _1_3  
   
-  _1_3  _1_3  1.0 ]
+  _1_3  _1_3  ]
 
 
 coords_quad4 = 
-[ -1.0 -1.0  1.0
-   1.0 -1.0  1.0
-   1.0  1.0  1.0
-  -1.0  1.0  1.0 ]
+[ -1.0 -1.0 
+   1.0 -1.0 
+   1.0  1.0 
+  -1.0  1.0  ]
 
 coords_quad8 = 
-[ -1.0 -1.0  1.0
-   1.0 -1.0  1.0
-   1.0  1.0  1.0
-  -1.0  1.0  1.0
-   0.0 -1.0  1.0
-   1.0  0.0  1.0
-   0.0  1.0  1.0
-  -1.0  0.0  1.0 ]
+[ -1.0 -1.0
+   1.0 -1.0
+   1.0  1.0
+  -1.0  1.0
+   0.0 -1.0
+   1.0  0.0
+   0.0  1.0
+  -1.0  0.0 ]
+
+coords_quad9 = 
+[ -1.0 -1.0
+   1.0 -1.0
+   1.0  1.0
+  -1.0  1.0
+   0.0 -1.0
+   1.0  0.0
+   0.0  1.0
+  -1.0  0.0
+   0.0  0.0 ]
 
 coords_hex8 = 
-[ -1.0 -1.0 -1.0  1.0
-   1.0 -1.0 -1.0  1.0
-   1.0  1.0 -1.0  1.0
-  -1.0  1.0 -1.0  1.0
-  -1.0 -1.0  1.0  1.0
-   1.0 -1.0  1.0  1.0
-   1.0  1.0  1.0  1.0
-  -1.0  1.0  1.0  1.0 ]
+[ -1.0 -1.0 -1.0 
+   1.0 -1.0 -1.0 
+   1.0  1.0 -1.0 
+  -1.0  1.0 -1.0 
+  -1.0 -1.0  1.0 
+   1.0 -1.0  1.0 
+   1.0  1.0  1.0 
+  -1.0  1.0  1.0 ]
 
 coords_hex20 = 
-[ -1.0 -1.0 -1.0  1.0
-   1.0 -1.0 -1.0  1.0
-   1.0  1.0 -1.0  1.0
-  -1.0  1.0 -1.0  1.0
-  -1.0 -1.0  1.0  1.0
-   1.0 -1.0  1.0  1.0
-   1.0  1.0  1.0  1.0
-  -1.0  1.0  1.0  1.0 
+[ -1.0 -1.0 -1.0 
+   1.0 -1.0 -1.0 
+   1.0  1.0 -1.0 
+  -1.0  1.0 -1.0 
+  -1.0 -1.0  1.0 
+   1.0 -1.0  1.0 
+   1.0  1.0  1.0 
+  -1.0  1.0  1.0  
  
-   0.0 -1.0 -1.0  1.0
-   1.0  0.0 -1.0  1.0
-   0.0  1.0 -1.0  1.0
-  -0.0  0.0 -1.0  1.0
-   0.0 -1.0  1.0  1.0
-   1.0  0.0  1.0  1.0
-   0.0  1.0  1.0  1.0
-  -0.0  0.0  1.0  1.0
+   0.0 -1.0 -1.0 
+   1.0  0.0 -1.0 
+   0.0  1.0 -1.0 
+  -0.0  0.0 -1.0 
+   0.0 -1.0  1.0 
+   1.0  0.0  1.0 
+   0.0  1.0  1.0 
+  -0.0  0.0  1.0 
 
-  -1.0 -1.0  0.0  1.0
-   1.0 -1.0  0.0  1.0
-   1.0  1.0  0.0  1.0
-  -1.0  1.0  0.0  1.0
-  ]
+  -1.0 -1.0  0.0 
+   1.0 -1.0  0.0 
+   1.0  1.0  0.0 
+  -1.0  1.0  0.0 ]
 
 coords_tet4 = 
-[  0.0  0.0  0.0  1.0 
-   1.0  0.0  0.0  1.0 
-   0.0  1.0  0.0  1.0 
-   0.0  0.0  1.0  1.0 ]
+[  0.0  0.0  0.0 
+   1.0  0.0  0.0 
+   0.0  1.0  0.0 
+   0.0  0.0  1.0 ]
 
 coords_tet10 = 
-[  0.0  0.0  0.0  1.0 
-   1.0  0.0  0.0  1.0 
-   0.0  1.0  0.0  1.0 
-   0.0  0.0  1.0  1.0 
+[  0.0  0.0  0.0 
+   1.0  0.0  0.0 
+   0.0  1.0  0.0 
+   0.0  0.0  1.0 
 
-   0.5  0.0  0.0  1.0 
-   0.5  0.5  0.0  1.0 
-   0.0  0.5  0.0  1.0 
-   0.0  0.0  0.5  1.0 
-   0.5  0.0  0.5  1.0 
-   0.0  0.5  0.5  1.0 ]
+   0.5  0.0  0.0 
+   0.5  0.5  0.0 
+   0.0  0.5  0.0 
+   0.0  0.0  0.5 
+   0.5  0.0  0.5 
+   0.0  0.5  0.5 ]
 
 coords_wed6 = 
-[ 0.0  0.0 -1.0  1.0
-  1.0  0.0 -1.0  1.0
-  0.0  1.0 -1.0  1.0
-  0.0  0.0  1.0  1.0
-  1.0  0.0  1.0  1.0
-  0.0  1.0  1.0  1.0 ]
+[ 0.0  0.0 -1.0
+  1.0  0.0 -1.0
+  0.0  1.0 -1.0
+  0.0  0.0  1.0
+  1.0  0.0  1.0
+  0.0  1.0  1.0 ]
 
 coords_wed15 = 
-[ 0.0  0.0 -1.0  1.0
-  1.0  0.0 -1.0  1.0
-  0.0  1.0 -1.0  1.0
-  0.0  0.0  1.0  1.0
-  1.0  0.0  1.0  1.0
-  0.0  1.0  1.0  1.0
+[ 0.0  0.0 -1.0
+  1.0  0.0 -1.0
+  0.0  1.0 -1.0
+  0.0  0.0  1.0
+  1.0  0.0  1.0
+  0.0  1.0  1.0
 
-  0.5  0.0 -1.0  1.0
-  0.5  0.5 -1.0  1.0
-  0.0  0.5 -1.0  1.0
-  0.5  0.0  1.0  1.0
-  0.5  0.5  1.0  1.0
-  0.0  0.5  1.0  1.0
-  0.0  0.0  0.0  1.0
-  1.0  0.0  0.0  1.0
-  0.0  1.0  0.0  1.0 ]
+  0.5  0.0 -1.0
+  0.5  0.5 -1.0
+  0.0  0.5 -1.0
+  0.5  0.0  1.0
+  0.5  0.5  1.0
+  0.0  0.5  1.0
+  0.0  0.0  0.0
+  1.0  0.0  0.0
+  0.0  1.0  0.0 ]
 
 function get_local_coords(st::ShapeType)
     if     st == LIN2   return coords_lin2
     elseif st == LIN3   return coords_lin3
     elseif st == TRI6   return coords_tri6
     elseif st == QUAD4  return coords_quad4
+    elseif st == QUAD8  return coords_quad8
+    elseif st == QUAD9  return coords_quad9
     elseif st == TET10  return coords_tet10
     elseif st == HEX20  return coords_hex20
     elseif st == WED6   return coords_wed6
@@ -683,8 +702,9 @@ function shape_func(::Type{Val{QUAD9}}, R::Array{Float64,1})
     #
     r, s = R[1:2]
     N = Array(Float64,9)
-    rp1=1.0+r; rm1=1.0-r;
-    sp1=1.0+s; sm1=1.0-s;
+    rp1=r+1.0; rm1=r-1.0
+    sp1=s+1.0; sm1=s-1.0
+
     N[1] =  0.25*r*s*sm1*rm1
     N[2] =  0.25*r*s*sm1*rp1
     N[3] =  0.25*r*s*sp1*rp1
@@ -700,13 +720,9 @@ end
 function deriv_func(::Type{Val{QUAD9}}, R::Array{Float64,1})
     r, s = R[1:2]
     D = Array(Float64, 2,9)
-    rp1=1.0+r; rm1=1.0-r
-    sp1=1.0+s; sm1=1.0-s
-
-    #RP = 1. + r
-    #RM = 1. - r
-    #SP = 1. + s
-    #SM = 1. - s
+    rp1=r+1.0; rm1=r-1.0
+    sp1=s+1.0; sm1=s-1.0
+    #=
 	D[1,1] = (r + r - 1.0) * s * (s - 1.0) / 4.0
 	D[1,2] = (r + r + 1.0) * s * (s - 1.0) / 4.0
 	D[1,3] = (r + r + 1.0) * s * (s + 1.0) / 4.0
@@ -726,26 +742,27 @@ function deriv_func(::Type{Val{QUAD9}}, R::Array{Float64,1})
 	D[2,7] = -(r*r - 1.0) * (s + s + 1.0) / 2.0
 	D[2,8] = -r * (r - 1.0) * (s + s) / 2.0
 	D[2,9] = 2.0 * s * (r*r - 1.0)
+    =#
 
-	#D[1,1] = (r + rm1) * s * sm1 / 4.0
-	#D[1,2] = (r + rp1) * s * sm1 / 4.0
-	#D[1,3] = (r + rp1) * s * sp1 / 4.0
-	#D[1,4] = (r + rm1) * s * sp1 / 4.0
-	#D[1,5] = -(r + r) * s * (sm1) / 2.0
-	#D[1,6] = -(r + rp1) * (s*s - 1.0) / 2.0
-	#D[1,7] = -(r + r) * s * (sp1) / 2.0
-	#D[1,8] = -(r + rm1) * (s*s - 1.0) / 2.0
-	#D[1,9] = 2.0 * r * (s*s - 1.0)
-#
-	#D[2,1] = r * rm1 * (s + sm1) / 4.0
-	#D[2,2] = r * rp1 * (s + sm1) / 4.0
-	#D[2,3] = r * rp1 * (s + sp1) / 4.0
-	#D[2,4] = r * rm1 * (s + sp1) / 4.0
-	#D[2,5] = -(r*r - 1.0) * (s + sm1) / 2.0
-	#D[2,6] = -r * (rp1) * (s + s) / 2.0
-	#D[2,7] = -(r*r - 1.0) * (s + sp1) / 2.0
-	#D[2,8] = -r * (rm1) * (s + s) / 2.0
-	#D[2,9] = 2.0 * s * (r*r - 1.0)
+	D[1,1] = (r + rm1)*s*sm1/4.0
+	D[1,2] = (r + rp1)*s*sm1/4.0
+	D[1,3] = (r + rp1)*s*sp1/4.0
+	D[1,4] = (r + rm1)*s*sp1/4.0
+	D[1,5] = -(r + r)*s*(sm1)/2.0
+	D[1,6] = -(r + rp1)*(s*s - 1.0)/2.0
+	D[1,7] = -(r + r)*s*(sp1)/2.0
+	D[1,8] = -(r + rm1)*(s*s - 1.0)/2.0
+	D[1,9] = 2.0*r*(s*s - 1.0)
+
+	D[2,1] = r*rm1*(s+sm1)/4.0
+	D[2,2] = r*rp1*(s+sm1)/4.0
+	D[2,3] = r*rp1*(s+sp1)/4.0
+	D[2,4] = r*rm1*(s+sp1)/4.0
+	D[2,5] = -(r*r - 1.0)*(s + sm1)/2.0
+	D[2,6] = -r*rp1*(s + s)/2.0
+	D[2,7] = -(r*r - 1.0)*(s + sp1)/2.0
+	D[2,8] = -r*rm1*(s + s)/2.0
+	D[2,9] = 2.0*s*(r*r - 1.0)
 
     return D
 end
@@ -1238,6 +1255,54 @@ function deriv_func(::Type{Val{WED15}}, R::Array{Float64,1})
 end
 
 
+# Dictionary of faces indexes
+FACETS_IDXS = Dict(
+    TRI3   => [ [1, 2],                   [2, 3],                    [3, 1]                                                                                                  ],
+    TRI6   => [ [1, 2, 4],                [2, 3, 5],                 [3, 1, 6]                                                                                               ],
+    TRI9   => [ [1, 2, 4, 7],             [2, 3, 5, 8],              [3, 1, 6, 9]                                                                                            ],
+    QUAD4  => [ [1, 2],                   [2, 3],                    [3, 4],                   [4, 1]                                                                        ],
+    QUAD8  => [ [1, 2, 5],                [2, 3, 6],                 [3, 4, 7],                [4, 1, 8]                                                                     ],
+    QUAD9  => [ [1, 2, 5],                [2, 3, 6],                 [3, 4, 7],                [4, 1, 8]                                                                     ],
+    QUAD12 => [ [1, 2, 5, 9],             [2, 3, 6, 10],             [3, 4, 7, 11],            [4, 1, 8, 12]                                                                 ],
+    QUAD16 => [ [1, 2, 5, 9],             [2, 3, 6, 10],             [3, 4, 7, 11],            [4, 1, 8, 12]                                                                 ],
+    TET4   => [ [1, 4, 3],                [1, 2, 4],                 [1, 3, 2],                [2, 3, 4]                                                                     ],
+    TET10  => [ [1, 4, 3, 8, 10, 7],      [1, 2, 4, 5, 9, 8],        [1, 3, 2, 7, 6, 5],       [2, 3, 4, 6, 10, 9]                                                           ],
+    HEX8   => [ [1, 5, 8, 4],             [2, 3, 7, 6],              [1, 2, 6, 5],             [3, 4, 8, 7],             [1, 4, 3, 2],              [5, 6, 7, 8]             ],
+    HEX20  => [ [1, 5, 8, 4,17,16,20,12], [2, 3, 7, 6, 10,19,14,18], [1, 2, 6, 5, 9,18,13,17], [3, 4, 8, 7,11,20,15,19], [1, 4, 3, 2,12,11, 10, 9], [5, 6, 7, 8,13,14,15,16] ],
+    WED6   => [ [1, 4, 6, 3], [1, 2, 5, 4], [2, 3, 6, 5], [1, 3, 2], [4, 5, 6]],
+    WED15  => [ [1, 4, 6, 3, 13, 12, 15, 9], [1, 2, 5, 4, 7, 14, 10, 13], [2, 3, 6, 5, 8, 15, 11, 14], [1, 3, 2, 9, 8, 7], [4, 5, 6, 10, 11, 12]],
+    )
+
+# Dictionary of edge indexes for 3D shapes
+EDGES_IDXS = Dict(
+    TET4   => [ [1, 2],    [2, 3],      [3, 1],     [1, 4],      [2, 4],      [3, 4]       ],
+    TET10  => [ [1, 2, 5], [2, 3, 6],   [3, 1, 7],  [1, 4, 8],   [2, 4, 9],   [3, 4, 10]   ],
+    HEX8   => [ [1, 2],    [2, 3],      [3, 4],     [4, 1],      [5, 6],      [6, 7],      [7, 8],      [8, 5],      [1, 5],     [2, 6],      [3, 7],     [4, 8]     ],
+    HEX20  => [ [1, 2, 9], [2, 3, 10],  [3, 4, 11], [4, 1, 12],  [5, 6, 13],  [6, 7, 14],  [7, 8, 15],  [8, 5, 16],  [1, 5, 17], [2, 6, 18],  [3, 7, 19], [4, 8, 20] ],
+    WED6   => [ [1, 2],    [2, 3],      [3, 1],     [4, 5],      [5, 6],      [6, 4],      [1, 4],      [2, 5],      [3, 6]  ],
+    WED15  => [ [1, 2, 7], [2, 3, 8],   [3, 1, 9],  [4, 5, 10],  [5, 6, 11],  [6, 4, 12],  [1, 4, 13],  [2, 5, 14],  [3, 6, 15]  ],
+    )
+
+# Dictionary of corresponding faces type
+FACETS_SHAPE = Dict(
+    QUAD4  => LIN2 ,
+    TRI3   => LIN2 ,
+    TRI6   => LIN3 ,
+    TRI9   => LIN4 ,
+    QUAD4  => LIN2 ,
+    QUAD8  => LIN3 ,
+    QUAD9  => LIN3 ,
+    QUAD12 => LIN4 ,
+    QUAD16 => LIN4 ,
+    TET4   => TRI3 ,
+    TET10  => TRI6 ,
+    HEX8   => QUAD4,
+    HEX20  => QUAD8,
+    WED6   => (QUAD4, QUAD4, QUAD4, TRI3, TRI3, TRI3),
+    WED15  => (QUAD8, QUAD8, QUAD8, TRI6, TRI6, TRI6),
+)
+
+
 # Number of integration points per element
 IP_FEM = Dict(
     LIN2    => Dict( 0 => LIN_IP2,  1 => ALL_IP1,  2 => LIN_IP2,  3 => LIN_IP3,   4 => LIN_IP4    ),
@@ -1294,8 +1359,6 @@ function bdistance(shape::ShapeType, R::Array{Float64,1})
     if shape in [ TET4, TET10 ] return min(r, s, t, 1.0-r-s-t) end
     if shape in [ HEX8, HEX20 ] return min(1.0 - abs(r), 1.0 - abs(s), 1.0 - abs(t)) end
     if shape in [ WED6, WED15 ] return min(r, s, 1.0-r-s, 1.0-abs(t)) end
-    #if shape in [ QUAD4, QUAD8, QUAD12, QUAD16 ]  return min(1.0 - r*r, 1.0 - s*s) end
-    #if shape in [ HEX8, HEX20 ] return min(1.0 - r*r, 1.0 - s*s, 1.0 - t*t) end
     error("No boundary distance for shape ($shape)")
 end
 
@@ -1406,7 +1469,7 @@ function extrapolator(shape::ShapeType, nips::Int)
     #@show nips
     #@show nnodes
     # ε matrix: Local coordinates of nodal points
-    ε = get_local_coords(shape)
+    ε = [ get_local_coords(shape) ones(nnodes) ] # increase a column of ones
 
     E = pinv(N)*(I - εip*pinv(εip)) + ε*pinv(εip)
 

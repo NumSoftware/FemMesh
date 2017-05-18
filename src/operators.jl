@@ -161,3 +161,9 @@ function polar(blocks::Array; base=[0.,0,0], axis=[0.,0,1], angle=360, n=2 )
 
     return blocks3D
 end
+
+
+
+function scale(msh::Mesh, value; base=[0.,0,0])
+    return msh
+end
