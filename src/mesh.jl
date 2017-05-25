@@ -139,7 +139,7 @@ function reorder!(mesh::Mesh; sort_degrees=true, reversed=false)
     for cell in mesh.cells
 
         # adding cell edges
-        if is_solid(cell.shape)
+        if cell.shape.class == SOLID_SHAPE #is_solid(cell.shape)
             for edge in get_edges(cell)
                 hs = hash(edge)
                 all_edges[hs] = edge
@@ -155,7 +155,7 @@ function reorder!(mesh::Mesh; sort_degrees=true, reversed=false)
         end
 
         # joint1D cells
-        if cell.shape in (LINK2, LINK3)
+        if cell.shape in (JLINK2, JLINK3)
             edge = Cell(LIN2, [ cell.points[1], cell.points[end-1] ])
             hs = hash(edge)
             all_edges[hs] = edge
@@ -443,7 +443,7 @@ function save(mesh::Mesh, filename::AbstractString; verbose::Bool=true)
     # Write cell types
     println(f, "CELL_TYPES ", ncells)
     for cell in mesh.cells
-        println(f, get_vtk_type(cell.shape))
+        println(f, cell.shape.vtk_type)
     end
     println(f)
 
@@ -593,8 +593,8 @@ function load_mesh_vtk(filename::String; verbose::Bool=true)
     # read type of cells (cont.)
     has_polyvertex = false
     for i=1:ncells
-        vtk_shape = parse(data[idx])
-        if vtk_shape == Int(POLYV)
+        vtk_shape = VTKCellType(parse(data[idx]))
+        if vtk_shape == VTK_POLY_VERTEX
             shape = POLYV
         else
             shape = get_shape_from_vtk( vtk_shape, length(conns[i]), ndim )
@@ -629,7 +629,7 @@ function load_mesh_vtk(filename::String; verbose::Bool=true)
                     #hss = hash(conn[1:end-2])
                     hss = hash( [ cell.points[i] for i=1:n-2] )
                     if haskey(cdict, hss) 
-                        cell.shape = LINK2
+                        cell.shape = JLINK2
                         hs0   = hash( [ cell.points[i] for i=n-1:n] )
                         hcell = cdict[hss]
                         lcell = cdict[hs0]
@@ -640,7 +640,7 @@ function load_mesh_vtk(filename::String; verbose::Bool=true)
                     #hss = hash(conn[1:end-3])
                     hss = hash( [ cell.points[i] for i=1:n-3] )
                     if haskey(cdict, hss) 
-                        cell.shape = LINK3
+                        cell.shape = JLINK3
                         hs0   = hash( [ cell.points[i] for i=n-2:n] )
                         hcell = cdict[hss]
                         lcell = cdict[hs0]
@@ -661,13 +661,13 @@ function load_mesh_vtk(filename::String; verbose::Bool=true)
                         delta += abs(p1.z - p2.z)
                     end
                     if delta<1e-10
-                        cell.shape = get_shape_from_vtk(Int(POLYV), n, ndim)
+                        cell.shape = get_shape_from_vtk(VTK_POLY_VERTEX, n, ndim)
                         continue
                     end
                 end
 
                 # remaining polyvertex cells
-                cell.shape = get_shape_from_vtk(Int(POLYV), n, ndim)
+                cell.shape = get_shape_from_vtk(VTK_POLY_VERTEX, n, ndim)
             end
         end
 
@@ -676,7 +676,7 @@ function load_mesh_vtk(filename::String; verbose::Bool=true)
         # check if there are joints
         has_joints = false
         for cell in mesh.cells
-            if is_joint(cell.shape )
+            if cell.shape.class == JOINT_SHAPE
                 has_joints = true
                 break
             end
@@ -694,7 +694,7 @@ function load_mesh_vtk(filename::String; verbose::Bool=true)
             end
 
             for cell in mesh.cells
-                if is_joint(cell.shape)
+                if cell.shape.class == JOINT_SHAPE
                     n = length(cell.points)
                     hs1 = hash( [ cell.points[i] for i=1:div(n,2)] )
                     hs2 = hash( [ cell.points[i] for i=div(n,2)+1:n] )
@@ -796,7 +796,7 @@ function load_mesh_json(filename; format="json")
 
     all_faces = Face[]
     for (i,C) in enumerate(mesh.cells)
-        if is_solid(C.shape)
+        if C.shape.class == SOLID_SHAPE #is_solid(C.shape)
             faces = get_faces(C)
             ftags = get(cells[i],"ftags", [])
             if length(ftags) > 0
@@ -897,15 +897,6 @@ function move(mesh::Mesh; dx=0.0, dy=0.0, dz=0.0)
     end
     return mesh
 end
-
-include("filters.jl") 
-include("extrude.jl") 
-include("smooth.jl") 
-include("split.jl") 
-include("embedded.jl") 
-
-include("draw.jl") 
-
 
 # TESTING
 function get_surface_alt(cells::Array{Cell,1})

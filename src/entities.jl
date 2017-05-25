@@ -78,7 +78,7 @@ end
 
 function get_coords(points::Array{Point,1}, ndim::Int64=3)
     np = length(points)
-    C  = Array(Float64, np, ndim)
+    C  = Array{Float64}(np, ndim)
     for i=1:np
         C[i,1] = points[i].x
         C[i,2] = points[i].y
@@ -126,7 +126,7 @@ hash(c::Cell) = sum([ hash(p) for p in c.points])
 
 function get_coords(c::Cell, ndim=3)
     n = length(c.points)
-    C = Array(Float64, n, ndim)
+    C = Array{Float64}(n, ndim)
     for (i,p) in enumerate(c.points)
         C[i,1] = p.x
         if ndim>1 C[i,2] = p.y end
@@ -164,16 +164,16 @@ end
 # Index operator for a collection of elements
 function getindex(cells::Array{Cell,1}, s::Symbol)
     if s == :solids
-        cr = [ is_solid(cell.shape) for cell in cells]
-        return cells[cr]
+        return filter(cell -> cell.shape.class==SOLID_SHAPE, cells)
     end
     if s == :lines
-        cr = [ is_line(cell.shape) for cell in cells]
-        return cells[cr]
+        return filter(cell -> cell.shape.class==LINE_SHAPE, cells)
     end
     if s == :joints
-        cr = [ is_joint(cell.shape) for cell in cells]
-        return cells[cr]
+        return filter(cell -> cell.shape.class==JOINT_SHAPE, cells)
+    end
+    if s == :joints1D
+        return filter(cell -> cell.shape.class==JOINT1D_SHAPE, cells)
     end
     if s == :points
         return get_points(cells)
@@ -187,7 +187,7 @@ type Bins
     lbin::Float64
     function Bins(nx=0, ny=0, nz=0, bbox=nothing)
         this = new()
-        this.bins = Array(Array{Cell,1}, nx, nx, nx)
+        this.bins = Array{Array{Cell,1}}(nx, nx, nx)
         this.bbox = zeros(0,0)
         # this.lbin = ..
         return this
@@ -276,7 +276,7 @@ function build_bins(cells::Array{Cell,1}, bins::Bins)
     # Get max cell lengths
     max_l = 0.0
     for cell in cells
-        if !is_solid(cell.shape); continue end
+        if cell.shape.class!=SOLID_SHAPE continue end
         bbox = bounding_box(cell)
         max  = maximum(bbox[2,:] - bbox[1,:])
         if max>max_l; max_l = max end
@@ -293,9 +293,9 @@ function build_bins(cells::Array{Cell,1}, bins::Bins)
     nz = floor(Int, Lz/lbin) + 1
 
     # Allocate bins
-    bins.bins = Array(Array{Cell,1}, nx, ny, nz)
+    bins.bins = Array{Array{Cell,1}}(nx, ny, nz)
     for k=1:nz, j=1:ny, i=1:nx
-        bins.bins[i,j,k] = Array(Cell,0)
+        bins.bins[i,j,k] = Array{Cell}(0)
     end
 
     # Fill bins
@@ -366,17 +366,16 @@ end
 
 # gets all facets of a cell
 function get_faces(cell::Cell)
-    faces  = Array(Cell,0)
-    if !haskey(FACETS_IDXS, cell.shape) 
-        if is_solid(cell.shape)
-            error("get_faces: Facets for shape ($(cell.shape)) not implemented")
-        end
-        return faces 
-    end
+    faces  = Array{Cell}(0)
 
-    all_faces_idxs = FACETS_IDXS[cell.shape]
-    facet_shape = FACETS_SHAPE[cell.shape]         # facet_shape could be of type ShapeType or Tuple
-    sameshape   = typeof(facet_shape) == ShapeType # check if all facet have the same shape
+    #all_faces_idxs = FACETS_IDXS[cell.shape]
+    all_faces_idxs = cell.shape.facet_idxs
+    #facet_shape = FACETS_SHAPE[cell.shape]         # facet_shape could be of type ShapeType or Tuple
+    facet_shape = cell.shape.facet_shape
+    
+    if facet_shape==() return faces end
+
+    sameshape  = typeof(facet_shape) == ShapeType # check if all facets have the same shape
 
     # Iteration for each facet
     for (i, face_idxs) in enumerate(all_faces_idxs)
@@ -391,16 +390,13 @@ end
 
 # gets all edges of a cell
 function get_edges(cell::Cell)
-    ndim = get_ndim(cell.shape)
-    if ndim==2 return get_faces(cell) end
+    if cell.shape.ndim==2 return get_faces(cell) end
 
-    edges  = Array(Cell,0)
-    if !haskey(EDGES_IDXS, cell.shape) return edges end
+    edges  = Array{Cell}(0)
+    all_edge_idxs = cell.shape.edge_idxs
 
-    e_idxs = EDGES_IDXS[cell.shape]
-
-    for e_idx in e_idxs
-        points = cell.points[e_idx]
+    for edge_idx in all_edge_idxs
+        points = cell.points[edge_idx]
         shape  = (LIN2, LIN3, LIN4)[length(points)-1]
         edge   = Cell(shape, points, cell.tag, cell)
         push!(edges, edge)
@@ -431,17 +427,19 @@ end
 function cell_extent(c::Cell)
     IP = get_ip_coords(c.shape)
     nip = size(IP,1)
-    nldim = get_ndim(c.shape) # cell basic dimension 
+    nldim = c.shape.ndim # cell basic dimension
+
 
     # get coordinates matrix
     C = get_coords(c)
-    J = Array(Float64, nldim, size(C,2))
+    J = Array{Float64}(nldim, size(C,2))
 
     # calc metric
     vol = 0.0
     for i=1:nip
         R    = vec(IP[i,1:3])
-        dNdR = deriv_func(c.shape, R)
+        dNdR = c.shape.deriv(R)
+
         @gemm J = dNdR*C
         w    = IP[i,4]
         normJ = norm2(J)

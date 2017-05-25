@@ -26,8 +26,8 @@ export smooth!, laplacian_smooth!
 
 # Returns a matrix with the cell coordinates
 function cellcoords(c::Cell)
-    ndim = get_ndim(c.shape)
-    C = Array(Float64, length(c.points), ndim)
+    ndim = c.shape.ndim
+    C = Array{Float64}(length(c.points), ndim)
     for (i,point) in enumerate(c.points)
         C[i,1] = point.x
         C[i,2] = point.y
@@ -110,7 +110,7 @@ end
 # Returns a rotation matrix for a cell based in their first points
 function cell_orientation(cell::Cell)
     shape   = cell.shape
-    geo_dim = get_ndim(shape)
+    geo_dim = shape.ndim
 
     if geo_dim == 2
         p1 = cell.points[1]
@@ -199,9 +199,9 @@ function matrixK(cell::Cell, ndim::Int64, E::Float64, nu::Float64)
     K = zeros(nnodes*ndim, nnodes*ndim)
     B = zeros(6, nnodes*ndim)
 
-    DB = Array(Float64, 6, nnodes*ndim)
-    J = Array(Float64, ndim, ndim)
-    dNdX = Array(Float64, ndim, nnodes)
+    DB = Array{Float64}(6, nnodes*ndim)
+    J = Array{Float64}(ndim, ndim)
+    dNdX = Array{Float64}(ndim, nnodes)
 
     IP = get_ip_coords(cell.shape)
     D = matrixD(E, nu)
@@ -211,7 +211,7 @@ function matrixK(cell::Cell, ndim::Int64, E::Float64, nu::Float64)
         w    = IP[i,4]
 
         # compute B matrix
-        dNdR = deriv_func(cell.shape, R)
+        dNdR = cell.shape.deriv(R)
         @gemm J = dNdR*C
         @gemm dNdX = inv(J)*dNdR
         detJ = det(J)
@@ -232,7 +232,7 @@ function matrixK2(cell::Cell, ndim::Int64, E::Float64, nu::Float64)
     C = cellcoords(cell)
     K = zeros(nnodes*ndim, nnodes*ndim)
     B = zeros(6, nnodes*ndim)
-    DB = Array(Float64, 6, nnodes*ndim)
+    DB = Array{Float64}(6, nnodes*ndim)
 
     IP = get_ip_coords(cell.shape)
 
@@ -251,7 +251,7 @@ function matrixK2(cell::Cell, ndim::Int64, E::Float64, nu::Float64)
 end
 
 function get_map(c::Cell)
-    ndim = get_ndim(c.shape)
+    ndim = c.shape.ndim
     
     map = Int[]
     for p in c.points
@@ -306,8 +306,8 @@ end
 # Returns the normal unitary vector of a face
 # If the face is not flat returns [0,0,0]
 function normal_to_faces(faces::Array{Cell, 1})
-    ndim = 1 + get_ndim(faces[1].shape)
-    points = Array(Point, 0)
+    ndim = 1 + faces[1].shape.ndim
+    points = Array{Point}(0)
 
     for f in faces
         for p in f.points
@@ -316,7 +316,7 @@ function normal_to_faces(faces::Array{Cell, 1})
     end
 
     # mount coordinates matrix
-    C = Array(Float64, length(points), ndim)
+    C = Array{Float64}(length(points), ndim)
     for (i,p) in enumerate(points)
         C[i,1] = p.x
         C[i,2] = p.y
@@ -338,7 +338,7 @@ end
 
 
 function faces_normal(faces::Array{Cell,1}, eps_face)
-    ndim = 1 + get_ndim(faces[1].shape)
+    ndim = 1 + faces[1].shape.ndim
     
     #normals = Set{Array{Float64,1}}()
     normals = Array{Float64,1}[]
@@ -558,8 +558,8 @@ function smooth!(mesh::Mesh; verbose=true, alpha::Float64=0.3, target::Float64=0
 
     # check for not allowed cells
     for c in mesh.cells
-        if is_joint1D(c.shape) || is_joint(c.shape) || is_line(c.shape)
-            error("smooth!: joint, joint1D nor line cells are allowed for smoothing: $(get_name(c.shape))")
+        if c.shape.class != SOLID_SHAPE
+            error("smooth!: cells of class $(SOLID_SHAPE) are not allowed for smoothing: $(c.shape.name)")
         end
     end
 
@@ -578,7 +578,7 @@ function smooth!(mesh::Mesh; verbose=true, alpha::Float64=0.3, target::Float64=0
     qmin = minimum(Q)
     dev  = stdm(Q, q) 
     verbose && @printf("  it: %2d  qmin: %7.5f  qavg: %7.5f  dev: %7.5f", 0, qmin, q, dev)
-    verbose && println("  hist: ", fit(Histogram, Q, 0.5:0.05:1.0).weights)
+    verbose && println("  hist: ", fit(Histogram, Q, 0.5:0.05:1.0, closed=:right).weights)
 
     # Lagrange multipliers matrix
     A   = mountA(mesh, fixed, conds, eps_face) 
@@ -628,7 +628,7 @@ function smooth!(mesh::Mesh; verbose=true, alpha::Float64=0.3, target::Float64=0
         dev  = stdm(Q, q)
 
         verbose && @printf("  it: %2d  qmin: %7.5f  qavg: %7.5f  dev: %7.5f", i, qmin, q, dev)
-        verbose && println("  hist: ", fit(Histogram, Q, 0.5:0.05:1.0).weights)
+        verbose && println("  hist: ", fit(Histogram, Q, 0.5:0.05:1.0, closed=:right).weights)
 
         if Δq<eps && Δqmin<epsmin
             break
@@ -700,7 +700,7 @@ function laplacian_smooth!(mesh::Mesh; alpha::Float64=1.0, maxit::Int64=100, ver
     dev  = stdm(Q, q)
     save_steps && save(mesh, "$filekey-0.vtk", verbose=false)
     verbose && @printf("  it: %2d  qmin: %7.5f  qavg: %7.5f  dev: %7.5f", 0, qmin, q, dev)
-    verbose && println("  hist: ", fit(Histogram, Q, 0.5:0.05:1.0).weights)
+    verbose && println("  hist: ", fit(Histogram, Q, 0.5:0.05:1.0, closed=:right).weights)
 
     # find center point and update point position
     for i=1:maxit
@@ -758,7 +758,7 @@ function laplacian_smooth!(mesh::Mesh; alpha::Float64=1.0, maxit::Int64=100, ver
         dev  = stdm(Q, q)
 
         verbose && @printf("  it: %2d  qmin: %7.5f  qavg: %7.5f  dev: %7.5f", i, qmin, q, dev)
-        verbose && println("  hist: ", fit(Histogram, Q, 0.5:0.05:1.0).weights)
+        verbose && println("  hist: ", fit(Histogram, Q, 0.5:0.05:1.0, closed=:right).weights)
 
         if Δq<eps && Δqmin<epsmin
             break

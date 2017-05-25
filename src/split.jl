@@ -39,7 +39,7 @@ end
 # Adds joint cells over all shared faces
 function generate_joint_cells!(mesh::Mesh)
     cells  = mesh.cells
-    solids = filter( c -> is_solid(c.shape), cells)
+    solids = filter(c -> c.shape.class==SOLID_SHAPE, cells)
 
     newpoints = Point[]
 
@@ -78,7 +78,7 @@ function generate_joint_cells!(mesh::Mesh)
     jcells = Cell[]
     for (f1, f2) in face_pairs
         n   = length(f1.points)
-        con = Array(Point, 2*n)
+        con = Array{Point}(2*n)
         for (i,p1) in enumerate(f1.points)
             for p2 in f2.points
                 if hash(p1)==hash(p2)
@@ -104,8 +104,8 @@ function generate_joint_cells!(mesh::Mesh)
     end
 
     for c in cells
-        if c.shape in (LINK2, LINK3)
-            njpoints = c.shape==LINK2? 2 : 3
+        if c.shape in (JLINK2, JLINK3)
+            njpoints = c.shape==JLINK2? 2 : 3
             ncpoints = length(c.points) - njpoints  # number of points of crossed cell
             hs    = sum([ hash(p) for p in c.points[1:ncpoints]])
             ccell = cdict[hs]  # crossed cell

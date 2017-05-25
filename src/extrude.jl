@@ -113,7 +113,7 @@ function extrude(mesh::Mesh; axis=[0.,0.,1.], len::Number=1.0, n::Int=1, verbose
     # generate extra nodes and cells
     if shape == QUAD4
         # generate new points
-        p_arr = [ Array(Point,n+1) for p in inipoints ]
+        p_arr = [ Array{Point}(n+1) for p in inipoints ]
         for (i,p) in enumerate(inipoints)
             pp = p_arr[i]
             X = [ p.x, p.y, p.z ]
@@ -126,11 +126,11 @@ function extrude(mesh::Mesh; axis=[0.,0.,1.], len::Number=1.0, n::Int=1, verbose
         end
 
         # generate new cells
-        c_arr = [ Array(Cell, n) for c in inicells ]
+        c_arr = [ Array{Cell}( n) for c in inicells ]
         for (i,c) in enumerate(inicells)
             cc = c_arr[i]
             for j=1:n
-                cpoints = Array(Point, 8)
+                cpoints = Array{Point}( 8)
                 cpoints[1] = p_arr[ c.points[1].id ][j]
                 cpoints[2] = p_arr[ c.points[2].id ][j]
                 cpoints[3] = p_arr[ c.points[3].id ][j]
@@ -162,7 +162,7 @@ function extrude(mesh::Mesh; axis=[0.,0.,1.], len::Number=1.0, n::Int=1, verbose
         end
 
         # generate new points
-        p_arr = [ Array(Point,2*n+1) for p in inipoints ]
+        p_arr = [ Array{Point}(2*n+1) for p in inipoints ]
         for (i,p) in enumerate(inipoints)
             pp = p_arr[i]
             X = [ p.x, p.y, p.z ]
@@ -176,11 +176,11 @@ function extrude(mesh::Mesh; axis=[0.,0.,1.], len::Number=1.0, n::Int=1, verbose
         end
 
         # generate new cells
-        c_arr = [ Array(Cell, n) for c in inicells ]
+        c_arr = [ Array{Cell}( n) for c in inicells ]
         for (i,c) in enumerate(inicells)
             cc = c_arr[i]
             for j=1:2:2*n
-                cpoints = Array(Point, 20)
+                cpoints = Array{Point}( 20)
                 cpoints[1 ] = p_arr[ c.points[1].id ][j]
                 cpoints[2 ] = p_arr[ c.points[2].id ][j]
                 cpoints[3 ] = p_arr[ c.points[3].id ][j]
@@ -287,7 +287,7 @@ function extrude2(mesh::Mesh; axis=[0.,0.,1.], len::Number=1.0, n::Int=1, verbos
     # generate extra nodes and cells
     if shape == QUAD4
         # generate new points
-        p_arr = [ Array(Point,n+1) for p in inipoints ]
+        p_arr = [ Array{Point}(n+1) for p in inipoints ]
         for (i,p) in enumerate(inipoints)
             pp = p_arr[i]
             X = [ p.x, p.y, p.z ]
@@ -300,11 +300,11 @@ function extrude2(mesh::Mesh; axis=[0.,0.,1.], len::Number=1.0, n::Int=1, verbos
         end
 
         # generate new cells
-        c_arr = [ Array(Cell, n) for c in inicells ]
+        c_arr = [ Array{Cell}( n) for c in inicells ]
         for (i,c) in enumerate(inicells)
             cc = c_arr[i]
             for j=1:n
-                cpoints = Array(Point, 8)
+                cpoints = Array{Point}( 8)
                 cpoints[1] = p_arr[ c.points[1].id ][j]
                 cpoints[2] = p_arr[ c.points[2].id ][j]
                 cpoints[3] = p_arr[ c.points[3].id ][j]
@@ -336,7 +336,7 @@ function extrude2(mesh::Mesh; axis=[0.,0.,1.], len::Number=1.0, n::Int=1, verbos
         end
 
         # generate new points
-        p_arr = [ Array(Point,2*n+1) for p in inipoints ]
+        p_arr = [ Array{Point}(2*n+1) for p in inipoints ]
         for (i,p) in enumerate(inipoints)
             pp = p_arr[i]
             X = [ p.x, p.y, p.z ]
@@ -350,11 +350,11 @@ function extrude2(mesh::Mesh; axis=[0.,0.,1.], len::Number=1.0, n::Int=1, verbos
         end
 
         # generate new cells
-        c_arr = [ Array(Cell, n) for c in inicells ]
+        c_arr = [ Array{Cell}( n) for c in inicells ]
         for (i,c) in enumerate(inicells)
             cc = c_arr[i]
             for j=1:2:2*n
-                cpoints = Array(Point, 20)
+                cpoints = Array{Point}( 20)
                 cpoints[1 ] = p_arr[ c.points[1].id ][j]
                 cpoints[2 ] = p_arr[ c.points[2].id ][j]
                 cpoints[3 ] = p_arr[ c.points[3].id ][j]

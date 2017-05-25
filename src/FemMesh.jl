@@ -65,12 +65,16 @@ end
 # Alias to print with color
 printcolor = print_with_color
 
-# Types
-typealias Vect Array{Float64, 1}
-typealias Matx Array{Float64, 2}
-
 # Mesh module
 include("tools/linalg.jl")
 include("mesh.jl")
+
+include("filters.jl") 
+include("extrude.jl") 
+include("smooth.jl") 
+include("split.jl") 
+include("embedded.jl") 
+
+include("draw.jl") 
 
 end#module

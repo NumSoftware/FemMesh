@@ -195,7 +195,7 @@ function split_curve(coords::Array{Float64,2}, bl::BlockInset, closed::Bool, msh
     # Constants
     shape   = bl.shape
     npoints = shape==LIN2? 2 : 3
-    jntshape = shape==LIN2? LINK2 : LINK3
+    jntshape = shape==LIN2? JLINK2 : JLINK3
     curvetype = bl.curvetype
 
     # Initial conditions
@@ -207,7 +207,7 @@ function split_curve(coords::Array{Float64,2}, bl::BlockInset, closed::Bool, msh
     Xn = vec(coords[end,:])
 
     # Find the initial and final element
-    ecells = Array(Cell,0)
+    ecells = Array{Cell}(0)
     s0 = get_point(εn,coords,curvetype)
     icell = find_cell(s0, msh.cells, msh.bins, εc, ecells) # The first tresspased cell
 
@@ -217,7 +217,7 @@ function split_curve(coords::Array{Float64,2}, bl::BlockInset, closed::Bool, msh
 
     # Initializing more variables
     ccell  = icell
-    points = Array(Point, npoints)
+    points = Array{Point}(npoints)
 
     # Do not set _endpoint to nothing ( bl._endpoint = nothing ) to allow connectivity between segments!
 

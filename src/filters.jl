@@ -1,6 +1,6 @@
 
 # Get an array with shares for all points
-function get_shares(cells::Array{Cell,1}, points::Point=Array(Point,0))
+function get_shares(cells::Array{Cell,1}, points::Point=Array{Point}(0))
     # points should be numbered
 
     # get all points from cells if needed

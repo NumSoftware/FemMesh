@@ -20,8 +20,8 @@
 ##############################################################################
 
 # Types
-typealias Vect Array{Float64, 1}
-typealias Matx Array{Float64, 2}
+const Vect = Array{Float64, 1}
+const Matx = Array{Float64, 2}
 
 # Fancy matrix printing
 function print_matrix(M::Array{Float64,2})

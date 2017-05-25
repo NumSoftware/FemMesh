@@ -230,7 +230,7 @@ function triangulate(coords::Array{Float64,2}; getedges=false)
     end
 
     # points coordinates matrix
-    Co = Array(Float64, length(points), 2)
+    Co = Array{Float64}(length(points), 2)
     for (i,point) in enumerate(points)
         Co[i, 1] = point.x
         Co[i, 2] = point.y
@@ -238,7 +238,7 @@ function triangulate(coords::Array{Float64,2}; getedges=false)
 
     # generate cell connectivities
     n = length(cells)
-    Con = Array(Int64, n, 3)
+    Con = Array{Int64}(n, 3)
     for (i,cell) in enumerate(cells)
         Con[i,1] = cell.points[1].id
         Con[i,2] = cell.points[2].id
