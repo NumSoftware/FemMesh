@@ -251,7 +251,7 @@ function extrapolator(shape::ShapeType, nips::Int)
     #@show nips
     #@show npoints
     # ε matrix: Local coordinates of nodal points
-    ε = [ get_local_coords(shape) ones(npoints) ] # increase a column of ones
+    ε = [ shape.nat_coords ones(npoints) ] # increase a column of ones
 
     E = pinv(N)*(I - εip*pinv(εip)) + ε*pinv(εip)
 
