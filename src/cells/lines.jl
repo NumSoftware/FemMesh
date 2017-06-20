@@ -124,7 +124,7 @@ export LIN3
 # ==========
 
 # natural coordinates
-const coords_LIN4 = [] # TODO
+const coords_LIN4 = [ -1.0,  1.0,  -1.0/3.0,  1.0/3.0 ]
 
 # shape functions
 function shape_func_LIN4(R::Array{Float64,1})

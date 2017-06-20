@@ -551,10 +551,10 @@ function force_bc(mesh::Mesh, E::Float64, nu::Float64, α::Float64)
     return Fbc
 end
 
-function smooth!(mesh::Mesh; verbose=true, alpha::Float64=0.3, target::Float64=0.97, fixed::Bool=false, maxit::Int64=100, epsmin::Float64=1e-3,
+function smooth!(mesh::Mesh; verbose=true, alpha::Float64=0.3, target::Float64=0.97, fixed::Bool=false, maxit::Int64=20, epsmin::Float64=1e-3,
     eps::Float64=1e-4, eps_face=1e-5, save_steps::Bool=false, filekey::AbstractString="smooth", conds=nothing)
 
-    verbose && printcolor(:cyan, "Mesh smoothing:\n")
+    verbose && print_with_color(:cyan, "Mesh smoothing:\n", bold=true)
 
     # check for not allowed cells
     for c in mesh.cells
@@ -648,7 +648,8 @@ function laplacian_smooth!(mesh::Mesh; alpha::Float64=1.0, maxit::Int64=100, ver
     ndim = mesh.ndim
 
     # find element shares
-    C = get_shares(mesh)
+    @show length(mesh.cells)
+    C = get_patches(mesh)
     P = Array{Point,1}[]
 
     # remove key nodes from list

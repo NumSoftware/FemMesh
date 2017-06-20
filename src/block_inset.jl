@@ -212,7 +212,7 @@ function split_curve(coords::Array{Float64,2}, bl::BlockInset, closed::Bool, msh
     icell = find_cell(s0, msh.cells, msh.bins, εc, ecells) # The first tresspased cell
 
     if icell == nothing
-        error("Inset limits outside the mesh")
+        error("Inset point $(s0) outside the mesh")
     end
 
     # Initializing more variables

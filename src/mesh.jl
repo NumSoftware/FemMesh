@@ -18,14 +18,7 @@
 #    along with FemLab.  If not, see <http://www.gnu.org/licenses/>.         #
 ##############################################################################
 
-export Mesh
-export copy, move
-export update!, quality!, reorder!, generate_mesh, save, loadmesh
-export get_surface, get_neighbors
-
-include("entities.jl")
 include("delaunay.jl")
-
 
 ### Type Mesh
 """
@@ -58,10 +51,7 @@ type Mesh
     end
 end
 
-include("block.jl")
-include("operators.jl")
-
-function get_surface(cells::Array{Cell,1})
+function get_surface(cells::Array{Cell,1})::Array{Cell,1}
     surf_dict = Dict{UInt64, Cell}()
 
     # Get only unique faces. If dup, original and dup are deleted
@@ -81,7 +71,7 @@ function get_surface(cells::Array{Cell,1})
     return [ face for face in values(surf_dict) ]
 end
 
-function get_edges(surf_cells::Array{Cell,1})
+function get_edges(surf_cells::Array{Cell,1})::Array{Cell,1}
     edges_dict = Dict{UInt64, Cell}()
 
     # Get only unique edges
@@ -96,7 +86,7 @@ function get_edges(surf_cells::Array{Cell,1})
 end
 
 # Return a list of neighbors for each cell
-function get_neighbors(cells::Array{Cell,1})
+function get_neighbors(cells::Array{Cell,1})::Array{Cell,1}
     faces_dict = Dict{UInt64, Cell}()
     neighbors = [ Cell[] for i=1:length(cells) ]
 
@@ -119,12 +109,12 @@ function get_neighbors(cells::Array{Cell,1})
 
 end
 
-# Return the elements patch for each node
-function get_patch(mesh::Mesh)
+# Return the cell patch for each point
+function get_patches(mesh::Mesh)::Array{Array{Cell,1},1}
     patches = [ Cell[] for i=1:length(mesh.points) ]
-    for cell in cells
-        for point in cell.points
-            push!(patches[point.id], cell)
+    for cell in mesh.cells
+        for pt in cell.points
+            push!(patches[pt.id], cell)
         end
     end
 
@@ -268,6 +258,7 @@ function update!(mesh::Mesh; verbose::Bool=false, genfacets::Bool=true, genedges
         verbose && print("  finding facets...\r")
         mesh.faces = get_surface(mesh.cells)
     end
+    ndim==2 && (mesh.edges=mesh.faces)
 
     # Edges
     if genedges && ndim==3
@@ -276,9 +267,9 @@ function update!(mesh::Mesh; verbose::Bool=false, genfacets::Bool=true, genedges
     end
 
     # Quality
-    if length(mesh.cells)<=1000
+    #if 0<length(mesh.cells)<=1000
         quality!(mesh)
-    end
+    #end
 
     return nothing
 end
@@ -311,7 +302,7 @@ Generates a mesh based on an array of geometry blocks:
 Mesh(blocks, [verbose=true,] [genfacets=true,] [genedges=false,] [initial_mesh=nothing]) -> mesh_object
 ```
 """
-function Mesh(items::Union{Block, Mesh, Array}...; verbose::Bool=true, genfacets::Bool=true, genedges::Bool=false, reorder=true)
+function Mesh(items::Union{Block, Mesh, Array}...; verbose::Bool=true, genfacets::Bool=true, genedges::Bool=true, reorder=true)
 
     # New mesh object
     mesh = Mesh()
@@ -333,7 +324,7 @@ function Mesh(items::Union{Block, Mesh, Array}...; verbose::Bool=true, genfacets
 
     nblocks = length(blocks)
     if verbose
-        printcolor(:cyan, "Mesh generation:\n")
+        print_with_color(:cyan, "Mesh generation:\n", bold=true)
         println("  analyzing $nblocks block(s)") 
     end
 
@@ -381,18 +372,10 @@ function Mesh(items::Union{Block, Mesh, Array}...; verbose::Bool=true, genfacets
     return mesh
 end
 
-# precompilation
-#precompile(Mesh, (Union{Block,Array},)) 
-#precompile(Mesh, (Block2D,))
-#precompile(Mesh, (Block3D,))
-#precompile(Mesh, (Array,))
-#precompile(split_block, (Block3D, Mesh))
-
-
-function generate_mesh(items::Union{Block, Array}...; verbose::Bool=true, genfacets::Bool=true, genedges::Bool=false)
-    println("generate_mesh function deprecated. Use Mesh instead")
-    return Mesh(items..., verbose=verbose, genfacets=genfacets, genedges=genedges)
-end
+#function generate_mesh(items::Union{Block, Array}...; verbose::Bool=true, genfacets::Bool=true, genedges::Bool=false)
+    #println("generate_mesh function deprecated. Use Mesh instead")
+    #return Mesh(items..., verbose=verbose, genfacets=genfacets, genedges=genedges)
+#end
 
 
 """
@@ -495,29 +478,14 @@ function save(mesh::Mesh, filename::AbstractString; verbose::Bool=true)
     end
 
     if verbose
-        printcolor(:green, "  file $filename written (Mesh)\n")
+        print_with_color(:green, "  file $filename written (Mesh)\n")
     end
 
     close(f)
 
 end
 
-function get_shape_type(geo, npoints=0)
-    types = [ LIN2, LIN3, -1, TRI3, TRI6, -1, QUAD4, QUAD8, QUAD9, TET4, TET10, HEX8, HEX20, -2, LIN4, TRI10, QUAD12, QUAD16]
-    shapetype = types[geo+1]
-    if shapetype==-2 #joint
-        shapetype = npoints==2? LINK2: LINK3
-    end
-
-    return shapetype
-end
-
-function load_mesh_vtk(filename::String; verbose::Bool=true)
-
-    if verbose
-        printcolor(:cyan, "Mesh loading:\n")
-        print("  Reading VTK legacy format...\n")
-    end
+function load_mesh_vtk(filename::String)
 
     file = open(filename)
     mesh = Mesh()
@@ -716,17 +684,6 @@ function load_mesh_vtk(filename::String; verbose::Bool=true)
         end
     end
 
-    if verbose
-        npoints = length(mesh.points)
-        ncells  = length(mesh.cells)
-        nfaces  = length(mesh.faces)
-        nedges  = length(mesh.edges)
-        println("  ", mesh.ndim, "d found             ")
-        @printf "  %5d points read\n" npoints
-        @printf "  %5d cells read\n" ncells
-        @printf "  %5d faces obtained\n" nfaces
-        @printf "  %5d surface edges obtained\n" nedges
-    end
 
     return mesh
 end
@@ -735,7 +692,9 @@ function load_mesh_json(filename; format="json")
     mesh = Mesh()
 
     data = JSON.parsefile(filename)
-    verts = data["points"]
+    points_key = haskey(data, "points") ? "points" : "verts"
+    shape_key  = haskey(data["cells"][1], "shape") ? "shape" : "geo"
+    verts = data[points_key]
     cells = data["cells"]
 
     # Loading points
@@ -743,8 +702,11 @@ function load_mesh_json(filename; format="json")
         C = vert["c"]
         push!(C, 0.0)
         P = Point(C[1], C[2], C[3])
-        #P.id  = vert["id"]+1
-        P.id  = vert["id"]
+        if points_key=="points"
+            P.id  = vert["id"]
+        else
+            P.id  = vert["id"]+1
+        end
         P.tag = string(vert["tag"])
         push!(mesh.points, P)
 
@@ -759,24 +721,35 @@ function load_mesh_json(filename; format="json")
 
     # Loading cells
     for cell in cells
-        #geo   = cell["shape"]
-        conn  = cell["points"]
-        #conn  = [ i+1 for i in conn]
-        conn  = [ i for i in conn]
-        npoints = length(conn)
+        conn  = cell[points_key]
+        id =  cell["id"]
+
+        if shape_key=="shape"
+            shapetype = eval(parse(cell[shape_key]))
+        else
+            conn  = [ i+1 for i in conn]
+            id    = id+1
+            shapetype = get_shape_from_geo(cell[shape_key])
+            #@show shapetype.name
+        end
+        points = Point[ mesh.points[i] for i in conn ]
+
+        C = Cell(shapetype, points, string(cell["tag"]))
 
         # check for embedded joint
         if haskey(cell, "jlinid") # is joint element
-            lincell = cells[cell["jlinid"]]
-            npoints = length(lincell["points"])
+            lincell = mesh.cells[cell["jlinid"]+1] # TODO
+            sldcell = mesh.cells[cell["jsldid"]+1]
+            C.linked_cells = [sldcell, lincell]
+            if length(lincell.points)==2
+                C.shape = JLINK2
+            else
+                C.shape = JLINK3
+            end
+            #@show " ", shapetype.name
         end
 
-        #shapetype = get_shape_type(geo, npoints)
-        shapetype = eval(parse(cell["shape"]))
-        points    = Point[ mesh.points[i] for i in conn ]
-        C = Cell(shapetype, points, string(cell["tag"]))
-        #C.id  = cell["id"]+1
-        C.id  = cell["id"]
+        C.id  = id
         C.ndim=ndim; 
         push!(mesh.cells, C)
     end
@@ -820,141 +793,38 @@ end
 """
 `Mesh(filename)` constructs a mesh object based on a file in VTK legacy format or JSON format.
 """
-function Mesh(filename::String; verbose::Bool=true)
+function Mesh(filename::String; verbose::Bool=true, reorder::Bool=false)
+    if verbose
+        print_with_color(:cyan, "Mesh loading:\n", bold=true)
+    end
+
     basename, ext = splitext(filename)
     if ext==".vtk"
-        return load_mesh_vtk(filename, verbose=verbose)
+        verbose && print("  Reading VTK legacy format...\n")
+        mesh = load_mesh_vtk(filename)
     else # try JSON
-        return load_mesh_json(filename)
+        verbose && print("  Reading JSON format...\n")
+        mesh = load_mesh_json(filename)
     end
-end
 
+    # Reorder nodal numbering
+    if reorder
+        verbose && print("  reordering points...\r")
+        reorder!(mesh)
+    end
 
-export rotate
-
-"""
-`rotate(mesh, [base=[0,0,0],] [axis=[0,0,1],] [angle=90.0])`
-
-Rotates a Mesh object `mesh` according to a `base` point, an `axis` vector and an `angle`.
-"""
-function rotate(mesh::Mesh; base=[0.,0,0], axis=[0.,0,1], angle=90.0 )
-
-    length(axis)==2 && ( axis=vcat(axis, 0.0) )
-    length(base)==2 && ( base=vcat(base, 0.0) )
-
-    # unit vector
-    axis = axis/norm(axis)
-    a, b, c = axis
-    d = sqrt(b^2+c^2)
-    d==0.0 && ( d=1.0 )
-
-    # unit vector for rotation
-    l = cos(angle*pi/180)
-    m = sin(angle*pi/180)
-
-    # Rotation matrices
-    Rx  = [  1.    0.    0.
-             0.   c/d  -b/d 
-             0.   b/d   c/d ]
-
-    Rxi = [  1.    0.    0.
-             0.   c/d   b/d 
-             0.  -b/d   c/d ]
-
-    Ry  = [   d    0.  -a
-             0.    1.  0.
-              a    0.   d ]
-           
-    Ryi = [   d    0.   a
-             0.    1.  0.
-             -a    0.   d ]
-
-    Rz  = [   l   -m   0.
-              m    l   0.
-             0.   0.   1. ]
-
-    # all rotations matrix
-    R = Rxi*Ryi*Rz*Ry*Rx
-
-    for p in mesh.points
-        p.x, p.y, p.z = base + R*([p.x, p.y, p.z] - base)
+    if verbose
+        npoints = length(mesh.points)
+        ncells  = length(mesh.cells)
+        nfaces  = length(mesh.faces)
+        nedges  = length(mesh.edges)
+        println("  ", mesh.ndim, "d found             ")
+        @printf "  %5d points read\n" npoints
+        @printf "  %5d cells read\n" ncells
+        @printf "  %5d faces obtained\n" nfaces
+        @printf "  %5d surface edges obtained\n" nedges
     end
 
     return mesh
 end
 
-# move...
-"""
-`move(mesh, [dx=0.0,] [dy=0.0,] [dz=0.0])` 
-
-Moves a Mesh object `mesh`. Also returns a reference.
-"""
-function move(mesh::Mesh; dx=0.0, dy=0.0, dz=0.0)
-    for p in mesh.points
-        p.x += dx
-        p.y += dy
-        p.z += dz
-    end
-    return mesh
-end
-
-# TESTING
-function get_surface_alt(cells::Array{Cell,1})
-    # Actually slower....
-    # Get all points
-    pointsd = Dict{UInt64, Point}()
-    for cell in cells
-        for point in cell.points
-            pointsd[hash(point)] = point
-        end
-    end
-    points = values(pointsd)
-
-    # Get incidence matrix (shares) (fast)
-    np = length(points)
-    N = [ Cell[] for i=1:np]
-    for cell in cells
-        for pt in cell.points
-            push!(N[pt.id], cell)
-        end
-    end
-
-    @show 1
-    # Get matrix of cells faces
-    F = [ get_faces(cell) for cell in cells]
-    nc = length(cells)
-    #CF = Array(Array{Array{Int64,1},1}, nc)
-    CF = Array(Array{UInt64,1}, nc)
-    for cell in cells # fast
-        #CF[cell.id] = [ sort([pt.id for pt in face.points]) for face in F[cell.id]]
-        CF[cell.id] = [ hash(face) for face in F[cell.id]]
-    end
-
-    @show 2
-    # Get cells boundary flag matrix
-    CB = [ trues(length(CF[cell.id])) for cell in cells]
-    for cell in cells
-        for (i,fcon) in enumerate(CF[cell.id])
-            for pid in fcon
-                for cl in N[pid]
-                    if cl.id == cell.id; continue end
-                    if fcon in CF[cl.id]
-                        CB[cell.id][i] = false
-                    end
-                end
-            end
-        end
-    end
-
-    @show 3
-    # Get list of boundary faces (almost fast)
-    facets = Cell[]
-    for cell in cells
-        for (i,face) in enumerate(F[cell.id])
-            if CB[cell.id][i]
-                push!(facets, face)
-            end
-        end
-    end
-    return facets
-end

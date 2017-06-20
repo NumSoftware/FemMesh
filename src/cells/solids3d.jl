@@ -116,6 +116,17 @@ export TET4
 
 # natural coordinates
 const coords_TET10 = 
+[  0.0 	 0.0   0.0
+   1.0   0.0   0.0
+   0.0   1.0   0.0
+   0.0   0.0   1.0
+   0.5   0.0   0.0
+   0.5   0.5   0.0
+   0.0   0.5   0.0
+   0.0   0.0   0.5
+   0.5   0.0   0.5
+   0.0   0.5   0.5 ]
+
 
 const facet_idxs_TET10 = [ [1, 4, 3, 8, 10, 7], [1, 2, 4, 5, 9, 8], [1, 3, 2, 7, 6, 5], [2, 3, 4, 6, 10, 9] ]
 const edge_idxs_TET10 = [ [1, 2, 5], [2, 3, 6], [3, 1, 7], [1, 4, 8], [2, 4, 9], [3, 4, 10] ]
@@ -196,7 +207,7 @@ function MakeTET10()
     shape.ndim        = 3
     shape.npoints     = 10
     shape.basic_shape = TET4
-    shape.vtk_type    = VTK_TRIANGLE
+    shape.vtk_type    = VTK_QUADRATIC_TETRA
     shape.facet_idxs  = facet_idxs_TET10
     shape.edge_idxs   = edge_idxs_TET10
     shape.facet_shape = TRI6
@@ -348,11 +359,11 @@ const coords_HEX20 =
    0.0 -1.0 -1.0 
    1.0  0.0 -1.0 
    0.0  1.0 -1.0 
-  -0.0  0.0 -1.0 
+  -1.0  0.0 -1.0 
    0.0 -1.0  1.0 
    1.0  0.0  1.0 
    0.0  1.0  1.0 
-  -0.0  0.0  1.0 
+  -1.0  0.0  1.0 
 
   -1.0 -1.0  0.0 
    1.0 -1.0  0.0 
@@ -540,6 +551,7 @@ end
 function MakeWED6()
     shape             = ShapeType()
     shape.name        = "WED6"
+    shape.class       = SOLID_SHAPE
     shape.ndim        = 3
     shape.npoints     = 6
     shape.basic_shape = shape
@@ -679,7 +691,7 @@ function MakeWED15()
     shape.edge_idxs   = edge_idxs_WED15
     shape.facet_shape = (QUAD8, QUAD8, QUAD8, TRI6, TRI6, TRI6)
     shape.nat_coords  = coords_WED15
-    shape.quadrature  = Dict( 0 => WED_IP9, 2 => WED_IP2, 9 => WED_IP9, 18 => WED_IP18 )
+    shape.quadrature  = Dict( 0 => WED_IP9, 2 => WED_IP2, 9 => WED_IP9 )
     shape.func        = shape_func_WED15
     shape.deriv       = shape_deriv_WED15
     return shape

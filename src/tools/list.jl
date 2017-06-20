@@ -1,4 +1,6 @@
-abstract AbstractNode
+import Base.show, Base.getindex, Base.push!, Base.delete!, Base.start, Base.next, Base.done, Base.length
+
+abstract type AbstractNode end
 
 type Node{T} 
     data::T
@@ -12,6 +14,28 @@ type Node{T}
     end
 end
 
+function show{T}(io::IO, node::Node{T})
+    print(io, "Node(data: $(node.data))")
+end
+
+function getindex(node::Node, index::Int)
+    nodei = node
+    if index>0
+        for i=1:index
+            nodei = nodei.next
+        end
+    end
+
+    if index<0
+        index = abs(index)
+        for i=1:index
+            nodei = nodei.prev
+        end
+    end
+
+    return nodei
+end
+
 #function Node{T}(data::T)
     #@show 1
     #node = Node{T}()
@@ -21,13 +45,24 @@ end
 
 
 type List{T}
-    len  ::Int
+    size  ::Int
     first::Node{T}
     last ::Node{T}
     function List()
         return new(0)
     end
 end
+
+function length(list::List)
+    return list.size
+end
+
+
+#type Iterator{T}
+    #container::T
+#end
+
+#iterator(container) = Iterator(container)
 
 # DummyNode used as start point for iteration
 type DummyNode{T}
@@ -40,7 +75,7 @@ Base.done{T}(list::List{T}, node) = node == list.last
 
 
 function push!{T}(list::List{T}, node::Node{T})
-    if list.len==0
+    if list.size==0
         list.first= node
         list.last = node
         node.prev = node
@@ -52,15 +87,20 @@ function push!{T}(list::List{T}, node::Node{T})
         list.last.next  = node
         list.last = node
     end
-    list.len += 1
+    list.size += 1
+end
+
+function push!{T}(list::List{T}, data::T)
+    push!(list, Node{T}(data))
 end
 
 # insert(list, cnode, new)
 function insert!{T}(list::List{T}, nodepos::Node{T}, newnode::Node{T})
+    # inserts before nodepos
     #if nodepos==list.first
         #list.first.prev = nodepos
     #end
-    @assert list.len>0
+    @assert list.size>0
 
     newnode.prev = nodepos.prev
     newnode.prev.next = newnode
@@ -76,16 +116,19 @@ function insert!{T}(list::List{T}, nodepos::Node{T}, newnode::Node{T})
     #newnode.next = nodepos
     #newnode.prev.next = newnode
     #nodepos.prev = newnode
-    list.len += 1
+    list.size += 1
 
 end
 
 function delete!{T}(list::List{T}, node::Node{T})
-    @assert list.len > 1
+    @assert list.size > 0
     node.prev.next = node.next
     node.next.prev = node.prev
-    list.len -= 1
+    list.size -= 1
 end
+
+
+#=
 
 l = List{Int}()
 n = Node{Int}(1)
@@ -110,7 +153,16 @@ for node in l
     #@show (node.data, node.prev, node.next)
 end
 
+node = l.first
+@show node[1]
+@show node[2]
+@show node[3]
+node = l.last
+@show node[-1]
+@show node[-2]
+@show node[-3]
+
 #A*B = Aik*Bkj
 #A*B*C = Aik*Bkm*Cmj
 
-
+=#

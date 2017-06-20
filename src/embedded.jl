@@ -21,8 +21,6 @@
 
 # This file includes the code for generating embedded line cells
 
-export generate_embedded_cells!
-
 # Remove joint cells from mesh and set up line cells as embedded cells
 function generate_embedded_cells!(mesh::Mesh)
 
@@ -36,7 +34,7 @@ function generate_embedded_cells!(mesh::Mesh)
         else
             # save non joint1D cells
             id += 1
-            cell.id = id
+            cell.id = id  # update id
             push!(newcells, cell)
         end
     end

@@ -18,14 +18,10 @@
 #    along with FemLab.  If not, see <http://www.gnu.org/licenses/>.         #
 ##############################################################################
 
-
-include("shape.jl")
-
-#using Shape
-export Point, Cell, hash, get_coords, get_point, get_faces, cell_extent, cell_quality
-export update!
 import Base.getindex
-export getindex
+export get_points
+
+abstract type Block end
 
 # Point
 # =====
@@ -37,7 +33,7 @@ type Point
     tag  ::AbstractString
     id   ::Int64
     extra::Int64
-    function Point(x::Float64,y::Float64,z::Float64; tag="")
+    function Point(x::Float64,y::Float64,z::Float64=0.0; tag="")
         const NDIG = 14
         x = round(x, NDIG)
         y = round(y, NDIG)
@@ -61,7 +57,7 @@ import Base.hash
 #hash(p::Point) = hash((p.x, p.y, p.z))
 hash(p::Point) = hash( (p.x==0.0?0.0:p.x, p.y==0.0?0.0:p.y, p.z==0.0?0.0:p.z) ) # comparisons used to avoid signed zero
 
-function hash(points::Array{Point,1}) 
+function hash(points::Array{Point,1})::UInt64
     hs = 0x000000000::UInt64
     for p in points
         hs += hash(p)
@@ -70,6 +66,9 @@ function hash(points::Array{Point,1})
 end
 
 getcoords(p::Point) = [p.x, p.y, p.z]
+
+# Sentinel instance for not found point
+const NO_POINT = Point(1e+308, 1e+308, 1e+308)
 
 function get_point(points::Dict{UInt64,Point}, C::Array{Float64,1})
     hs = hash(Point(C))
@@ -354,12 +353,12 @@ function find_cell(X::Array{Float64,1}, cells::Array{Cell,1}, bins::Bins, Tol::F
 
         # If not found in the first try then rebuild bins
         if attempt==1
-            println("Bin search failed. Rebuilding bins...")
+            warn("Bin search failed. Rebuilding bins...")
             build_bins(cells, bins) 
         end
     end
 
-    println("Bin search failed")
+    warn("Bin search failed")
     return nothing
 end
 

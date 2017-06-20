@@ -19,24 +19,19 @@
 ##############################################################################
 
 
-export ShapeType
-export ShapeClass
-export get_ip_coords, get_shape_from_vtk
-export inverse_map, extrapolator
-
 @enum(ShapeClass,
 LINE_SHAPE    = 1,
 SOLID_SHAPE   = 2,
 JOINT_SHAPE   = 3,
 JOINT1D_SHAPE = 4,
-EMBEDDED      = 5
+VERTEX_SHAPE  = 5,
+EMBEDDED      = 6
 )
 
 # Export
 for s in instances(ShapeClass)
     @eval export $(Symbol(s))
 end 
-
 
 
 type ShapeType 
@@ -58,16 +53,25 @@ type ShapeType
     end
 end
 
-# Shape for unknown polyvertex
-const POLYV = ShapeType()
-
-
 include("cells/quadrature.jl")
 include("cells/vtk.jl")
 include("cells/lines.jl")
 include("cells/solids2d.jl")
 include("cells/solids3d.jl")
 include("cells/joints.jl")
+
+# Shape for unknown polyvertex
+function MakePOLIV()
+    shape             = ShapeType()
+    shape.name        = "POLYV"
+    shape.class       = VERTEX_SHAPE
+    shape.ndim        = 0
+    shape.npoints     = 0
+    shape.vtk_type    = VTK_POLY_VERTEX
+    return shape
+end
+const POLYV = MakePOLIV()
+export POLYV
 
 
 function get_ip_coords(shape::ShapeType, nips=0)::Array{Float64,2}
@@ -93,6 +97,24 @@ const VTK2SHAPE = Dict{VTKCellType,ShapeType}(
     VTK_QUADRATIC_WEDGE                  => WED15,
     VTK_BIQUADRATIC_QUAD                 => QUAD9
 )
+
+const ALL_SHAPES = [
+    LIN2
+    LIN3
+    LIN4
+    TRI3
+    TRI6
+    QUAD4
+    QUAD8
+    QUAD9
+    QUAD12
+    TET4
+    TET10
+    WED6
+    WED15
+    HEX8
+    HEX20
+]
 
 
 function get_shape_from_vtk(vtk_type::VTKCellType, npoints::Int64, ndim::Int64)::ShapeType
@@ -124,6 +146,18 @@ function get_shape_from_vtk(vtk_type::VTKCellType, npoints::Int64, ndim::Int64):
 end
 
 
+# For compatibility with gofem input file
+function get_shape_from_geo(geo, npoints=0)
+    types = [ LIN2, LIN3, -1, TRI3, TRI6, -1, QUAD4, QUAD8, QUAD9, TET4, TET10, HEX8, HEX20, -2, LIN4, TRI10, QUAD12, QUAD16]
+    shapetype = types[geo+1]
+    if shapetype==-2 #joint
+        shapetype = npoints==2? JLINK2: JLINK3
+    end
+
+    return shapetype
+end
+
+
 function bdistance(shape::ShapeType, R::Array{Float64,1})
     # Returns a real value which is a pseudo distance from a point to the border of an element
     # Arguments:
@@ -137,7 +171,9 @@ function bdistance(shape::ShapeType, R::Array{Float64,1})
     if bshape == QUAD4 return min(1.0 - abs(r), 1.0 - abs(s)) end
     if bshape == TET4  return min(r, s, t, 1.0-r-s-t) end
     if bshape == HEX8  return min(1.0 - abs(r), 1.0 - abs(s), 1.0 - abs(t)) end
-    if bshape == WED6  return min(r, s, 1.0-r-s, 1.0-abs(t)) end
+    if bshape == WED6  
+        return min(r, s, 1.0-r-s, 1.0-abs(t)) 
+    end
     error("No boundary distance for shape ($shape)")
 end
 
@@ -243,13 +279,12 @@ function extrapolator(shape::ShapeType, nips::Int)
         return pinv(N) # Correction procedure is not applicable for nips==1
     end
 
+    # Case for nips<npoints
     I = eye(nips)
 
     # εip matrix: Local ip coordinates of integration points
     εip = [ IP[:,1:ndim] ones(nips) ]
 
-    #@show nips
-    #@show npoints
     # ε matrix: Local coordinates of nodal points
     ε = [ shape.nat_coords ones(npoints) ] # increase a column of ones
 

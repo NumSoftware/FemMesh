@@ -1,41 +1,36 @@
 
-# Get an array with shares for all points
-function get_shares(cells::Array{Cell,1}, points::Point=Array{Point}(0))
-    # points should be numbered
 
+# Get an array with shares for all points
+function get_patches(cells::Array{Cell,1})
     # get all points from cells if needed
-    if length(points==0)
-        pointsd = Dict{UInt64, Point}()
-        for cell in cells
-            for point in cell.points
-                pointsd[hash(point)] = point
-            end
+    pointsd = Dict{UInt64, Point}()
+    for cell in cells
+        for point in cell.points
+            pointsd[hash(point)] = point
         end
-        points = values(pointsd)
+    end
+    
+    points = values(pointsd)
+    np     = length(points)
+
+    # backup points ids
+    bk_pt_id = [ pt.id for pt in points ]
+    for i=1:np
+        points[i].id = i
     end
 
-    # get incidence array (shares) (fast)
-    np = length(points)
-    N  = [ Cell[] for i=1:np]
+    # get incidence array
+    P  = [ Cell[] for i=1:np ]
     for cell in cells
         for pt in cell.points
-            push!(N[pt.id], cell)
+            push!(P[pt.id], cell)
         end
     end
 
-    return N
-end
-
-# Get an array with shares for all points
-function get_shares(mesh::Mesh)
-    # get incidence array (shares) (fast)
-    np = length(mesh.points)
-    C  = [ Cell[] for i=1:np]
-    for cell in mesh.cells
-        for pt in cell.points
-            push!(C[pt.id], cell)
-        end
+    # restore points ids
+    for i=1:np
+        points[i].id = bk_pt_id[i]
     end
 
-    return C
+    return P
 end

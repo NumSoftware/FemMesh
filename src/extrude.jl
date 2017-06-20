@@ -19,14 +19,12 @@
 #    along with FemLab.  If not, see <http://www.gnu.org/licenses/>.         #
 ##############################################################################
 
-export extrude
-
 """
 `extrude(block, [axis=[0,0,1],] [len=1.0,] [n=1])`
 
 Extrudes a 2D `block` generating a 3D block based on a direction `axis`, a lenght `len` and a number `n` of divisions.
 """
-function extrude(block::Block2D; axis=[0,0,1], len::Number=1.0, n::Int=1)
+function extrude(block::Block2D; axis=[0,0,1], len::Number=1.0, n::Int=1)::Block3D
 
     V = axis/norm(axis)
     δ = len/n
@@ -61,13 +59,22 @@ function extrude(block::Block2D; axis=[0,0,1], len::Number=1.0, n::Int=1)
         end
     end
 
+    #shape = HEX8
+    #if block.shape==TRI3
+        #shape = WED6
+    #elseif block.shape==TRI6
+        #shape = WED15
+    #elseif block.shape==QUAD8
+        #shape = HEX20
+    #end
+
     shape = block.shape==QUAD8? HEX20 : HEX8
 
     return Block3D( newcoords, nx=block.nx, ny=block.ny, nz=n, shape=shape)
 
 end
 
-function extrude(blocks::Array; axis=[0,0,1], len=1.0::Number, n=1::Int)
+function extrude(blocks::Array; axis=[0,0,1], len=1.0::Number, n=1::Int)::Array{Block3D,1}
     blocks3D = []
 
     for bl in blocks
@@ -86,7 +93,7 @@ Extrudes a 2D `mesh` generating a 3D mesh based on a direction `axis`, a lenght 
 Only meshes with cell shapes QUAD4 and QUAD8 are allowed.
 """
 function extrude(mesh::Mesh; axis=[0.,0.,1.], len::Number=1.0, n::Int=1, verbose::Bool=true, genedges::Bool=false)
-    verbose && printcolor(:cyan, "Mesh extrude:\n")
+    verbose && print_with_color(:cyan, "Mesh extrude:\n", bold=true)
 
     V = axis/norm(axis)
     δ = len/n
@@ -229,7 +236,7 @@ end
 
 
 function extrude2(mesh::Mesh; axis=[0.,0.,1.], len::Number=1.0, n::Int=1, verbose::Bool=true, genedges::Bool=false)
-    verbose && printcolor(:cyan, "Mesh extrude:\n")
+    verbose && print_with_color(:cyan, "Mesh extrude:\n", bold=true)
 
     length(inicells)>0 || error("Extrude: Cannot extrude mesh with no cells.")
 

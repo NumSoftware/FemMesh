@@ -37,44 +37,42 @@ generate_mesh, copy, move, array, rotate, polar, extrude.
 
 """
 module FemMesh
-
 using JSON
-
-# Constants
-if is_linux()
-    const RED     = "\x1b[31m"
-    const GREEN   = "\x1b[32m"
-    const YELLOW  = "\x1b[33m"
-    const BLUE    = "\x1b[34m"
-    const MAGENTA = "\x1b[35m"
-    const CYAN    = "\x1b[36m"
-    const WHITE   = "\x1b[37m"
-    const BOLD    = "\x1b[1m"
-    const DEFAULT = "\x1b[0m"
-else
-    const RED     = ""
-    const GREEN   = "" 
-    const BLUE    = ""
-    const MAGENTA = ""
-    const CYAN    = ""
-    const WHITE   = ""
-    const BOLD    = "" 
-    const DEFAULT = "" 
-end
-
-# Alias to print with color
-printcolor = print_with_color
 
 # Mesh module
 include("tools/linalg.jl")
-include("mesh.jl")
 
-include("filters.jl") 
+# Generic exports
+export getindex
+
+include("shape.jl")
+export ShapeType, ALL_SHAPES, ShapeClass
+export get_ip_coords, get_shape_from_vtk
+export inverse_map, extrapolator
+
+include("entities.jl")
+export Point, Cell, hash, get_coords, get_point, get_faces, cell_extent, cell_quality
+export update!
+
+include("mesh.jl")
+export Mesh, update!, quality!, reorder!, save, get_surface, get_neighbors
+
+include("block.jl")
+export Block2D, Block3D, BlockTruss, BlockCoords, BlockCylinder
+
+include("operators.jl")
+export move, array, copy, rotate, polar
+
 include("extrude.jl") 
+export extrude
+
 include("smooth.jl") 
 include("split.jl") 
+
 include("embedded.jl") 
+export generate_embedded_cells!
 
 include("draw.jl") 
+export draw
 
 end#module

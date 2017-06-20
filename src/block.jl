@@ -18,11 +18,7 @@
 #    along with FemLab.  If not, see <http://www.gnu.org/licenses/>.         #
 ##############################################################################
 
-export Block2D, Block3D, BlockTruss, BlockCoords, BlockCylinder
 import Base.copy
-
-### Type Block
-abstract Block
 
 ### Block types:
 
@@ -92,7 +88,8 @@ type Block2D <: Block
     shape::ShapeType
     tag::AbstractString
     id::Int64
-    function Block2D(coords; nx=1, ny=1, shape=QUAD4, tag="", id=-1)
+    function Block2D(coords::Array; nx=1, ny=1, shape=QUAD4, tag="", id=-1)
+        shape in (TRI3, TRI6, QUAD4, QUAD8, QUAD9, QUAD12) || error("Block2D: shape must be TRI3, TRI6, QUAD4, QUAD8, QUAD9 or QUAD12")
         if size(coords,1)==2
             C = box_coords(vec(coords[1,:]), vec(coords[2,:]))
         elseif size(coords,2)==2
@@ -119,7 +116,8 @@ type Block3D <: Block
     shape::ShapeType
     tag::AbstractString
     id::Int64
-    function Block3D(coords; nx=1, ny=1, nz=1, shape=HEX8, tag="", id=-1)
+    function Block3D(coords::Array; nx=1, ny=1, nz=1, shape=HEX8, tag="", id=-1)
+        shape in (TET4, TET10, HEX8, HEX20) || error("Block3D: shape must be TET4, TET10, HEX8 or HEX20")
         C    = size(coords,1)==2? box_coords(vec(coords[1,:]), vec(coords[2,:])): coords
         this = new(C, nx, ny, nz, shape, tag, id)
         return this
@@ -135,9 +133,10 @@ type BlockCylinder <: Block
     tag::AbstractString
     id::Int64
 
-    function BlockCylinder(coords; r=1.0, nr=3, n=2, shape=HEX8, tag="", id=-1)
-        if size(coords,1) != 2; error("Invalid coordinates matrix for BlockCylinder") end
-        if nr<2; error("Invalid nr=$nr value for BlockCylinder") end
+    function BlockCylinder(coords::Array; r=1.0, nr=3, n=2, shape=HEX8, tag="", id=-1)
+        size(coords,1) != 2 && error("Invalid coordinates matrix for BlockCylinder")
+        nr<2 && error("Invalid nr=$nr value for BlockCylinder")
+        shape in (HEX8, HEX20) || error("BlockCylinder: shape must be HEX8 or HEX20")
         this = new(coords, r, nr, n, shape, tag, id)
         return this
     end
@@ -411,7 +410,7 @@ function split_block(bl::Block2D, msh::Mesh)
         return
     end
 
-    error("block: Can not discretize using shape $shape")
+    error("block: Can not discretize using shape $(shape.name)")
 end
 
 # Split for 3D meshes
@@ -474,7 +473,10 @@ function split_block(bl::Block3D, msh::Mesh)
                 end
             end
         end
-    elseif shape == HEX20 || shape == TET10
+        return
+    end
+
+    if shape == HEX20 || shape == TET10
         p_arr = Array{Point}(2*nx+1, 2*ny+1, 2*nz+1)
         for k = 1:2*nz+1
             for j = 1:2*ny+1
@@ -580,8 +582,9 @@ function split_block(bl::Block3D, msh::Mesh)
                 end
             end
         end
-
+        return
     end
+    error("block: Can not discretize using shape $(shape.name)")
 end
 
 
@@ -642,24 +645,35 @@ function split_block(bl::BlockCylinder, msh::Mesh)
     coords = bl.r*[ 0 0; 1/3 0; 1/3 1/3; 0 1/3; 1/6 0; 1/3 1/6; 1/6 1/3; 0 1/6 ]
     bl1 = Block2D(coords, nx=nx1, ny=nx1, shape= shape2D, tag=bl.tag)
 
-    s45 = sin(45*pi/180)
-    c45 = s45
+    s45  = sin(45*pi/180)
+    c45  = s45
     s225 = sin(22.5*pi/180)
     c225 = cos(22.5*pi/180)
 
     coords = bl.r*[ 1/3 0; 1 0; c45 s45; 1/3 1/3; 2/3 0; c225 s225; (c45+1/3)/2 (s45+1/3)/2; 1/3 1/6 ]
-    bl2 = Block2D(coords, nx=nx2, ny=nx1, shape= shape2D, tag=bl.tag)
+    bl2    = Block2D(coords, nx=nx2, ny=nx1, shape= shape2D, tag=bl.tag)
 
     coords = bl.r*[ 0 1/3; 1/3 1/3; c45 s45; 0 1; 1/6 1/3; (c45+1/3)/2 (s45+1/3)/2; s225 c225; 0 2/3 ]
-    bl3 = Block2D(coords, nx=nx1, ny=nx2, shape= shape2D, tag=bl.tag)
+    bl3    = Block2D(coords, nx=nx1, ny=nx2, shape= shape2D, tag=bl.tag)
 
     blocks = [bl1, bl2, bl3 ]
+
+    # polar and move
     blocks = polar(blocks, n=4)
     move(blocks, x=bl.coords[1,1], y=bl.coords[1,2], z=bl.coords[1,3])
 
-    len = norm(bl.coords[1,:] - bl.coords[2,:])
+    # extrude
+    len      = norm(bl.coords[1,:] - bl.coords[2,:])
     blocks3D = extrude(blocks, len=len, n=bl.n)
 
+    # rotation
+    zv    = [0.0, 0.0, 1.0]
+    axis  = bl.coords[2,:] - bl.coords[1,:]
+    angle = acos( dot(zv, axis)/(norm(zv)*norm(axis)) )*180/pi
+    raxis = cross(zv, axis)
+    norm(raxis)>1e-10 && rotate(blocks3D, base=bl.coords[1,:], axis=raxis, angle=angle)
+
+    # split
     for bl in blocks3D
         split_block(bl, msh)
     end

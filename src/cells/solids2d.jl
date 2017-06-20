@@ -566,8 +566,20 @@ export QUAD9
 #  
 
 # natural coordinates
-const coords_QUAD12 = []
-
+const coords_QUAD12 =
+[   -1.0       -1.0
+     1.0       -1.0
+     1.0        1.0
+    -1.0        1.0
+    -1.0/3.0   -1.0
+     1.0       -1.0/3.0
+     1.0/3.0    1.0
+    -1.0        1.0/3.0
+     1.0/3.0   -1.0
+     1.0        1.0/3.0
+    -1.0/3.0    1.0
+    -1         -1.0/3.0 ]
+	
 const facet_idxs_QUAD12 = [ [1, 2, 5, 9], [2, 3, 6, 10], [3, 4, 7, 11], [4, 1, 8, 12] ]
 
 function shape_func_QUAD12(R::Array{Float64,1})

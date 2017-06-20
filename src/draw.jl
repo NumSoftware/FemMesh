@@ -1,7 +1,6 @@
 #using FemMesh
 
 using PyCall
-export draw
 
 const MOVETO = 1
 const LINETO = 2
