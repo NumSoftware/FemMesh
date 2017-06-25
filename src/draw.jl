@@ -83,13 +83,14 @@ function draw_cell3d(c::Cell)
     return verts
 end
 
-function draw(mesh::Mesh, filename=""; axis=true, points=false, pointlabels=false, celllabels=false, quality=false, lims=nothing,
+function draw(mesh::Mesh, filename::String=""; axis=true, points=false, pointlabels=false, celllabels=false, quality=false, lims=nothing,
     cmap=nothing)
     if is_windows() eval(Expr(:using, :PyPlot)) end
 
     @pyimport matplotlib.pyplot as plt
     @pyimport matplotlib.path as path
-    Path = path.pymember("Path")
+    #Path = path.pymember("Path")
+    Path = path.Path
     @pyimport matplotlib.patches as patches
     @pyimport matplotlib.collections as collections
 
@@ -188,7 +189,7 @@ function draw(mesh::Mesh, filename=""; axis=true, points=false, pointlabels=fals
         for cell in surface
             verts = draw_cell3d(cell)
             #if quality facecolor = cm(cell.ocell.quality) end
-            if is_line(cell.shape) facecolor="none" end
+            if cell.shape.class==LINE_SHAPE facecolor="none" end
 
             push!(all_verts, verts)
             #poly = art3d.Poly3DCollection(verts, facecolor=facecolor)
@@ -205,12 +206,12 @@ function draw(mesh::Mesh, filename=""; axis=true, points=false, pointlabels=fals
     else
         all = []
         for cell in mesh.cells
-            if cell.shape>50 continue end
+            if Int(cell.shape.class)>2 continue end
             verts, codes = draw_cell2d(cell)
             path  = Path(verts, codes)
             #if quality facecolor = cm(cbnorm(cell.quality)) end
             lw = 0.5
-            if is_line(cell.shape) 
+            if cell.shape.class == LINE_SHAPE
                 facecolor="none" 
                 lw = 3
             end
@@ -280,8 +281,11 @@ function draw(mesh::Mesh, filename=""; axis=true, points=false, pointlabels=fals
     if filename==""
         plt.show()
     else
-        plt.savefig(filename, bbox_inches="tight", pad_inches=0.25)
+        plt.savefig(filename, bbox_inches="tight", pad_inches=0.25, format="pdf")
     end
+
+    # close de figure
+    plt.close("all")
 end
 
 #coord = [ 0 0; 9 0; 18 0; 0 9; 9 9; 18 9.]

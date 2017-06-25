@@ -72,10 +72,10 @@ const NO_POINT = Point(1e+308, 1e+308, 1e+308)
 
 function get_point(points::Dict{UInt64,Point}, C::Array{Float64,1})
     hs = hash(Point(C))
-    get(points, hs, nothing)
+    return get(points, hs, nothing)
 end
 
-function get_coords(points::Array{Point,1}, ndim::Int64=3)
+function get_coords(points::Array{Point,1}, ndim::Int64=3)::Array{Float64,2}
     np = length(points)
     C  = Array{Float64}(np, ndim)
     for i=1:np
@@ -123,9 +123,9 @@ Face=Cell
 
 hash(c::Cell) = sum([ hash(p) for p in c.points])
 
-function get_coords(c::Cell, ndim=3)
+function get_coords(c::Cell, ndim=3)::Array{Float64,2}
     n = length(c.points)
-    C = Array{Float64}(n, ndim)
+    C = Array{Float64, 2}(n, ndim)
     for (i,p) in enumerate(c.points)
         C[i,1] = p.x
         if ndim>1 C[i,2] = p.y end
@@ -135,7 +135,7 @@ function get_coords(c::Cell, ndim=3)
 end
 
 # Return all points in cells
-function get_points(cells::Array{Cell,1})
+function get_points(cells::Array{Cell,1})::Array{Point,1}
     #pointsd = Dict{UInt64, Point}()
     #for cell in cells
         #for point in cell.points
@@ -150,18 +150,18 @@ function get_points(cells::Array{Cell,1})
             push!(points, point)
         end
     end
-    return [point for point in points]
+    return Point[point for point in points]
 end
 
 # Updates cell internal data
-function update!(c::Cell)
+function update!(c::Cell)::Void
     c.quality = cell_quality(c)
     return nothing
 end
 
 
 # Index operator for a collection of elements
-function getindex(cells::Array{Cell,1}, s::Symbol)
+function getindex(cells::Array{Cell,1}, s::Symbol)::Array{Cell,1}
     if s == :solids
         return filter(cell -> cell.shape.class==SOLID_SHAPE, cells)
     end
@@ -448,7 +448,7 @@ function cell_extent(c::Cell)
     return vol
 end
 
-# Returns the surface/perimeter given the volume/area of a cell
+# Returns the desirable surface/perimeter given the volume/area of a cell
 function regular_surface(metric::Float64, shape::ShapeType)
     if shape in [ TRI3, TRI6, TRI9, TRI10 ] 
         A = metric
@@ -475,7 +475,7 @@ function regular_surface(metric::Float64, shape::ShapeType)
         a2 = (16./3.*V^2)^(1./3.) 
         return (3. + √3./2.)*a2
     end
-    error("No regular surface value for shape $(get_name(shape))")
+    error("No regular surface/perimeter value for shape $(get_name(shape))")
 end
 
 
@@ -499,7 +499,7 @@ function cell_aspect_ratio(c::Cell)
 end =#
 
 # Returns the cell quality ratio as reg_surf/surf
-function cell_quality(c::Cell)
+function cell_quality(c::Cell)::Float64
     # get faces
     faces = get_faces(c)
     if length(faces)==0 
@@ -520,7 +520,7 @@ function cell_quality(c::Cell)
     return min(c.quality, 1.0)
 end
 
-function cell_aspect_ratio(c::Cell)
+function cell_aspect_ratio(c::Cell)::Float64
     faces = get_faces(c)
     len = [ cell_extent(f) for f in faces ]
     c.quality = minimum(len)/maximum(len)

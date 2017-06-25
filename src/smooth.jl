@@ -533,11 +533,11 @@ function force_bc(mesh::Mesh, E::Float64, nu::Float64, α::Float64)
         K = matrixK(c, ndim, E, nu)
         β = 0.97
 
-        if mesh.qmin>0.9
-            F  = K*U
-        else
-            F = K*U*(β-c.quality)/(β-mesh.qmin)*α
-        end
+        #if mesh.qmin>0.9
+            F = K*U
+        #else
+            #F = K*U*(β-c.quality)/(β-mesh.qmin)*α
+        #end
 
         # add forces to Fbc
         for (i,point) in enumerate(c.points)
@@ -559,7 +559,7 @@ function smooth!(mesh::Mesh; verbose=true, alpha::Float64=0.3, target::Float64=0
     # check for not allowed cells
     for c in mesh.cells
         if c.shape.class != SOLID_SHAPE
-            error("smooth!: cells of class $(SOLID_SHAPE) are not allowed for smoothing: $(c.shape.name)")
+            error("smooth!: cells of class $(c.shape.class) are not allowed for smoothing: $(c.shape.name)")
         end
     end
 

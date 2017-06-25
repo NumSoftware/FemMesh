@@ -58,6 +58,54 @@ function move(blocks::Array; x=0.0, y=0.0, z=0.0, dx=0.0, dy=0.0, dz=0.0)
 end
 
 
+function scale(bl::Block; factor=1.0, base=[0.,0,0])
+    bl.coords = ( base .+ factor*(bl.coords' .- base) )'
+end
+
+
+function scale(blocks::Array{Block,1}; factor=1.0, base=[0.,0,0])
+    for bl in blocks
+        bl.coords = ( base .+ factor*(bl.coords' .- base) )'
+    end
+end
+
+function mirror(block::Block; face=[0. 0 0; 0 1 0; 0 0 1])
+    p1 = vec(face[1,:])
+    p2 = vec(face[2,:])
+    p3 = vec(face[3,:])
+    normal = cross(p2-p1, p3-p2)
+    normal = normal/norm(normal)
+
+    bl = copy(block)
+
+    distances    = (bl.coords .- p1')*normal          # d = n^.(xi - xp)
+    bl.coords = bl.coords .+ 2*distances.*normal'  # xi = xi + 2*d*n^
+
+    # fix coordinates in bl to keep anti-clockwise numbering
+    npts = size(bl.coords)[1]
+    ndim = typeof(bl)==Block2D ? 2 : 3
+
+    if npts==8 && ndim==2
+        idxs = [ 4, 3, 2, 1, 7, 6, 5, 8 ]
+    elseif npts==8 && ndim==3
+        idxs = [ 5:8; 1:4 ]
+    elseif npts==20 && ndim==3
+        idxs = [ 5:8; 1:4; 13:16; 9:12; 17:20 ]
+    else
+        idxs = [ npts:-1:1; ]  # reverse
+    end
+    bl.coords = bl.coords[idxs,:]
+
+    return bl
+end
+
+function mirror(blocks::Array{Block,1}; face=[0. 0 0; 0 1 0; 0 0 1])
+    for bl in newblocks
+        mirror(bl, face=face)
+    end
+end
+
+
 """
 `array(block, [n=2,] [x=0.0,] [y=0.0,] [z=0.0])` 
 
@@ -75,17 +123,6 @@ function array(bl::Block; n=2, x=0.0, y=0.0, z=0.0)
         push!(blocks, cp)
     end
     return blocks
-end
-
-
-function scale(bl::Block; factor=1.0, base=[0.,0,0])
-    bl.coords = ( base .+ factor*(bl.coords' .- base) )'
-end
-
-function scale(blocks::Array{Block,1}; factor=1.0, base=[0.,0,0])
-    for bl in blocks
-        bl.coords = ( base .+ factor*(bl.coords' .- base) )'
-    end
 end
 
 

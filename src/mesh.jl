@@ -26,15 +26,19 @@ include("delaunay.jl")
 It contains geometric fields as: points, cells, faces, edges, ndim, quality, etc.
 """
 type Mesh
+    ndim   ::Int
     points ::Array{Point,1}
     cells  ::Array{Cell,1}
     faces  ::Array{Cell,1}
     edges  ::Array{Cell,1}
     bpoints::Dict{UInt64,Point}
-    ndim   ::Int
     bins   ::Bins
     quality::Float64
     qmin   ::Float64 
+    # Data
+    point_scalars::Dict{Symbol,Array{Float64}}
+    point_vectors::Dict{Symbol,Array{Array{Float64}}}
+    cell_scalars ::Dict{Symbol,Array{Float64}}
 
     function Mesh()
         this = new()
@@ -122,7 +126,7 @@ function get_patches(mesh::Mesh)::Array{Array{Cell,1},1}
 end
 
 # Reverse Cuthill–McKee algorithm (RCM) 
-function reorder!(mesh::Mesh; sort_degrees=true, reversed=false)
+function reorder!(mesh::Mesh; sort_degrees=true, reversed=false)::Void
 
     # Get all mesh edges
     all_edges = Dict{UInt64, Cell}()
@@ -231,11 +235,13 @@ function reorder!(mesh::Mesh; sort_degrees=true, reversed=false)
 
     mesh.points = N
 
+    return nothing
+
 end
 
 
 # Updates numbering, faces and edges in a Mesh object
-function update!(mesh::Mesh; verbose::Bool=false, genfacets::Bool=true, genedges::Bool=true)
+function update!(mesh::Mesh; verbose::Bool=false, genfacets::Bool=true, genedges::Bool=true)::Void
 
     # Get ndim
     ndim = 2
@@ -275,10 +281,11 @@ function update!(mesh::Mesh; verbose::Bool=false, genfacets::Bool=true, genedges
 end
 
 # Mesh quality
-function quality!(mesh::Mesh)
-    Q = [ cell_quality(c) for c in mesh.cells]
+function quality!(mesh::Mesh)::Void
+    Q = Float64[ cell_quality(c) for c in mesh.cells]
     mesh.quality = sum(Q)/length(mesh.cells)
     mesh.qmin    = minimum(Q)
+    return nothing
 end
 
 # flattens a list of nested lists
@@ -384,7 +391,7 @@ Saves a mesh object into a file in VTK legacy format:
 save(mesh, filename, [verbose=true])
 ```
 """
-function save(mesh::Mesh, filename::AbstractString; verbose::Bool=true)
+function save(mesh::Mesh, filename::AbstractString; verbose::Bool=true)::Void
     # Saves the mesh information in vtk format
 
     npoints = length(mesh.points)
@@ -395,7 +402,7 @@ function save(mesh::Mesh, filename::AbstractString; verbose::Bool=true)
         ndata += 1 + length(cell.points)
     end
 
-    has_crossed = any([cell.crossed for cell in mesh.cells])
+    has_crossed = any(Bool[cell.crossed for cell in mesh.cells])
 
     f = open(filename, "w")
 
@@ -483,9 +490,11 @@ function save(mesh::Mesh, filename::AbstractString; verbose::Bool=true)
 
     close(f)
 
+    return nothing
+
 end
 
-function load_mesh_vtk(filename::String)
+function load_mesh_vtk(filename::String)::Mesh
 
     file = open(filename)
     mesh = Mesh()
@@ -793,7 +802,7 @@ end
 """
 `Mesh(filename)` constructs a mesh object based on a file in VTK legacy format or JSON format.
 """
-function Mesh(filename::String; verbose::Bool=true, reorder::Bool=false)
+function Mesh(filename::String; verbose::Bool=true, reorder::Bool=false)::Mesh
     if verbose
         print_with_color(:cyan, "Mesh loading:\n", bold=true)
     end
