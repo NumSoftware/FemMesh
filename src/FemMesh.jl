@@ -33,7 +33,7 @@ Block2D, Block3D, BlockTruss, BlockInset, Point, Cell, Face, Edge, Mesh.
 
 **Important functions** 
 
-generate_mesh, copy, move, array, rotate, polar, extrude.
+copy, move!, array, rotate!, polar, extrude.
 
 """
 module FemMesh
@@ -61,7 +61,7 @@ include("block.jl")
 export Block2D, Block3D, BlockTruss, BlockCoords, BlockCylinder
 
 include("operators.jl")
-export move, array, copy, rotate, polar
+export move!, array, copy, mirror, rotate!, polar
 
 include("extrude.jl") 
 export extrude

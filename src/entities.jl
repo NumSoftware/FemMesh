@@ -33,18 +33,18 @@ type Point
     tag  ::AbstractString
     id   ::Int64
     extra::Int64
-    function Point(x::Float64,y::Float64,z::Float64=0.0; tag="")
+    function Point(x::Real, y::Real, z::Real=0.0; tag::String="")
         const NDIG = 14
         x = round(x, NDIG)
         y = round(y, NDIG)
         z = round(z, NDIG)
-        return new(x,y,z,tag,-1,-1)
+        return new(x, y, z, tag,-1,-1)
     end
-    function Point(C::Array{Float64,1})
+    function Point(C::AbstractArray{<:Real}; tag::String="")
         if length(C)==2
-            return Point(C[1], C[2], 0.0)
+            return new(C[1], C[2], 0.0, tag, -1, -1)
         else
-            return Point(C[1], C[2], C[3])
+            return new(C[1], C[2], C[3], tag, -1, -1)
         end
     end
 end
@@ -54,7 +54,6 @@ end
 
 import Base.hash
 #hash(p::Point) = round(UInt, 1000000 + p.x*1001 + p.y*10000001 + p.z*100000000001)
-#hash(p::Point) = hash((p.x, p.y, p.z))
 hash(p::Point) = hash( (p.x==0.0?0.0:p.x, p.y==0.0?0.0:p.y, p.z==0.0?0.0:p.z) ) # comparisons used to avoid signed zero
 
 function hash(points::Array{Point,1})::UInt64
@@ -70,7 +69,7 @@ getcoords(p::Point) = [p.x, p.y, p.z]
 # Sentinel instance for not found point
 const NO_POINT = Point(1e+308, 1e+308, 1e+308)
 
-function get_point(points::Dict{UInt64,Point}, C::Array{Float64,1})
+function get_point(points::Dict{UInt64,Point}, C::AbstractArray{<:Real})
     hs = hash(Point(C))
     return get(points, hs, nothing)
 end

@@ -103,8 +103,17 @@ function basic_coords(shape::ShapeType) #check
         return [ 0.  0.  0.; a  0.  0.; a/2.  a/2*√3  0. ;
                  0.  0.   a; a  0.   a; a/2.  a/2*√3   a ]
     end
+    if shape == WED15
+        a = (4./√3.)^(1./3.)
+        b = a/2*√3
+        return [   0  0    0; a        0     0; a/2    b    0;
+                   0  0    a; a        0     a; a/2    b    a;
+                 a/2  0    0; a*3/4  b/2     0; a/4  b/2    0;
+                 a/2  0    a; a*3/4  b/2     a; a/4  b/2    a;
+                   0  0  a/2; a        0   a/2; a/2    b  a/2 ]
+    end
 
-    error("No basic coordinates for shape $shape")
+    error("No basic coordinates for shape $(shape.name)")
 end
 
 # Returns a rotation matrix for a cell based in their first points
@@ -533,11 +542,11 @@ function force_bc(mesh::Mesh, E::Float64, nu::Float64, α::Float64)
         K = matrixK(c, ndim, E, nu)
         β = 0.97
 
-        #if mesh.qmin>0.9
+        if mesh.qmin>0.9
             F = K*U
-        #else
-            #F = K*U*(β-c.quality)/(β-mesh.qmin)*α
-        #end
+        else
+            F = K*U*(β-c.quality)/(β-mesh.qmin)*α
+        end
 
         # add forces to Fbc
         for (i,point) in enumerate(c.points)
@@ -577,7 +586,11 @@ function smooth!(mesh::Mesh; verbose=true, alpha::Float64=0.3, target::Float64=0
     q    = mesh.quality
     qmin = minimum(Q)
     dev  = stdm(Q, q) 
-    verbose && @printf("  it: %2d  qmin: %7.5f  qavg: %7.5f  dev: %7.5f", 0, qmin, q, dev)
+
+    hist  = fit(Histogram, Q, 0.0:0.05:1.0, closed=:right).weights
+    hists = [ hist ]
+
+    verbose && @printf("  it: %2d  qmin: %5.3f  qavg: %5.3f  dev: %7.5f", 0, qmin, q, dev)
     verbose && println("  hist: ", fit(Histogram, Q, 0.5:0.05:1.0, closed=:right).weights)
 
     # Lagrange multipliers matrix
@@ -627,7 +640,10 @@ function smooth!(mesh::Mesh; verbose=true, alpha::Float64=0.3, target::Float64=0
         qmin = temp
         dev  = stdm(Q, q)
 
-        verbose && @printf("  it: %2d  qmin: %7.5f  qavg: %7.5f  dev: %7.5f", i, qmin, q, dev)
+        hist  = fit(Histogram, Q, 0.0:0.05:1.0, closed=:right).weights
+        push!(hists, hist)
+
+        verbose && @printf("  it: %2d  qmin: %5.3f  qavg: %5.3f  dev: %7.5f", i, qmin, q, dev)
         verbose && println("  hist: ", fit(Histogram, Q, 0.5:0.05:1.0, closed=:right).weights)
 
         if Δq<eps && Δqmin<epsmin
@@ -637,7 +653,7 @@ function smooth!(mesh::Mesh; verbose=true, alpha::Float64=0.3, target::Float64=0
 
     verbose && println("  done.")
 
-    return nothing
+    return hists
 end
 
 precompile(smooth!, (Mesh,) )

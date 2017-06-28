@@ -35,7 +35,7 @@ copy(bl::Block3D) = Block3D(copy(bl.coords), nx=bl.nx, ny=bl.ny, nz=bl.nz, shape
 
 Changes the coordinates of a `block`. Also returns a reference.
 """
-function move(bl::Block;x=0.0, y=0.0, z=0.0, dx=0.0, dy=0.0, dz=0.0)
+function move!(bl::Block;x=0.0, y=0.0, z=0.0, dx=0.0, dy=0.0, dz=0.0)
     bl.coords[:, 1] += x
     bl.coords[:, 2] += y
     bl.coords[:, 3] += z
@@ -48,7 +48,7 @@ end
 
 Changes the coordinates of an array of blocks. Also returns a reference.
 """
-function move(blocks::Array; x=0.0, y=0.0, z=0.0, dx=0.0, dy=0.0, dz=0.0)
+function move!(blocks::Array; x=0.0, y=0.0, z=0.0, dx=0.0, dy=0.0, dz=0.0)
     for bl in blocks
         bl.coords[:, 1] += x
         bl.coords[:, 2] += y
@@ -58,28 +58,36 @@ function move(blocks::Array; x=0.0, y=0.0, z=0.0, dx=0.0, dy=0.0, dz=0.0)
 end
 
 
-function scale(bl::Block; factor=1.0, base=[0.,0,0])
+function scale!(bl::Block; factor=1.0, base=[0.,0,0])
     bl.coords = ( base .+ factor*(bl.coords' .- base) )'
 end
 
 
-function scale(blocks::Array{Block,1}; factor=1.0, base=[0.,0,0])
+function scale!(blocks::Array{Block,1}; factor=1.0, base=[0.,0,0])
     for bl in blocks
         bl.coords = ( base .+ factor*(bl.coords' .- base) )'
     end
 end
 
 function mirror(block::Block; face=[0. 0 0; 0 1 0; 0 0 1])
-    p1 = vec(face[1,:])
-    p2 = vec(face[2,:])
-    p3 = vec(face[3,:])
-    normal = cross(p2-p1, p3-p2)
+    nr, nc = size(face)
+    if nc==2
+        face = [ face zeros(nr) ]
+    end
+    if nr==2
+        face = [ face; [face[1,1] face[1,2] 1.0] ]
+    end
+
+    p1 = face[1,:]
+    p2 = face[2,:]
+    p3 = face[3,:]
+    normal = cross(p2-p1, p3-p1)
     normal = normal/norm(normal)
 
     bl = copy(block)
 
     distances    = (bl.coords .- p1')*normal          # d = n^.(xi - xp)
-    bl.coords = bl.coords .+ 2*distances.*normal'  # xi = xi + 2*d*n^
+    bl.coords = bl.coords .- 2*distances.*normal'  # xi = xi - 2*d*n^
 
     # fix coordinates in bl to keep anti-clockwise numbering
     npts = size(bl.coords)[1]
@@ -127,11 +135,11 @@ end
 
 
 """
-`rotate(block, [base=[0,0,0],] [axis=[0,0,1],] [angle=90.0])`
+`rotate!(block, [base=[0,0,0],] [axis=[0,0,1],] [angle=90.0])`
 
 Rotates a `block` according to a `base` point, an `axis` vector and an `angle`.
 """
-function rotate(bl::Block; base=[0.,0,0], axis=[0.,0,1], angle=90.0 )
+function rotate!(bl::Block; base=[0.,0,0], axis=[0.,0,1], angle=90.0 )
 
     length(axis)==2 && ( axis=vcat(axis, 0.0) )
     length(base)==2 && ( base=vcat(base, 0.0) )
@@ -180,9 +188,9 @@ function rotate(bl::Block; base=[0.,0,0], axis=[0.,0,1], angle=90.0 )
     #return bl
 end
 
-function rotate{T<:Block}(blocks::Array{T,1}; base=[0.,0,0], axis=[0.,0,1], angle=90.0 )
+function rotate!{T<:Block}(blocks::Array{T,1}; base=[0.,0,0], axis=[0.,0,1], angle=90.0 )
     for bl in blocks
-        rotate(bl, base=base, axis=axis, angle=angle)
+        rotate!(bl, base=base, axis=axis, angle=angle)
     end
 end
 
@@ -198,7 +206,7 @@ function polar{T<:Block}(bl::T; base=[0.,0,0], axis=[0.,0,1], angle=360, n=2 )::
     angle = angle/n
     for i=1:n-1
         bli = copy(bl)
-        rotate(bli, base=base, axis=axis, angle=angle*i)
+        rotate!(bli, base=base, axis=axis, angle=angle*i)
         push!(blocks, bli)
     end
     return blocks
@@ -221,7 +229,7 @@ end
 
 Moves a Mesh object `mesh`. Also returns a reference.
 """
-function move(mesh::Mesh; dx=0.0, dy=0.0, dz=0.0)
+function move!(mesh::Mesh; dx=0.0, dy=0.0, dz=0.0)
     for p in mesh.points
         p.x += dx
         p.y += dy
@@ -232,7 +240,7 @@ end
 
 
 
-function scale(msh::Mesh; factor=1.0, base=[0.,0,0])
+function scale!(msh::Mesh; factor=1.0, base=[0.,0,0])
     for pt in mesh.points
         p.x, p.y, p.z = base + ([p.x, p.y, p.z] - base)*factor
     end
@@ -245,7 +253,7 @@ end
 
 Rotates a Mesh object `mesh` according to a `base` point, an `axis` vector and an `angle`.
 """
-function rotate(mesh::Mesh; base=[0.,0,0], axis=[0.,0,1], angle=90.0 )
+function rotate!(mesh::Mesh; base=[0.,0,0], axis=[0.,0,1], angle=90.0 )
 
     length(axis)==2 && ( axis=vcat(axis, 0.0) )
     length(base)==2 && ( base=vcat(base, 0.0) )

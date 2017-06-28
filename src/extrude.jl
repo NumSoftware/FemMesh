@@ -90,9 +90,75 @@ end
 `extrude(mesh, [axis=[0,0,1],] [len=1.0,] [n=1,] [verbose=true,] [genedges=false])`
 
 Extrudes a 2D `mesh` generating a 3D mesh based on a direction `axis`, a lenght `len` and a number `n` of divisions.
-Only meshes with cell shapes QUAD4 and QUAD8 are allowed.
+Only meshes with cell shapes TRI3, TRI6, QUAD4 and QUAD8 are allowed.
 """
-function extrude(mesh::Mesh; axis=[0.,0.,1.], len::Number=1.0, n::Int=1, verbose::Bool=true, genedges::Bool=false)
+function extrude(mesh::Mesh; len::Number=1.0, n::Int=1, verbose::Bool=true)
+    verbose && print_with_color(:cyan, "Mesh extrude:\n", bold=true)
+    Δz = len/n
+
+    # Generate new cells
+    cells = Cell[]
+
+    for cell in mesh.cells
+        if cell.shape in (TRI3, QUAD4)
+            newshape = cell.shape==TRI3 ? WED6 : HEX8
+            for i=1:n
+                zi = (i-1)*Δz
+                points  = [ Point(p.x, p.y, z) for z in (zi, zi+Δz) for p in cell.points ]
+                newcell = Cell(newshape, points, cell.tag)
+                push!(cells, newcell)
+            end
+        elseif cell.shape==TRI6
+            for i=1:n
+                zi = (i-1)*Δz
+                points1 = [ Point(p.x, p.y, z) for z in (zi, zi+Δz) for p in view(cell.points, 1:3) ]
+                points2 = [ Point(p.x, p.y, z) for z in (zi, zi+Δz) for p in view(cell.points, 4:6) ]
+                points3 = [ Point(p.x, p.y, zi+Δz/2) for p in view(cell.points, 1:3) ]
+                newcell = Cell(WED15, [ points1; points2; points3 ], cell.tag)
+                push!(cells, newcell)
+            end
+        elseif cell.shape==QUAD8
+            for i=1:n
+                zi = (i-1)*Δz
+                points1 = [ Point(p.x, p.y, z) for z in (zi, zi+Δz) for p in view(cell.points, 1:4) ]
+                points2 = [ Point(p.x, p.y, z) for z in (zi, zi+Δz) for p in view(cell.points, 5:8) ]
+                points3 = [ Point(p.x, p.y, zi+Δz/2) for p in view(cell.points, 1:4) ]
+                newcell = Cell(WED6, [ points1; points2; points3 ], cell.tag)
+                push!(cells, newcell)
+            end
+        else
+            error("extrude: Cell $(cell.shape.name) is not supported")
+        end
+    end
+
+    # Merge points
+    pointsD = Dict{UInt64,Point}( hash(p) => p for c in cells for p in c.points )
+
+    for cell in cells
+        cell.points = [ pointsD[hash(p)] for p in cell.points ]
+    end
+
+    # New mesh
+    newmesh = Mesh()
+    newmesh.points = collect(values(pointsD))
+    newmesh.cells  = cells
+    update!(newmesh)
+
+    if verbose
+        @printf "  %5d points obtained\n" length(newmesh.points)
+        @printf "  %5d cells obtained\n" length(newmesh.cells)
+        @printf "  %5d faces obtained\n" length(newmesh.faces)
+        @printf "  %5d surface edges obtained\n" length(newmesh.edges)
+        println("  done.")
+    end
+
+    return newmesh
+
+end
+
+
+
+function extrude2(mesh::Mesh; axis=[0.,0.,1.], len::Number=1.0, n::Int=1, verbose::Bool=true, genedges::Bool=false)
     verbose && print_with_color(:cyan, "Mesh extrude:\n", bold=true)
 
     V = axis/norm(axis)
@@ -235,7 +301,7 @@ function extrude(mesh::Mesh; axis=[0.,0.,1.], len::Number=1.0, n::Int=1, verbose
 end
 
 
-function extrude2(mesh::Mesh; axis=[0.,0.,1.], len::Number=1.0, n::Int=1, verbose::Bool=true, genedges::Bool=false)
+function extrude1(mesh::Mesh; axis=[0.,0.,1.], len::Number=1.0, n::Int=1, verbose::Bool=true, genedges::Bool=false)
     verbose && print_with_color(:cyan, "Mesh extrude:\n", bold=true)
 
     length(inicells)>0 || error("Extrude: Cannot extrude mesh with no cells.")

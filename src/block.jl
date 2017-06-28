@@ -36,7 +36,7 @@ type BlockTruss <: Block
     tag::AbstractString
     id::Int64
 
-    function BlockTruss(coords, conns::Array{Int64,2}; shape=LIN2, tag="", id=-1)
+    function BlockTruss(coords::Array{<:Real}, conns::Array{Int64,2}; shape=LIN2, tag="", id=-1)
         ncols = size(coords,2)
         if !(ncols in (2,3)); error("Invalid coordinates matrix for BlockTruss") end
         if ncols==2
@@ -61,7 +61,7 @@ type BlockCoords <: Block
     tag::AbstractString
     id::Int64
 
-    function BlockCoords(coords, conns::Array{Int64,2}; tag="", id=-1)
+    function BlockCoords(coords::Array{<:Real}, conns::Array{Int64,2}; tag="", id=-1)
         ncols = size(coords,2)
         if !(ncols in (2,3)); error("Invalid coordinates matrix for BlockCoords") end
         if ncols==2
@@ -88,10 +88,11 @@ type Block2D <: Block
     shape::ShapeType
     tag::AbstractString
     id::Int64
-    function Block2D(coords::Array; nx=1, ny=1, shape=QUAD4, tag="", id=-1)
+
+    function Block2D(coords::Array{<:Real}; nx=1, ny=1, shape=QUAD4, tag="", id=-1)
         shape in (TRI3, TRI6, QUAD4, QUAD8, QUAD9, QUAD12) || error("Block2D: shape must be TRI3, TRI6, QUAD4, QUAD8, QUAD9 or QUAD12")
         if size(coords,1)==2
-            C = box_coords(vec(coords[1,:]), vec(coords[2,:]))
+            C = box_coords(coords[1,:], coords[2,:])
         elseif size(coords,2)==2
             C = [coords zeros(size(coords,1)) ]
         else
@@ -116,9 +117,10 @@ type Block3D <: Block
     shape::ShapeType
     tag::AbstractString
     id::Int64
-    function Block3D(coords::Array; nx=1, ny=1, nz=1, shape=HEX8, tag="", id=-1)
+
+    function Block3D(coords::Array{<:Real}; nx=1, ny=1, nz=1, shape=HEX8, tag="", id=-1)
         shape in (TET4, TET10, HEX8, HEX20) || error("Block3D: shape must be TET4, TET10, HEX8 or HEX20")
-        C    = size(coords,1)==2? box_coords(vec(coords[1,:]), vec(coords[2,:])): coords
+        C    = size(coords,1)==2? box_coords(coords[1,:], coords[2,:]): coords
         this = new(C, nx, ny, nz, shape, tag, id)
         return this
     end
@@ -133,7 +135,7 @@ type BlockCylinder <: Block
     tag::AbstractString
     id::Int64
 
-    function BlockCylinder(coords::Array; r=1.0, nr=3, n=2, shape=HEX8, tag="", id=-1)
+    function BlockCylinder(coords::Array{<:Real}; r=1.0, nr=3, n=2, shape=HEX8, tag="", id=-1)
         size(coords,1) != 2 && error("Invalid coordinates matrix for BlockCylinder")
         nr<2 && error("Invalid nr=$nr value for BlockCylinder")
         shape in (HEX8, HEX20) || error("BlockCylinder: shape must be HEX8 or HEX20")
@@ -142,7 +144,7 @@ type BlockCylinder <: Block
     end
 end
 
-function box_coords{T1<:Number, T2<:Number}(C1::Array{T1,1}, C2::Array{T2,1})
+function box_coords(C1::Array{<:Real,1}, C2::Array{<:Real,1})
     C = Array{Float64}(8, 3)
     x1 = C1[1]
     y1 = C1[2]
@@ -185,10 +187,10 @@ function split_block(bl::Block2D, msh::Mesh)
                 r = (2.0/nx)*(i-1) - 1.0
                 s = (2.0/ny)*(j-1) - 1.0
                 N = bshape.func([r, s])
-                C = round.(N'*bl.coords, 8)[1,:]
-                #C = reshape(C, 3)
+                C = N'*bl.coords
                 p::Any = nothing
                 if i in (1, nx+1) || j in (1, ny+1)
+                    C = round.(C, 8)
                     p = get_point(msh.bpoints, C)
                     if p==nothing
                         p = Point(C); push!(msh.points, p)
@@ -225,10 +227,10 @@ function split_block(bl::Block2D, msh::Mesh)
                 r = (1.0/nx)*(i-1) - 1.0
                 s = (1.0/ny)*(j-1) - 1.0
                 N = bshape.func([r, s])
-                C = round.(N'*bl.coords, 8)[1,:]
-                #C = reshape(C, 3)
+                C = N'*bl.coords
                 p::Any = nothing
                 if i in (1, 2*nx+1) || j in (1, 2*ny+1)
+                    C = round.(C, 8)
                     p = get_point(msh.bpoints, C)
                     if p==nothing
                         p = Point(C); push!(msh.points, p)
@@ -274,10 +276,10 @@ function split_block(bl::Block2D, msh::Mesh)
                 r = ((2/3)/nx)*(i-1) - 1.0
                 s = ((2/3)/ny)*(j-1) - 1.0
                 N = bshape.func([r, s])
-                C = round.(N'*bl.coords, 8)[1,:]
-                #C = reshape(C, 3)
+                C = N'*bl.coords
                 p::Any = nothing
                 if i in (1, 3*nx+1) || j in (1, 3*ny+1)
+                    C = round.(C, 8)
                     p = get_point(msh.bpoints, C)
                     if p==nothing
                         p = Point(C); push!(msh.points, p)
@@ -321,10 +323,10 @@ function split_block(bl::Block2D, msh::Mesh)
                 r = (2.0/nx)*(i-1) - 1.0
                 s = (2.0/ny)*(j-1) - 1.0
                 N = bshape.func([r, s])
-                C = round.(N'*bl.coords, 8)[1,:]
-                #C = reshape(C, 3)
+                C = N'*bl.coords
                 p::Any = nothing
                 if i in (1, nx+1) || j in (1, ny+1)
+                    C = round.(C, 8)
                     p = get_point(msh.bpoints, C)
                     if p==nothing
                         p = Point(C); push!(msh.points, p)
@@ -371,10 +373,10 @@ function split_block(bl::Block2D, msh::Mesh)
                 r = (1.0/nx)*(i-1) - 1.0
                 s = (1.0/ny)*(j-1) - 1.0
                 N = bshape.func([r, s])
-                C = round.(N'*bl.coords, 8)[1,:]
-                #C = reshape(C, 3)
+                C = N'*bl.coords
                 p::Any = nothing
                 if i in (1, 2*nx+1) || j in (1, 2*ny+1)
+                    C = round.(C, 8)
                     p = get_point(msh.bpoints, C)
                     if p==nothing
                         p = Point(C); push!(msh.points, p)
@@ -430,9 +432,10 @@ function split_block(bl::Block3D, msh::Mesh)
                     s = (2.0/ny)*(j-1) - 1.0
                     t = (2.0/nz)*(k-1) - 1.0
                     N = bshape.func([r, s, t])
-                    C = round.(N'*bl.coords, 8)[1,:]
+                    C = N'*bl.coords
                     p::Any = nothing
                     if i in (1, nx+1) || j in (1, ny+1) || k in (1, nz+1)
+                        C = round.(C, 8)
                         p = get_point(msh.bpoints, C)
                         if p==nothing
                             p = Point(C); push!(msh.points, p)
@@ -491,10 +494,10 @@ function split_block(bl::Block3D, msh::Mesh)
                     s = (1.0/ny)*(j-1) - 1.0
                     t = (1.0/nz)*(k-1) - 1.0
                     N = bshape.func([r, s, t])
-                    C = round.(N'*bl.coords, 8)[1,:]
-                    #C = reshape(C, 3)
+                    C = N'*bl.coords
                     p::Any = nothing
                     if i in (1, 2*nx+1) || j in (1, 2*ny+1) || k in (1, 2*nz+1)
+                        C = round.(C, 8)
                         p = get_point(msh.bpoints, C)
                         if p==nothing
                             p = Point(C); push!(msh.points, p)
@@ -615,7 +618,7 @@ function split_block(bl::BlockCoords, msh::Mesh)
     m = size(bl.conns , 1) # number of cells
     p_arr = Array{Point}(n)
     for i=1:n
-        C = vec(bl.coords[i,:])
+        C = bl.coords[i,:]
         p = get_point(msh.bpoints, C)
         if p==nothing; 
             p = Point(C) 
@@ -660,7 +663,7 @@ function split_block(bl::BlockCylinder, msh::Mesh)
 
     # polar and move
     blocks = polar(blocks, n=4)
-    move(blocks, x=bl.coords[1,1], y=bl.coords[1,2], z=bl.coords[1,3])
+    move!(blocks, x=bl.coords[1,1], y=bl.coords[1,2], z=bl.coords[1,3])
 
     # extrude
     len      = norm(bl.coords[1,:] - bl.coords[2,:])
@@ -671,7 +674,7 @@ function split_block(bl::BlockCylinder, msh::Mesh)
     axis  = bl.coords[2,:] - bl.coords[1,:]
     angle = acos( dot(zv, axis)/(norm(zv)*norm(axis)) )*180/pi
     raxis = cross(zv, axis)
-    norm(raxis)>1e-10 && rotate(blocks3D, base=bl.coords[1,:], axis=raxis, angle=angle)
+    norm(raxis)>1e-10 && rotate!(blocks3D, base=bl.coords[1,:], axis=raxis, angle=angle)
 
     # split
     for bl in blocks3D
