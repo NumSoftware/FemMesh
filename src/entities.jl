@@ -160,7 +160,8 @@ end
 
 
 # Index operator for a collection of elements
-function getindex(cells::Array{Cell,1}, s::Symbol)::Array{Cell,1}
+# This function is not type stable
+function getindex(cells::Array{Cell,1}, s::Symbol)
     if s == :solids
         return filter(cell -> cell.shape.class==SOLID_SHAPE, cells)
     end
