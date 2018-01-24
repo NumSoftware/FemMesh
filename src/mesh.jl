@@ -1,28 +1,12 @@
-##############################################################################
-#    FemLab - Finite Element Library                                         #
-#    Copyright (C) 2014 Raul Durand <raul.durand at gmail.com>               #
-#                                                                            #
-#    This file is part of FemLab.                                            #
-#                                                                            #
-#    FemLab is free software: you can redistribute it and/or modify          #
-#    it under the terms of the GNU General Public License as published by    #
-#    the Free Software Foundation, either version 3 of the License, or       #
-#    any later version.                                                      #
-#                                                                            #
-#    FemLab is distributed in the hope that it will be useful,               #
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of          #
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the           #
-#    GNU General Public License for more details.                            #
-#                                                                            #
-#    You should have received a copy of the GNU General Public License       #
-#    along with FemLab.  If not, see <http://www.gnu.org/licenses/>.         #
-##############################################################################
+# This file is part of FemMesh package. See copyright license in https://github.com/NumSoftware/FemMesh
 
 include("delaunay.jl")
 
 ### Type Mesh
 """
-`Mesh()` constructs an unitialized mesh object to be used in finite element analyses.
+    Mesh()
+
+constructs an unitialized mesh object to be used in finite element analyses.
 It contains geometric fields as: points, cells, faces, edges, ndim, quality, etc.
 """
 type Mesh
@@ -36,9 +20,9 @@ type Mesh
     quality::Float64
     qmin   ::Float64 
     # Data
-    point_scalars::Dict{Symbol,Array{Float64}}
-    point_vectors::Dict{Symbol,Array{Array{Float64}}}
-    cell_scalars ::Dict{Symbol,Array{Float64}}
+    point_scalar_data::Dict{String,Array}
+    point_vector_data::Dict{String,Array}
+    cell_scalar_data ::Dict{String,Array}
 
     function Mesh()
         this = new()
@@ -156,15 +140,21 @@ function reorder!(mesh::Mesh; sort_degrees=true, reversed=false)::Void
             continue
         end
 
+        # embedded line cells
+        if cell.shape.class == LINE_SHAPE && length(cell.linked_cells)>0
+            edge1 = Cell(cell.shape, cell.points)
+            edge2 = Cell(LIN2, [ cell.points[1], cell.linked_cells[1].points[1] ])
+            all_edges[hash(edge1)] = edge1
+            all_edges[hash(edge2)] = edge2
+            continue
+        end
+
         # all other cells
         edge = Cell(cell.shape, cell.points)
         hs = hash(edge)
         all_edges[hs] = edge
 
     end
-
-    #myedges = [ [ed.points[1].id, ed.points[2].id] for ed in values(all_edges)  ]
-    #@show myedges
 
     # Get points neighbors
     npoints = length(mesh.points)
@@ -220,7 +210,6 @@ function reorder!(mesh::Mesh; sort_degrees=true, reversed=false)::Void
         append!(N, RA)
         R0 = R
         R  = A
-
     end
 
     # Reverse list of new nodes
@@ -261,14 +250,14 @@ function update!(mesh::Mesh; verbose::Bool=false, genfacets::Bool=true, genedges
 
     # Facets
     if genfacets
-        verbose && print("  finding facets...\r")
+        verbose && print("  finding facets...   \r")
         mesh.faces = get_surface(mesh.cells)
     end
     ndim==2 && (mesh.edges=mesh.faces)
 
     # Edges
     if genedges && ndim==3
-        verbose && print("  finding edges...\r")
+        verbose && print("  finding edges...   \r")
         mesh.edges = get_edges(mesh.faces)
     end
 
@@ -304,10 +293,9 @@ flatten(x)=flatten(x, [])
 
 
 """
-Generates a mesh based on an array of geometry blocks:
-```
-Mesh(blocks, [verbose=true,] [genfacets=true,] [genedges=false,] [initial_mesh=nothing]) -> mesh_object
-```
+    Mesh(blocks, [verbose=true], [genfacets=true], [genedges=false], [reorder=true])
+
+Generates a mesh based on an array of geometry blocks
 """
 function Mesh(items::Union{Block, Mesh, Array}...; verbose::Bool=true, genfacets::Bool=true, genedges::Bool=true, reorder=true)
 
@@ -326,6 +314,8 @@ function Mesh(items::Union{Block, Mesh, Array}...; verbose::Bool=true, genfacets
             append!(mesh.points, item.points)
             append!(mesh.cells, item.cells)
             mesh.bpoints = merge(mesh.bpoints, item.bpoints)
+        else
+            error("Mesh: item of type $(typeof(item)) cannot be used as Block or Mesh")
         end
     end
 
@@ -356,7 +346,7 @@ function Mesh(items::Union{Block, Mesh, Array}...; verbose::Bool=true, genfacets
         ncells  = length(mesh.cells)
         nfaces  = length(mesh.faces)
         nedges  = length(mesh.edges)
-        println("  ", mesh.ndim, "d found             ")
+        println("  ", mesh.ndim, "D mesh             ")
         @printf "  %5d points obtained\n" npoints
         @printf "  %5d cells obtained\n" ncells
         if genfacets
@@ -372,226 +362,116 @@ function Mesh(items::Union{Block, Mesh, Array}...; verbose::Bool=true, genfacets
         if icount>0
             @printf "  %5d intersections found\n" icount
         end
+        println("  done.")
     end
-
-    verbose && println("  done.")
 
     return mesh
 end
 
-#function generate_mesh(items::Union{Block, Array}...; verbose::Bool=true, genfacets::Bool=true, genedges::Bool=false)
-    #println("generate_mesh function deprecated. Use Mesh instead")
-    #return Mesh(items..., verbose=verbose, genfacets=genfacets, genedges=genedges)
-#end
-
-
-"""
-Saves a mesh object into a file in VTK legacy format:
-```
-save(mesh, filename, [verbose=true])
-```
-"""
-function save(mesh::Mesh, filename::AbstractString; verbose::Bool=true)::Void
-    # Saves the mesh information in vtk format
-
+import Base.convert
+function convert(::Type{VTK_unstructured_grid}, mesh::Mesh)
     npoints = length(mesh.points)
     ncells  = length(mesh.cells)
 
-    ndata = 0
-    for cell in mesh.cells
-        ndata += 1 + length(cell.points)
+    # points
+    points  = zeros(npoints, 3)
+    for (i,P) in enumerate(mesh.points)
+        points[i, 1] = P.x
+        points[i, 2] = P.y
+        points[i, 3] = P.z
+    end
+    cells   = [ [point.id for point in C.points] for C in mesh.cells ]
+    cell_tys= [ C.shape.vtk_type for C in mesh.cells ]
+    
+    # point id
+    point_ids = [ P.id for P in mesh.points ]
+
+    # cell data
+    cell_scalar_data = Dict()
+    # cell id
+    cell_scalar_data["cell-id"] = [ C.id for C in mesh.cells ]
+    # cell quality
+    cell_scalar_data["quality"] = [ C.quality for C in mesh.cells ]
+    # cell crossed
+    cell_crs  = [ C.crossed for C in mesh.cells ]
+    if any(cell_crs)
+        cell_scalar_data["crossed"] = Int.(cell_crs)
     end
 
-    has_crossed = any(Bool[cell.crossed for cell in mesh.cells])
+    # title
+    title = "FemMesh output"
 
-    f = open(filename, "w")
-
-    println(f, "# vtk DataFile Version 3.0")
-    println(f, "pyfem output ")
-    println(f, "ASCII")
-    println(f, "DATASET UNSTRUCTURED_GRID")
-    println(f, "")
-    println(f, "POINTS ", npoints, " float64")
-
-    # Write points
-    for point in mesh.points
-        @printf f "%23.15e %23.15e %23.15e \n" point.x point.y point.z
-    end
-    println(f)
-
-    # Write connectivities
-    println(f, "CELLS ",ncells, " ", ndata)
-    for cell in mesh.cells
-        print(f, length(cell.points), " ")
-        for point in cell.points
-            print(f, point.id-1, " ")
-        end
-        println(f)
-    end
-    println(f)
-
-    # Write cell types
-    println(f, "CELL_TYPES ", ncells)
-    for cell in mesh.cells
-        println(f, cell.shape.vtk_type)
-    end
-    println(f)
-
-    # Write point data
-    println(f, "POINT_DATA ", npoints)
-
-    # Write point numbers
-    println(f, "SCALARS ", "Point-ID", " int 1")
-    println(f, "LOOKUP_TABLE default")
-    for point in mesh.points
-        @printf f "%5d " point.id
-    end
-    println(f, )
-
-    println(f, "CELL_DATA ", ncells)
-
-    # Write cell numbers
-    println(f, "SCALARS ", "Cell-ID", " int 1")
-    println(f, "LOOKUP_TABLE default")
-    for cell in mesh.cells  #naelems
-        @printf f "%5d " cell.id
-    end
-    println(f, )
-
-    # Write cells quality
-    println(f, "SCALARS quality float 1")
-    println(f, "LOOKUP_TABLE default")
-    for cell in mesh.cells
-        println(f, cell.quality)
-    end
-    println(f, )
-
-    # Write cell type as cell data
-    #println(f, "SCALARS cell_type int 1")
-    #println(f, "LOOKUP_TABLE default")
-    #for cell in mesh.cells
-        #println(f, Int64(cell.shape))
-    #end
-    #println(f, )
-
-    # Write flag for crossed cells
-    if has_crossed
-        println(f, "SCALARS crossed int 1")
-        println(f, "LOOKUP_TABLE default")
-        for cell in mesh.cells
-            println(f, Int(cell.crossed))
-        end
-        println(f, )
-    end
-
-    if verbose
-        print_with_color(:green, "  file $filename written (Mesh)\n")
-    end
-
-    close(f)
-
-    return nothing
+    return VTK_unstructured_grid(title, points, cells, cell_tys,
+                                 point_scalar_data = Dict("point-id"=>point_ids),
+                                 cell_scalar_data  = cell_scalar_data)
 
 end
 
-function load_mesh_vtk(filename::String)::Mesh
 
-    file = open(filename)
+
+"""
+    save(mesh, filename, [verbose=true])
+
+Saves a mesh object into a file in VTK legacy format
+"""
+function save(mesh::Mesh, filename::String; verbose::Bool=true)
+    vtk_data = convert(VTK_unstructured_grid, mesh)
+
+    # Warning for lost of embedded flag
+    has_embedded = any( C -> C.embedded, mesh.cells )
+    if has_embedded
+        # the function read_mesh_vtk cannot setup jet embedded cells
+        warn("save: the flag for embedded cells will be lost after saving mesh to file $filename")
+    end
+
+    save(vtk_data, filename)
+    verbose && print_with_color(:green, "  file $filename written (Mesh)\n")
+end
+
+
+function read_mesh_vtk(filename::String, verbose::Bool=false)
+
+    vtk_data = read_VTK_unstructured_grid(filename)
     mesh = Mesh()
 
-    # read nodal information
-    alltext = readstring(filename)
-    data    = split(alltext)
-
-    # read header
-    idx  = 1
-    while data[idx] != "DATASET"
-        idx += 1
-    end
-    idx += 1
-
-    gridtype = data[idx]
-    gridtype == "UNSTRUCTURED_GRID" || error("This reader only support VTK UNSTRUCTURED_GRID.")
-
-    # read number of points
-    while data[idx] != "POINTS"
-        idx += 1
-    end
-    npoints = parse(data[idx+1])
-    idx += 3
-
-    # read points
+    # Setting points
+    npoints = size(vtk_data.points,1)
+    ndim = 2
     for i=1:npoints
-        x = parse(Float64, data[idx])
-        y = parse(Float64, data[idx+1])
-        z = parse(Float64, data[idx+2])
-        point = Point(x,y,z)
+        X = vtk_data.points[i,:]
+        point = Point(X[1], X[2], X[3])
         point.id = i
         push!(mesh.points, point)
-        idx += 3
+        if X[3] != 0.0
+            ndim = 3
+        end
     end
 
-    # get ndim
-    ndim = 2
-    for point in mesh.points
-        if point.z != 0.0; ndim = 3; break end
-    end
+    # Set ndim
     mesh.ndim = ndim
 
-    # read number of cells
-    while data[idx] != "CELLS"
-        idx += 1
-    end
-    ncells = parse(data[idx+1])
-    ncdata = parse(data[idx+2])
-    idx += 3
-
-    # read cells connectivities
-    conns = Array{Point}[]
-    for i=1:ncells
-        npoints = parse(data[idx])
-        idx += 1
-        conn = Point[]
-        for j=1:npoints
-            point = mesh.points[ parse(data[idx]) + 1 ]
-            idx  += 1
-            push!(conn, point)
-        end
-        push!(conns, conn)
-    end
-
-    # read type of cells
-    types = Int[]
-    while data[idx] != "CELL_TYPES"
-        idx += 1
-    end
-    idx += 2
-
-    # read type of cells (cont.)
+    # Setting cells
+    ncells = length(vtk_data.cells)
     has_polyvertex = false
+
     for i=1:ncells
-        vtk_shape = VTKCellType(parse(data[idx]))
+        conn = mesh.points[ vtk_data.cells[i] ]
+        vtk_shape = VTKCellType(vtk_data.cell_types[i])
         if vtk_shape == VTK_POLY_VERTEX
             shape = POLYV
+            has_polyvertex = true
         else
-            shape = get_shape_from_vtk( vtk_shape, length(conns[i]), ndim )
+            shape = get_shape_from_vtk( vtk_shape, length(conn), ndim )
         end
-        cell  = Cell(shape, conns[i])
+        cell  = Cell(shape, conn)
         push!(mesh.cells, cell)
-        idx  += 1
-        if shape == POLYV   has_polyvertex = true end
     end
 
-    # end of reading
-    close(file)
-
-    # Fixing shape field for polyvertex cells
+    # Fix shape for polyvertex cells
     if has_polyvertex
         # mount dictionary of cells
         cdict = Dict{UInt64, Cell}() 
         for cell in mesh.cells
-            #conn = [ point.id for point in cell.points]
-            #hs = hash(conn)
             hs = hash(cell)
             cdict[hs] = cell
         end
@@ -602,8 +482,6 @@ function load_mesh_vtk(filename::String)::Mesh
                 n = length(cell.points)
                 # look for joints1D and fix shape
                 if n>=5
-                    #conn = [ point.id for point in cell.points]
-                    #hss = hash(conn[1:end-2])
                     hss = hash( [ cell.points[i] for i=1:n-2] )
                     if haskey(cdict, hss) 
                         cell.shape = JLINK2
@@ -614,7 +492,7 @@ function load_mesh_vtk(filename::String)::Mesh
                         hcell.crossed = true
                         continue
                     end
-                    #hss = hash(conn[1:end-3])
+
                     hss = hash( [ cell.points[i] for i=1:n-3] )
                     if haskey(cdict, hss) 
                         cell.shape = JLINK3
@@ -651,13 +529,7 @@ function load_mesh_vtk(filename::String)::Mesh
         # Update linked cells in joints
 
         # check if there are joints
-        has_joints = false
-        for cell in mesh.cells
-            if cell.shape.class == JOINT_SHAPE
-                has_joints = true
-                break
-            end
-        end
+        has_joints = any( C -> C.shape.class==JOINT_SHAPE, mesh.cells )
 
         if has_joints
             # generate dict of faces
@@ -683,6 +555,12 @@ function load_mesh_vtk(filename::String)::Mesh
         end
     end
 
+    # Fix linked_cells for embedded elements (line cells not connected to other elements)
+    has_line = any(C->C.shape.class==LINE_SHAPE, mesh.cells)
+    if has_line
+        # TODO: find the owner of orphan line cells OR use parent id information
+    end
+
     # update mesh and get faces and edges
     update!(mesh)
 
@@ -692,7 +570,6 @@ function load_mesh_vtk(filename::String)::Mesh
             mesh.bpoints[hash(p)] = p
         end
     end
-
 
     return mesh
 end
@@ -810,7 +687,7 @@ function Mesh(filename::String; verbose::Bool=true, reorder::Bool=false)::Mesh
     basename, ext = splitext(filename)
     if ext==".vtk"
         verbose && print("  Reading VTK legacy format...\n")
-        mesh = load_mesh_vtk(filename)
+        mesh = read_mesh_vtk(filename)
     else # try JSON
         verbose && print("  Reading JSON format...\n")
         mesh = load_mesh_json(filename)

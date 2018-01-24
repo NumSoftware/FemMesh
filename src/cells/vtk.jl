@@ -1,3 +1,4 @@
+export VTKCellType
 @enum(VTKCellType,
     VTK_VERTEX                           = 1,
     VTK_POLY_VERTEX                      = 2,

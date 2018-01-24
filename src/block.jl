@@ -1,22 +1,4 @@
-##############################################################################
-#    FemLab - Finite Element Library                                         #
-#    Copyright (C) 2014 Raul Durand <raul.durand at gmail.com>               #
-#                                                                            #
-#    This file is part of FemLab.                                            #
-#                                                                            #
-#    FemLab is free software: you can redistribute it and/or modify          #
-#    it under the terms of the GNU General Public License as published by    #
-#    the Free Software Foundation, either version 3 of the License, or       #
-#    any later version.                                                      #
-#                                                                            #
-#    FemLab is distributed in the hope that it will be useful,               #
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of          #
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the           #
-#    GNU General Public License for more details.                            #
-#                                                                            #
-#    You should have received a copy of the GNU General Public License       #
-#    along with FemLab.  If not, see <http://www.gnu.org/licenses/>.         #
-##############################################################################
+# This file is part of FemMesh package. See copyright license in https://github.com/NumSoftware/FemMesh
 
 import Base.copy
 
@@ -178,7 +160,21 @@ end
 function split_block(bl::Block2D, msh::Mesh)
     nx, ny = bl.nx, bl.ny
     shape  = bl.shape # cell shape
-    bshape = size(bl.coords,1)==4? QUAD4:QUAD8 # block shape
+    nbpoints = size(bl.coords,1)
+    #bshape = nbpoints==4? QUAD4:QUAD8 # block shape
+    
+    nbpoints in (3, 4, 6, 8) || error("Block2D: Wrong number of block points ($nbpoints)")
+    if nbpoints==4
+        bshape = QUAD4
+    elseif nbpoints==8
+        bshape = QUAD8
+    elseif nbpoints==3
+        bshape = TRI3
+    elseif nbpoints==6
+        bshape = TRI6
+    end
+
+    quadrilat_bshape = nbpoints in (4, 8)
 
     if shape==QUAD4
         p_arr = Array{Point}(nx+1, ny+1)
@@ -316,7 +312,7 @@ function split_block(bl::Block2D, msh::Mesh)
         return
     end
 
-    if shape == TRI3
+    if shape == TRI3 && quadrilat_bshape
         p_arr = Array{Point}(nx+1, ny+1)
         for j = 1:ny+1
             for i = 1:nx+1
@@ -355,7 +351,53 @@ function split_block(bl::Block2D, msh::Mesh)
         return
     end
 
-    if shape == TRI6
+    if shape == TRI3 && !quadrilat_bshape
+        p_arr = Array{Point}(nx+1, nx+1)
+        for j = 1:ny+1
+            for i = 1:nx+1
+                j>i && continue
+                r = 1 - (1.0/nx)*(i-1)
+                s =  (1.0/ny)*(j-1)
+                #r = (2.0/nx)*(i-1) - 1.0
+                #s = (2.0/ny)*(j-1) - 1.0
+                N = bshape.func([r, s])
+                C = N'*bl.coords
+                p::Any = nothing
+                if i in (1, nx+1) || j in (1, ny+1) || i==j
+                    C = round.(C, 8)
+                    p = get_point(msh.bpoints, C)
+                    if p==nothing
+                        p = Point(C); push!(msh.points, p)
+                        msh.bpoints[hash(p)] = p
+                    end
+                else
+                    p = Point(C); push!(msh.points, p)
+                end
+                p_arr[i,j] = p
+            end
+        end
+
+        for j = 1:ny
+            for i = 1:nx
+                j>i && continue
+                p1 = p_arr[i  , j  ]
+                p2 = p_arr[i+1, j  ]
+                p3 = p_arr[i+1, j+1]
+
+                cell1 = Cell(shape, [p1, p2, p3], bl.tag)
+                push!(msh.cells, cell1)
+                
+                if i>j
+                    p4 = p_arr[i  , j+1]
+                    cell2 = Cell(shape, [p4, p1, p3], bl.tag)
+                    push!(msh.cells, cell2)
+                end
+            end
+        end
+        return
+    end
+
+    if shape == TRI6 && quadrilat_bshape
 
         #=   4       7       3
                @-----@-----@
@@ -407,6 +449,69 @@ function split_block(bl::Block2D, msh::Mesh)
                 cell2 = Cell(shape, [p4, p1, p3, p8, p9, p7], bl.tag)
                 push!(msh.cells, cell1)
                 push!(msh.cells, cell2)
+            end
+        end
+        return
+    end
+
+    if shape == TRI6 && !quadrilat_bshape
+
+        #=   4       7       3
+               @-----@-----@
+               |         / |
+               |       /   |
+             8 @     @     @ 6
+               |   /  9    |
+               | /         |
+               @-----@-----@
+             1       5       2     =#
+
+        p_arr = Array{Point}(2*nx+1, 2*ny+1)
+        for j = 1:2*ny+1
+            for i = 1:2*nx+1
+                j>i && continue
+                r = (1.0/nx)*(i-1) # TODO
+                s = (1.0/ny)*(j-1)
+                #r = (1.0/nx)*(i-1) - 1.0
+                #s = (1.0/ny)*(j-1) - 1.0
+                N = bshape.func([r, s])
+                C = N'*bl.coords
+                p::Any = nothing
+                if i in (1, 2*nx+1) || j in (1, 2*ny+1) || i==j
+                    C = round.(C, 8)
+                    p = get_point(msh.bpoints, C)
+                    if p==nothing
+                        p = Point(C); push!(msh.points, p)
+                        msh.bpoints[hash(p)] = p
+                    end
+                else
+                    p = Point(C); push!(msh.points, p)
+                end
+                p_arr[i,j] = p
+            end
+        end
+
+        for j = 1:2:2*ny
+            for i = 1:2:2*nx
+                j>i && continue
+
+                p1 = p_arr[i  , j  ]
+                p2 = p_arr[i+2, j  ]
+                p3 = p_arr[i+2, j+2]
+                p5 = p_arr[i+1, j  ]
+                p6 = p_arr[i+2, j+1]
+                p9 = p_arr[i+1, j+1]
+
+                cell1 = Cell(shape, [p1, p2, p3, p5, p6, p9], bl.tag)
+                push!(msh.cells, cell1)
+
+                if i>j
+                    p4 = p_arr[i  , j+2]
+                    p7 = p_arr[i+1, j+2]
+                    p8 = p_arr[i  , j+1]
+                    cell2 = Cell(shape, [p4, p1, p3, p8, p9, p7], bl.tag)
+                    push!(msh.cells, cell2)
+                end
             end
         end
         return

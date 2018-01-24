@@ -1,24 +1,5 @@
-##############################################################################
-#    FemMesh - Finite Element Library                                        #
-#    Copyright (C) 2014 Raul Durand <raul.durand at gmail.com>               #
-#                                                                            #
-#    This file is part of FemMesh.                                           #
-#                                                                            #
-#    FemMesh is free software: you can redistribute it and/or modify         #
-#    it under the terms of the GNU General Public License as published by    #
-#    the Free Software Foundation, either version 3 of the License, or       #
-#    any later version.                                                      #
-#                                                                            #
-#    FemMesh is distributed in the hope that it will be useful,              #
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of          #
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the           #
-#    GNU General Public License for more details.                            #
-#                                                                            #
-#    You should have received a copy of the GNU General Public License       #
-#    along with FemMesh.  If not, see <http://www.gnu.org/licenses/>.        #
-##############################################################################
+# This file is part of FemMesh package. See copyright license in https://github.com/NumSoftware/FemMesh
 
-#VERSION >= v"0.4.0-dev+6521" && __precompile__()
 __precompile__()
 
 """
@@ -41,6 +22,8 @@ using JSON
 
 # Mesh module
 include("tools/linalg.jl")
+include("tools/expr.jl")
+include("tools/show.jl")
 
 # Generic exports
 export getindex
@@ -51,8 +34,12 @@ export get_ip_coords, get_shape_from_vtk
 export inverse_map, extrapolator
 
 include("entities.jl")
-export Point, Cell, hash, get_coords, get_point, get_faces, cell_extent, cell_quality
-export update!
+export Point, Cell, hash, get_x, get_y, get_z
+export get_coords, get_point, get_points, get_faces, cell_extent, cell_quality
+export tag!, update!
+
+include("vtk-io.jl")
+export VTK_unstructured_grid, save, read_VTK_unstructured_grid
 
 include("mesh.jl")
 export Mesh, update!, quality!, reorder!, save, get_surface, get_neighbors
@@ -72,7 +59,29 @@ include("split.jl")
 include("embedded.jl") 
 export generate_embedded_cells!
 
-include("draw.jl") 
-export draw
+include("mplot.jl") 
+export mplot
+
+
+# show functions for common structures and arrays
+@show_function ShapeType
+@show_array_function ShapeType
+@show_function Point
+@show_array_function Point
+@show_function Cell
+@show_array_function Cell
+@show_function Block
+@show_array_function Block
+
+@show_function Mesh
+@show_function VTK_unstructured_grid
+
+# precompile hint
+#bl = Block2D( [0 0; 1 1], nx=2, ny=2, shape=TRI3)
+#mesh = Mesh(bl, verbose=false)
+#bl = Block2D( [0 0; 1 1], nx=2, ny=2, shape=QUAD4)
+#mesh = Mesh(bl, verbose=false)
+#bl = Block3D( [0 0 0; 1 1 1], nx=2, ny=2, nz=2, shape=HEX8)
+#mesh = Mesh(bl, verbose=false)
 
 end#module

@@ -23,7 +23,7 @@ function MakeJLIN2()
     shape.vtk_type    = VTK_POLY_VERTEX
     shape.facet_idxs  = []
     shape.edge_idxs   = []
-    shape.facet_shape = ()
+    shape.facet_shape = LIN2
     shape.nat_coords  = coords_LIN2
     shape.quadrature  = Dict( 0 => LIN_IP2,  2 => LIN_IP2,  3 => LIN_IP3,   4 => LIN_IP4)
     shape.func        = shape_func_LIN2
@@ -52,7 +52,7 @@ function MakeJLIN3()
     shape.vtk_type    = VTK_POLY_VERTEX
     shape.facet_idxs  = []
     shape.edge_idxs   = []
-    shape.facet_shape = ()
+    shape.facet_shape = LIN3
     shape.nat_coords  = coords_LIN3
     shape.quadrature  = Dict( 0 => LIN_IP2,  2 => LIN_IP2,  3 => LIN_IP3,   4 => LIN_IP4 )
     shape.func        = shape_func_LIN3
@@ -81,7 +81,7 @@ function MakeJLIN4()
     shape.vtk_type    = VTK_POLY_VERTEX
     shape.facet_idxs  = []
     shape.edge_idxs   = []
-    shape.facet_shape = ()
+    shape.facet_shape = LIN4
     shape.nat_coords  = coords_LIN4
     shape.quadrature  = Dict( 0 => LIN_IP3,  2 => LIN_IP2,  3 => LIN_IP3,   4 => LIN_IP4 )
     shape.func        = shape_func_LIN4
@@ -110,7 +110,7 @@ function MakeJTRI3()
     shape.vtk_type    = VTK_POLY_VERTEX
     shape.facet_idxs  = []
     shape.edge_idxs   = []
-    shape.facet_shape = ()
+    shape.facet_shape = TRI3
     shape.nat_coords  = coords_TRI3
     shape.quadrature  = Dict( 0 => TRI_IP3,  3 => TRI_IP3,  6 => TRI_IP6 )
     shape.func        = shape_func_TRI3
@@ -139,7 +139,7 @@ function MakeJTRI6()
     shape.vtk_type    = VTK_POLY_VERTEX
     shape.facet_idxs  = []
     shape.edge_idxs   = []
-    shape.facet_shape = ()
+    shape.facet_shape = TRI6
     shape.nat_coords  = coords_TRI6
     shape.quadrature  = Dict( 0 => TRI_IP3,  3 => TRI_IP3,  6 => TRI_IP6 )
     shape.func        = shape_func_TRI6
@@ -168,7 +168,7 @@ function MakeJQUAD4()
     shape.vtk_type    = VTK_POLY_VERTEX
     shape.facet_idxs  = []
     shape.edge_idxs   = []
-    shape.facet_shape = ()
+    shape.facet_shape = QUAD4
     shape.nat_coords  = coords_QUAD4
     shape.quadrature  = Dict( 0 => QUAD_IP2, 4 => QUAD_IP2, 9 => QUAD_IP3, 16 => QUAD_IP4 )
     shape.func        = shape_func_QUAD4
@@ -193,11 +193,11 @@ function MakeJQUAD8()
     shape.class       = JOINT_SHAPE
     shape.ndim        = 2
     shape.npoints     = 16
-    shape.basic_shape = TRI3
+    shape.basic_shape = QUAD4
     shape.vtk_type    = VTK_POLY_VERTEX
     shape.facet_idxs  = []
     shape.edge_idxs   = []
-    shape.facet_shape = ()
+    shape.facet_shape = QUAD8
     shape.nat_coords  = coords_QUAD8
     shape.quadrature  = Dict( 0 => QUAD_IP3, 4 => QUAD_IP2, 9 => QUAD_IP3, 16 => QUAD_IP4 )
     shape.func        = shape_func_QUAD8

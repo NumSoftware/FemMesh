@@ -1,23 +1,4 @@
-
-##############################################################################
-#    FemLab - Finite Element Library                                         #
-#    Copyright (C) 2014 Raul Durand <raul.durand at gmail.com>               #
-#                                                                            #
-#    This file is part of FemLab.                                            #
-#                                                                            #
-#    FemLab is free software: you can redistribute it and/or modify          #
-#    it under the terms of the GNU General Public License as published by    #
-#    the Free Software Foundation, either version 3 of the License, or       #
-#    any later version.                                                      #
-#                                                                            #
-#    FemLab is distributed in the hope that it will be useful,               #
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of          #
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the           #
-#    GNU General Public License for more details.                            #
-#                                                                            #
-#    You should have received a copy of the GNU General Public License       #
-#    along with FemLab.  If not, see <http://www.gnu.org/licenses/>.         #
-##############################################################################
+# This file is part of FemMesh package. See copyright license in https://github.com/NumSoftware/FemMesh
 
 """
 `copy(block)` 
@@ -39,7 +20,7 @@ function move!(bl::Block;x=0.0, y=0.0, z=0.0, dx=0.0, dy=0.0, dz=0.0)
     bl.coords[:, 1] += x
     bl.coords[:, 2] += y
     bl.coords[:, 3] += z
-    #return bl
+    return bl
 end
 
 
@@ -54,12 +35,13 @@ function move!(blocks::Array; x=0.0, y=0.0, z=0.0, dx=0.0, dy=0.0, dz=0.0)
         bl.coords[:, 2] += y
         bl.coords[:, 3] += z
     end
-    #return blocks 
+    return blocks
 end
 
 
 function scale!(bl::Block; factor=1.0, base=[0.,0,0])
     bl.coords = ( base .+ factor*(bl.coords' .- base) )'
+    return bl
 end
 
 
@@ -67,6 +49,7 @@ function scale!(blocks::Array{Block,1}; factor=1.0, base=[0.,0,0])
     for bl in blocks
         bl.coords = ( base .+ factor*(bl.coords' .- base) )'
     end
+    return blocks
 end
 
 function mirror(block::Block; face=[0. 0 0; 0 1 0; 0 0 1])
@@ -108,9 +91,7 @@ function mirror(block::Block; face=[0. 0 0; 0 1 0; 0 0 1])
 end
 
 function mirror(blocks::Array{Block,1}; face=[0. 0 0; 0 1 0; 0 0 1])
-    for bl in newblocks
-        mirror(bl, face=face)
-    end
+    return [ mirror(bl, face=face) for bl in blocks ]
 end
 
 
@@ -185,13 +166,15 @@ function rotate!(bl::Block; base=[0.,0,0], axis=[0.,0,1], angle=90.0 )
 
     # equation: p2 = base + R*(p-base)
     bl.coords = ( base .+ R*(bl.coords' .- base) )'
-    #return bl
+
+    return bl
 end
 
 function rotate!{T<:Block}(blocks::Array{T,1}; base=[0.,0,0], axis=[0.,0,1], angle=90.0 )
     for bl in blocks
         rotate!(bl, base=base, axis=axis, angle=angle)
     end
+    return blocks
 end
 
 
@@ -235,7 +218,7 @@ function move!(mesh::Mesh; dx=0.0, dy=0.0, dz=0.0)
         p.y += dy
         p.z += dz
     end
-    #return mesh
+    return mesh
 end
 
 
@@ -244,7 +227,7 @@ function scale!(msh::Mesh; factor=1.0, base=[0.,0,0])
     for pt in mesh.points
         p.x, p.y, p.z = base + ([p.x, p.y, p.z] - base)*factor
     end
-    #return mesh
+    return mesh
 end
 
 
@@ -297,7 +280,7 @@ function rotate!(mesh::Mesh; base=[0.,0,0], axis=[0.,0,1], angle=90.0 )
         p.x, p.y, p.z = base + R*([p.x, p.y, p.z] - base)
     end
 
-    #return mesh
+    return mesh
 end
 
 

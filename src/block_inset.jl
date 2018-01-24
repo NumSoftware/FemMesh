@@ -1,22 +1,4 @@
-##############################################################################
-#    FemLab - Finite Element Library                                         #
-#    Copyright (C) 2014 Raul Durand <raul.durand at gmail.com>               #
-#                                                                            #
-#    This file is part of FemLab.                                            #
-#                                                                            #
-#    FemLab is free software: you can redistribute it and/or modify          #
-#    it under the terms of the GNU General Public License as published by    #
-#    the Free Software Foundation, either version 3 of the License, or       #
-#    any later version.                                                      #
-#                                                                            #
-#    FemLab is distributed in the hope that it will be useful,               #
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of          #
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the           #
-#    GNU General Public License for more details.                            #
-#                                                                            #
-#    You should have received a copy of the GNU General Public License       #
-#    along with FemLab.  If not, see <http://www.gnu.org/licenses/>.         #
-##############################################################################
+# This file is part of FemMesh package. See copyright license in https://github.com/NumSoftware/FemMesh
 
 export BlockInset
 
@@ -35,6 +17,7 @@ type BlockInset <: Block
     coords   ::Array{Float64,2}
     curvetype::Union{Int,AbstractString} # 0:polyline, 1:closed polyline, 2: lagrangian, 3:cubic Bezier with inner points
     closed   ::Bool
+    embedded ::Bool
     shape    ::ShapeType
     tag      ::AbstractString
     ε        ::Float64 # bisection tolerance
@@ -46,8 +29,9 @@ type BlockInset <: Block
     _endpoint  ::Union{Point, Void}
     _startpoint::Union{Point, Void}
 
-    function BlockInset(coords; curvetype=0, closed=false, shape=LIN3, tag="", tol=1e-9, toln=1e-4, tolc=1e-9, lam=1., id=-1) 
-        # TODO: add option: merge_nodes
+    function BlockInset(coords; curvetype=0, closed=false, embedded=false, shape=LIN3, tag="", tol=1e-9, toln=1e-4, tolc=1e-9, lam=1., id=-1) 
+        # TODO: add option: merge_points
+        # TODO: add case: endpoints outside mesh
         if typeof(curvetype)<:Integer
             if !(0<=curvetype<=3); error("Wrong curve type") end
             ctype = curvetype
@@ -62,7 +46,7 @@ type BlockInset <: Block
             coords = hcat(coords, zeros(nrows))
         end
 
-        this = new(coords, ctype, closed, shape, tag, tol, toln, tolc, lam, id)
+        this = new(coords, ctype, closed, embedded, shape, tag, tol, toln, tolc, lam, id)
         this.icount = 0
         this.ε  = tol
         this.εn = toln
@@ -74,8 +58,7 @@ type BlockInset <: Block
     end
 end
 
-copy(bl::BlockInset) = BlockInset(copy(bl.coords), curvetype=bl.curvetype, closed=bl.closed, shape=bl.shape, tag=bl.tag)
-
+copy(bl::BlockInset) = BlockInset(copy(bl.coords), curvetype=bl.curvetype, closed=bl.closed, embedded=bl.embedded, shape=bl.shape, tag=bl.tag)
 
 function cubicBezier(s::Float64, PorQ::Array{Float64,2}, isQ::Bool=false)
     # check
@@ -310,11 +293,17 @@ function split_curve(coords::Array{Float64,2}, bl::BlockInset, closed::Bool, msh
         lcell = Cell(shape, Ps, bl.tag)
         push!(msh.cells, lcell)
 
-        # Create a continuous joint element
-        jntpts  = vcat( ccell.points, lcell.points )
-        jntcell = Cell(jntshape, jntpts, bl.tag)
-        push!(msh.cells, jntcell)
-        jntcell.linked_cells = [ccell, lcell]
+        if bl.embedded
+            # Set line as embedded
+            lcell.embedded = true
+            lcell.linked_cells = [ ccell ]
+        else
+            # Generate a continuous joint element
+            jntpts  = vcat( ccell.points, lcell.points )
+            jntcell = Cell(jntshape, jntpts, bl.tag)
+            push!(msh.cells, jntcell)
+            jntcell.linked_cells = [ccell, lcell]
+        end
 
         ccell.crossed = true
 

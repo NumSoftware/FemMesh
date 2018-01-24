@@ -1,50 +1,32 @@
-##############################################################################
-#    FemLab - Finite Element Library                                         #
-#    Copyright (C) 2014 Raul Durand <raul.durand at gmail.com>               #
-#                                                                            #
-#    This file is part of FemLab.                                            #
-#                                                                            #
-#    FemLab is free software: you can redistribute it and/or modify          #
-#    it under the terms of the GNU General Public License as published by    #
-#    the Free Software Foundation, either version 3 of the License, or       #
-#    any later version.                                                      #
-#                                                                            #
-#    FemLab is distributed in the hope that it will be useful,               #
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of          #
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the           #
-#    GNU General Public License for more details.                            #
-#                                                                            #
-#    You should have received a copy of the GNU General Public License       #
-#    along with FemLab.  If not, see <http://www.gnu.org/licenses/>.         #
-##############################################################################
+# This file is part of FemMesh package. See copyright license in https://github.com/NumSoftware/FemMesh
 
 import Base.getindex
-export get_points
 
 abstract type Block end
 
 # Point
 # =====
 
-type Point
+mutable struct Point
     x    ::Float64
     y    ::Float64
     z    ::Float64
     tag  ::AbstractString
     id   ::Int64
-    extra::Int64
+    extra::Int64 # TODO: check where is used
     function Point(x::Real, y::Real, z::Real=0.0; tag::String="")
         const NDIG = 14
-        x = round(x, NDIG)
-        y = round(y, NDIG)
-        z = round(z, NDIG)
+        # Zero is added to avoid negative bit sign for zero signed values
+        x = round(x, NDIG) + 0.0
+        y = round(y, NDIG) + 0.0
+        z = round(z, NDIG) + 0.0
         return new(x, y, z, tag,-1,-1)
     end
     function Point(C::AbstractArray{<:Real}; tag::String="")
         if length(C)==2
-            return new(C[1], C[2], 0.0, tag, -1, -1)
+            return new(C[1]+0.0, C[2]+0.0, 0.0, tag, -1, -1)
         else
-            return new(C[1], C[2], C[3], tag, -1, -1)
+            return new(C[1]+0.0, C[2]+0.0, C[3]+0.0, tag, -1, -1)
         end
     end
 end
@@ -52,9 +34,15 @@ end
 
 ### Point methods
 
+# The functions below can be used in conjuntion with sort
+get_x(point::Point) = point.x
+get_y(point::Point) = point.y
+get_z(point::Point) = point.z
+
 import Base.hash
 #hash(p::Point) = round(UInt, 1000000 + p.x*1001 + p.y*10000001 + p.z*100000000001)
-hash(p::Point) = hash( (p.x==0.0?0.0:p.x, p.y==0.0?0.0:p.y, p.z==0.0?0.0:p.z) ) # comparisons used to avoid signed zero
+#hash(p::Point) = hash( (p.x==0.0?0.0:p.x, p.y==0.0?0.0:p.y, p.z==0.0?0.0:p.z) ) # comparisons used to avoid signed zero
+hash(p::Point) = hash( (p.x, p.y, p.z) ) 
 
 function hash(points::Array{Point,1})::UInt64
     hs = 0x000000000::UInt64
@@ -100,13 +88,15 @@ type Cell
     id     ::Integer
     ndim   ::Integer
     quality::Float64              # quality index: surf/(reg_surf) 
+    embedded::Bool                # flag for embedded cells
     crossed::Bool                 # flag if cell crossed by linear inclusion
-    ocell  ::Union{Cell,Void}     # owner cell in the case of a face
+    ocell  ::Union{Cell,Void}     # owner cell if this cell is a face/edge
     linked_cells::Array{Cell,1}   # neighbor cells in case of joint cell
     function Cell(shape::ShapeType, points::Array{Point,1}, tag::AbstractString="", ocell=nothing)
         this = new(shape, points, tag, -1)
         this.ndim = 0
         this.quality = 0.0
+        this.embedded= false
         this.crossed = false
         this.ocell   = ocell
         this.linked_cells = []
@@ -114,13 +104,18 @@ type Cell
     end
 end
 
-Face=Cell
+const Face=Cell
 
 
 ### Cell methods
 
 
-hash(c::Cell) = sum([ hash(p) for p in c.points])
+hash(c::Cell) =
+begin
+    #@show c
+    #@show c.points
+sum([ hash(p) for p in c.points])
+end
 
 function get_coords(c::Cell, ndim=3)::Array{Float64,2}
     n = length(c.points)
@@ -162,6 +157,8 @@ end
 # Index operator for a collection of elements
 # This function is not type stable
 function getindex(cells::Array{Cell,1}, s::Symbol)
+    s == :all && return cells
+
     if s == :solids
         return filter(cell -> cell.shape.class==SOLID_SHAPE, cells)
     end
@@ -180,6 +177,42 @@ function getindex(cells::Array{Cell,1}, s::Symbol)
     error("Cell getindex: Invalid symbol $s")
 end
 
+
+function getindex(cells::Array{Cell,1}, cond::Expr)
+    condm = fix_comparison_arrays(cond)
+    funex = :( (x,y,z,id,tag) -> false )
+    funex.args[2].args[2] = condm
+    fun = nothing
+    try
+        fun   = eval(funex)
+    catch
+        error("Cell getindex: Invalid condition ", cond)
+    end
+
+    result = Array{Cell}(0)
+    for cell in cells
+        x = [ p.x for p in cell.points ]
+        y = [ p.y for p in cell.points ]
+        z = [ p.z for p in cell.points ]
+        if Base.invokelatest(fun, x, y, z, cell.id, cell.tag)
+            push!(result, cell) 
+        end
+    end
+    return result
+end
+
+
+function tag!(object::Union{Point, Cell}, tag::String)
+    object.tag = tag
+end
+
+function tag!(arr::Array{T,1}, tag::String) where T<:Union{Point,Cell}
+    for obj in arr
+        obj.tag = tag
+    end
+end
+
+
 type Bins
     bins::Array{Array{Cell,1},3}
     bbox::Array{Float64,2}
@@ -193,16 +226,42 @@ type Bins
     end
 end
 
+
+# Gets the coordinates of a bounding box for an array of points
+function bounding_box(points::Array{Point,1})
+    minx = miny = minz =  Inf
+    maxx = maxy = maxz = -Inf
+    for point in points
+        point.x < minx && (minx = point.x)
+        point.y < miny && (miny = point.y)
+        point.z < minz && (minz = point.z)
+        point.x > maxx && (maxx = point.x)
+        point.y > maxy && (maxy = point.y)
+        point.z > maxz && (maxz = point.z)
+    end
+    return [ minx miny minz; maxx maxy maxz ]
+end
+
+# Gets the coordinates of a bounding box for a cell
+function bounding_box(cell::Cell)
+    return bounding_box(cell.points)
+end
+
 # Gets the coordinates of a bounding box for an array of cells
 function bounding_box(cells::Array{Cell,1})
+    points = unique( Point[ p for c in cells for p in c.points ] )
+    return bounding_box(points)
+end
+
+    #=
     # Get all points
-    pointsd = Dict{UInt64, Point}()
-    for cell in cells
-        for point in cell.points
-            pointsd[hash(point)] = point
-        end
-    end
-    points = values(pointsd)
+    #pointsd = Dict{UInt64, Point}()
+    #for cell in cells
+        #for point in cell.points
+            #pointsd[hash(point)] = point
+        #end
+    #end
+    #points = values(pointsd)
 
     # Get bounding box
     minx = miny = minz =  Inf
@@ -217,21 +276,7 @@ function bounding_box(cells::Array{Cell,1})
     end
     return [ minx miny minz; maxx maxy maxz ]
 end
-
-# Gets the coordinates of a bounding box for a cell
-function bounding_box(cell::Cell)
-    minx = miny = minz =  Inf
-    maxx = maxy = maxz = -Inf
-    for point in cell.points
-        if point.x<minx; minx = point.x end
-        if point.y<miny; miny = point.y end
-        if point.z<minz; minz = point.z end
-        if point.x>maxx; maxx = point.x end
-        if point.y>maxy; maxy = point.y end
-        if point.z>maxz; maxz = point.z end
-    end
-    return [ minx miny minz; maxx maxy maxz ]
-end
+=#
 
 function get_bin_cells(bins::Bins, p::Point) # returns an array of cells: TODO: untested function
     minx, miny, minz = bins.bbox[1,:]
@@ -277,8 +322,8 @@ function build_bins(cells::Array{Cell,1}, bins::Bins)
     for cell in cells
         if cell.shape.class!=SOLID_SHAPE continue end
         bbox = bounding_box(cell)
-        max  = maximum(bbox[2,:] - bbox[1,:])
-        if max>max_l; max_l = max end
+        l    = maximum(bbox[2,:] - bbox[1,:])
+        if l>max_l; max_l = l end
     end
 
     # Get number of divisions
@@ -301,39 +346,36 @@ function build_bins(cells::Array{Cell,1}, bins::Bins)
     for cell in cells
         bbox = bounding_box(cell)
         X, Y, Z  = bbox[:,1], bbox[:,2], bbox[:,3]
-        verts    = [ [x y z] for z in Z, y in Y, x in X ]
-        cell_pos = Set()
-        for V in verts
-            x, y, z = V
+        verts    = [ (x, y, z) for z in Z, y in Y, x in X ]
+        cell_loc = Set() # cells can be in more than one bin
+        for (x, y, z) in verts
             ix = floor(Int, (x - minx)/lbin) + 1
             iy = floor(Int, (y - miny)/lbin) + 1
             iz = floor(Int, (z - minz)/lbin) + 1
-            push!(cell_pos, (ix, iy, iz))
+            push!(cell_loc, (ix, iy, iz))
         end
 
-        for (ix, iy, iz) in cell_pos
+        for (ix, iy, iz) in cell_loc
             push!(bins.bins[ix, iy, iz], cell)
         end
     end
 end
 
 # Find the cell that contains a given point
-function find_cell(X::Array{Float64,1}, cells::Array{Cell,1}, bins::Bins, Tol::Float64, exc_cells::Array{Cell,1})
+function find_cell(X::Array{Float64,1}, cells::Array{Cell,1}, bins::Bins, tol::Float64, exc_cells::Array{Cell,1})
     # Point coordinates
     x, y, z = vcat(X, 0)[1:3]
     lbin = bins.lbin
 
     # Build bins if empty
-    if length(bins.bins) == 0
-        build_bins(cells, bins)
-    end
+    length(bins.bins) == 0 && build_bins(cells, bins)
 
     for attempt=1:2 
         Cmin = reshape(bins.bbox[1,:],3)
         Cmax = reshape(bins.bbox[2,:],3)
         lbin = bins.lbin
 
-        if any(X.<Cmin-Tol) || any(X.>Cmax+Tol)
+        if any(X.<Cmin-tol) || any(X.>Cmax+tol)
             error("find_cell: point outside bounding box")
         end
 
@@ -346,19 +388,19 @@ function find_cell(X::Array{Float64,1}, cells::Array{Cell,1}, bins::Bins, Tol::F
         bin = bins.bins[ix, iy, iz]
         for cell in bin
             coords = get_coords(cell)
-            if is_inside(cell.shape, coords, X, Tol) && !(cell in exc_cells)
+            if is_inside(cell.shape, coords, X, tol) && !(cell in exc_cells)
                 return cell
             end
         end
 
-        # If not found in the first try then rebuild bins
+        # If not found in the first attempt try then rebuild bins
         if attempt==1
-            warn("Bin search failed. Rebuilding bins...")
+            warn("find_cell: Bin search failed. Rebuilding bins...")
             build_bins(cells, bins) 
         end
     end
 
-    warn("Bin search failed")
+    warn("find_cell: Bin search failed")
     return nothing
 end
 

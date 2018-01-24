@@ -1,23 +1,4 @@
-
-##############################################################################
-#    FemLab - Finite Element Library                                         #
-#    Copyright (C) 2014 Raul Durand <raul.durand at gmail.com>               #
-#                                                                            #
-#    This file is part of FemLab.                                            #
-#                                                                            #
-#    FemLab is free software: you can redistribute it and/or modify          #
-#    it under the terms of the GNU General Public License as published by    #
-#    the Free Software Foundation, either version 3 of the License, or       #
-#    any later version.                                                      #
-#                                                                            #
-#    FemLab is distributed in the hope that it will be useful,               #
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of          #
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the           #
-#    GNU General Public License for more details.                            #
-#                                                                            #
-#    You should have received a copy of the GNU General Public License       #
-#    along with FemLab.  If not, see <http://www.gnu.org/licenses/>.         #
-##############################################################################
+# This file is part of FemMesh package. See copyright license in https://github.com/NumSoftware/FemMesh
 
 # This file includes the code for adding joints between cells
 
@@ -141,3 +122,122 @@ function split!(mesh::Mesh)
     generate_joints!(mesh)
 end
 
+mutable struct FacePair
+    face1::Face
+    face2::Face
+    idxs1::Array{Int,1}
+    idxs2::Array{Int,1}
+    FacePair() = new()
+end
+
+function generate_joints!(mesh::Mesh, expr::Expr, cell_tag::String="")
+    solids = filter(c -> c.shape.class==SOLID_SHAPE, mesh.cells)
+    cell_tag!="" && (solids=solids[cell_tag])
+    @assert length(solids)>0
+
+    # List all repeated faces
+    face_pairs = FacePair[]
+    face_idxs  = Array{Int,1}[]
+
+    # Joints generation
+    fp_dict = Dict{UInt64, FacePair}()
+
+    # Get paired faces 
+    for cell in solids
+        faces_idxs = cell.shape.facet_idxs
+        for (i,face) in enumerate(get_faces(cell))
+            hs = hash(face)
+            fp = get(fp_dict, hs, nothing)
+            if fp==nothing
+                fp = FacePair()
+                fp.face1 = face
+                fp.idxs1 = faces_idxs[i]
+                fp_dict[hs] = fp
+            else
+                fp.face2 = face
+                fp.idxs2 = faces_idxs[i]
+                push!(face_pairs, fp)
+                delete!(fp_dict, hs)
+            end
+        end
+    end
+
+    # Filtering
+    faces = [ fp.face1 for fp in face_pairs] 
+    for (i,face) in enumerate(faces); face.id = i end
+    faces = faces[expr]
+
+    in_idxs  = [ face.id for face in faces ]
+    out_idxs = setdiff(1:length(face_pairs), in_idxs) 
+
+    # Generating new points
+    for fp in face_pairs[in_idxs]
+        for i in fp.idxs1
+            p = fp.face1.ocell.points[i]
+            newp = Point(p.x, p.y, p.z)
+            fp.face1.ocell.points[i] = newp
+        end
+        for i in fp.idxs2
+            p = fp.face2.ocell.points[i]
+            newp = Point(p.x, p.y, p.z)
+            fp.face2.ocell.points[i] = newp
+        end
+    end
+
+    # Joining extra points
+    points_dict = Dict{UInt64,Point}()
+    for fp in face_pairs[out_idxs]
+        for i in fp.idxs1
+            p = fp.face1.ocell.points[i]
+            points_dict[hash(p)] = p
+        end
+        for i in fp.idxs2
+            p = fp.face2.ocell.points[i]
+            points_dict[hash(p)] = p
+        end
+    end
+
+    for fp in face_pairs[out_idxs]
+        for i in fp.idxs1
+            p = fp.face1.ocell.points[i]
+            fp.face1.ocell.points[i] = points_dict[hash(p)]
+        end
+        for i in fp.idxs2
+            p = fp.face2.ocell.points[i]
+            fp.face2.ocell.points[i] = points_dict[hash(p)]
+        end
+    end
+
+    # Generating Joints
+    jcells = Cell[]
+    for fp in face_pairs[in_idxs]
+        n   = length(fp.face1.points)
+        con = Array{Point}(2*n)
+        k   = 0
+        for i in fp.idxs1
+            k += 1
+            p1 = fp.face1.ocell.points[i]
+            h1 = hash(p1)
+            for j in fp.idxs2
+                p2 = fp.face2.ocell.points[j]
+                if h1==hash(p2)
+                    con[k]   = p1
+                    con[n+k] = p2
+                    break
+                end
+            end
+        end
+
+        jshape = joint_shape(fp.face1.shape)
+        cell = Cell(jshape, con, "")
+        cell.linked_cells = [fp.face1.ocell, fp.face2.ocell]
+        push!(jcells, cell)
+    end
+
+    mesh.points = collect(Set(p for c in mesh.cells for p in c.points))
+    mesh.cells  = [mesh.cells; jcells]
+
+    # update and reorder mesh
+    update!(mesh)
+    reorder!(mesh)
+end
