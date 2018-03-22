@@ -1,4 +1,5 @@
 FemMesh
 ======
 
-Structured meshes for FEM analysis used on FemLab
+Structured meshes for finite element analysis
+=======
