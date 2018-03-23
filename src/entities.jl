@@ -11,10 +11,10 @@ mutable struct Point
     x    ::Float64
     y    ::Float64
     z    ::Float64
-    tag  ::AbstractString
+    tag  ::TagType
     id   ::Int64
     extra::Int64 # TODO: check where is used
-    function Point(x::Real, y::Real, z::Real=0.0; tag::String="")
+    function Point(x::Real, y::Real, z::Real=0.0; tag=0)
         const NDIG = 14
         # Zero is added to avoid negative bit sign for zero signed values
         x = round(x, NDIG) + 0.0
@@ -22,7 +22,7 @@ mutable struct Point
         z = round(z, NDIG) + 0.0
         return new(x, y, z, tag,-1,-1)
     end
-    function Point(C::AbstractArray{<:Real}; tag::String="")
+    function Point(C::AbstractArray{<:Real}; tag=0)
         if length(C)==2
             return new(C[1]+0.0, C[2]+0.0, 0.0, tag, -1, -1)
         else
@@ -84,21 +84,25 @@ end
 type Cell
     shape  ::ShapeType
     points ::Array{Point,1}
-    tag    ::AbstractString
+    tag    ::TagType
     id     ::Integer
     ndim   ::Integer
     quality::Float64              # quality index: surf/(reg_surf) 
     embedded::Bool                # flag for embedded cells
     crossed::Bool                 # flag if cell crossed by linear inclusion
     ocell  ::Union{Cell,Void}     # owner cell if this cell is a face/edge
+    nips   ::Int                  # number of integration points if required
+    iptag  ::TagType # tag for integration points if required
     linked_cells::Array{Cell,1}   # neighbor cells in case of joint cell
-    function Cell(shape::ShapeType, points::Array{Point,1}, tag::AbstractString="", ocell=nothing)
+    function Cell(shape::ShapeType, points::Array{Point,1}, tag::TagType=0, ocell=nothing)
         this = new(shape, points, tag, -1)
         this.ndim = 0
         this.quality = 0.0
         this.embedded= false
         this.crossed = false
         this.ocell   = ocell
+        this.nips  = 0
+        this.iptag = 0
         this.linked_cells = []
         return this
     end
@@ -110,12 +114,7 @@ const Face=Cell
 ### Cell methods
 
 
-hash(c::Cell) =
-begin
-    #@show c
-    #@show c.points
-sum([ hash(p) for p in c.points])
-end
+hash(c::Cell) = sum(hash(p) for p in c.points)
 
 function get_coords(c::Cell, ndim=3)::Array{Float64,2}
     n = length(c.points)
@@ -202,13 +201,23 @@ function getindex(cells::Array{Cell,1}, cond::Expr)
 end
 
 
-function tag!(object::Union{Point, Cell}, tag::String)
+function tag!(object::Union{Point, Cell}, tag::TagType)
     object.tag = tag
 end
 
-function tag!(arr::Array{T,1}, tag::String) where T<:Union{Point,Cell}
+function tag!(arr::Array{T,1}, tag::TagType) where T<:Union{Point,Cell}
     for obj in arr
         obj.tag = tag
+    end
+end
+
+function iptag!(object::Cell, tag::TagType)
+    object.iptag = tag
+end
+
+function iptag!(arr::Array{Cell,1}, tag::TagType)
+    for obj in arr
+        obj.iptag = tag
     end
 end
 

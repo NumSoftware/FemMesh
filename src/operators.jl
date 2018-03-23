@@ -11,29 +11,34 @@ copy(bl::Block2D) = Block2D(copy(bl.coords), nx=bl.nx, ny=bl.ny, shape=bl.shape,
 
 copy(bl::Block3D) = Block3D(copy(bl.coords), nx=bl.nx, ny=bl.ny, nz=bl.nz, shape=bl.shape, tag=bl.tag)
 
+function copy(bl::Block; dx=0.0, dy=0.0, dz=0.0)
+    newbl = copy(bl)
+    move!(newbl, dx=dx, dy=dy, dz=dz)
+end
+
 """
-`move(block, [x=0.0,] [y=0.0,] [z=0.0])` 
+`move(block, [dx=0.0,] [dy=0.0,] [dz=0.0])` 
 
 Changes the coordinates of a `block`. Also returns a reference.
 """
-function move!(bl::Block;x=0.0, y=0.0, z=0.0, dx=0.0, dy=0.0, dz=0.0)
-    bl.coords[:, 1] += x
-    bl.coords[:, 2] += y
-    bl.coords[:, 3] += z
+function move!(bl::Block; dx=0.0, dy=0.0, dz=0.0)
+    bl.coords[:, 1] += dx
+    bl.coords[:, 2] += dy
+    bl.coords[:, 3] += dz
     return bl
 end
 
 
 """
-`move(blocks, [x=0.0,] [y=0.0,] [z=0.0])` 
+`move(blocks, [dx=0.0,] [dy=0.0,] [dz=0.0])` 
 
 Changes the coordinates of an array of blocks. Also returns a reference.
 """
-function move!(blocks::Array; x=0.0, y=0.0, z=0.0, dx=0.0, dy=0.0, dz=0.0)
+function move!(blocks::Array; dx=0.0, dy=0.0, dz=0.0)
     for bl in blocks
-        bl.coords[:, 1] += x
-        bl.coords[:, 2] += y
-        bl.coords[:, 3] += z
+        bl.coords[:, 1] += dx
+        bl.coords[:, 2] += dy
+        bl.coords[:, 3] += dz
     end
     return blocks
 end
@@ -69,7 +74,7 @@ function mirror(block::Block; face=[0. 0 0; 0 1 0; 0 0 1])
 
     bl = copy(block)
 
-    distances    = (bl.coords .- p1')*normal          # d = n^.(xi - xp)
+    distances    = (bl.coords .- p1')*normal       # d = n^.(xi - xp)
     bl.coords = bl.coords .- 2*distances.*normal'  # xi = xi - 2*d*n^
 
     # fix coordinates in bl to keep anti-clockwise numbering
@@ -108,7 +113,7 @@ function array(bl::Block; n=2, x=0.0, y=0.0, z=0.0)
         dy = i*y
         dz = i*z
         cp = copy(bl)
-        move(cp, x=dx, y=dy, z=dz)
+        move(cp, dx=dx, dy=dy, dz=dz)
         push!(blocks, cp)
     end
     return blocks

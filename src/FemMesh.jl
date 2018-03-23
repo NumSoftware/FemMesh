@@ -29,14 +29,14 @@ include("tools/show.jl")
 export getindex
 
 include("shape.jl")
-export ShapeType, ALL_SHAPES, ShapeClass
+export ShapeType, TagType, ALL_SHAPES, ShapeClass
 export get_ip_coords, get_shape_from_vtk
 export inverse_map, extrapolator
 
 include("entities.jl")
 export Point, Cell, hash, get_x, get_y, get_z
 export get_coords, get_point, get_points, get_faces, cell_extent, cell_quality
-export tag!, update!
+export tag!, iptag!, update!
 
 include("vtk-io.jl")
 export VTK_unstructured_grid, save, read_VTK_unstructured_grid

@@ -25,7 +25,7 @@ function MakeJLIN2()
     shape.edge_idxs   = []
     shape.facet_shape = LIN2
     shape.nat_coords  = coords_LIN2
-    shape.quadrature  = Dict( 0 => LIN_IP2,  2 => LIN_IP2,  3 => LIN_IP3,   4 => LIN_IP4)
+    shape.quadrature  = Dict( 0 => LIN_IP2, 1 => ALL_IP1, 2 => LIN_IP2, 3 => LIN_IP3, 4 => LIN_IP4)
     shape.func        = shape_func_LIN2
     shape.deriv       = shape_deriv_LIN2
     return shape
@@ -54,7 +54,7 @@ function MakeJLIN3()
     shape.edge_idxs   = []
     shape.facet_shape = LIN3
     shape.nat_coords  = coords_LIN3
-    shape.quadrature  = Dict( 0 => LIN_IP2,  2 => LIN_IP2,  3 => LIN_IP3,   4 => LIN_IP4 )
+    shape.quadrature  = Dict( 0 => LIN_IP2, 1 => ALL_IP1, 2 => LIN_IP2, 3 => LIN_IP3, 4 => LIN_IP4 )
     shape.func        = shape_func_LIN3
     shape.deriv       = shape_deriv_LIN3
     return shape
@@ -83,7 +83,7 @@ function MakeJLIN4()
     shape.edge_idxs   = []
     shape.facet_shape = LIN4
     shape.nat_coords  = coords_LIN4
-    shape.quadrature  = Dict( 0 => LIN_IP3,  2 => LIN_IP2,  3 => LIN_IP3,   4 => LIN_IP4 )
+    shape.quadrature  = Dict( 0 => LIN_IP3, 1 => ALL_IP1, 2 => LIN_IP2, 3 => LIN_IP3, 4 => LIN_IP4 )
     shape.func        = shape_func_LIN4
     shape.deriv       = shape_deriv_LIN4
     return shape
@@ -112,7 +112,7 @@ function MakeJTRI3()
     shape.edge_idxs   = []
     shape.facet_shape = TRI3
     shape.nat_coords  = coords_TRI3
-    shape.quadrature  = Dict( 0 => TRI_IP3,  3 => TRI_IP3,  6 => TRI_IP6 )
+    shape.quadrature  = Dict( 0 => TRI_IP3, 1 => ALL_IP1, 3 => TRI_IP3, 6 => TRI_IP6 )
     shape.func        = shape_func_TRI3
     shape.deriv       = shape_deriv_TRI3
     return shape
@@ -141,7 +141,7 @@ function MakeJTRI6()
     shape.edge_idxs   = []
     shape.facet_shape = TRI6
     shape.nat_coords  = coords_TRI6
-    shape.quadrature  = Dict( 0 => TRI_IP3,  3 => TRI_IP3,  6 => TRI_IP6 )
+    shape.quadrature  = Dict( 0 => TRI_IP3, 1 => ALL_IP1, 3 => TRI_IP3, 6 => TRI_IP6 )
     shape.func        = shape_func_TRI6
     shape.deriv       = shape_deriv_TRI6
     return shape
@@ -170,7 +170,7 @@ function MakeJQUAD4()
     shape.edge_idxs   = []
     shape.facet_shape = QUAD4
     shape.nat_coords  = coords_QUAD4
-    shape.quadrature  = Dict( 0 => QUAD_IP2, 4 => QUAD_IP2, 9 => QUAD_IP3, 16 => QUAD_IP4 )
+    shape.quadrature  = Dict( 0 => QUAD_IP2, 1 => ALL_IP1, 4 => QUAD_IP2, 9 => QUAD_IP3 )
     shape.func        = shape_func_QUAD4
     shape.deriv       = shape_deriv_QUAD4
     return shape
@@ -199,7 +199,7 @@ function MakeJQUAD8()
     shape.edge_idxs   = []
     shape.facet_shape = QUAD8
     shape.nat_coords  = coords_QUAD8
-    shape.quadrature  = Dict( 0 => QUAD_IP3, 4 => QUAD_IP2, 9 => QUAD_IP3, 16 => QUAD_IP4 )
+    shape.quadrature  = Dict( 0 => QUAD_IP3, 4 => QUAD_IP2, 9 => QUAD_IP3 )
     shape.func        = shape_func_QUAD8
     shape.deriv       = shape_deriv_QUAD8
     return shape

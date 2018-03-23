@@ -5,7 +5,7 @@ using Base.Test
 print_with_color(:cyan, "\nMesh move\n")
 bl = Block2D( [0 0; 1 1], nx=10, ny=10, shape=TRI3)
 mesh = Mesh(bl)
-move!(bl, x=1)
+move!(bl, dx=1)
 mesh = Mesh(mesh, bl)
 save(mesh, "out.vtk")
 @test length(mesh.points) == 231
