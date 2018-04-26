@@ -7,7 +7,7 @@ import Base.copy
 include("block_inset.jl")
 
 """
-`BlockTruss(coords, conns, [shape=LIN2,] [tag="",])`
+`BlockTruss(coords, conns, [shape=LIN2,] [tag=0,])`
 
 Generates a block object for the mesh generation of trusses:
 """
@@ -15,10 +15,10 @@ type BlockTruss <: Block
     coords::Array{Float64,2}
     conns ::Array{Int64,2}
     shape ::ShapeType
-    tag::AbstractString
+    tag::TagType
     id::Int64
 
-    function BlockTruss(coords::Array{<:Real}, conns::Array{Int64,2}; shape=LIN2, tag="", id=-1)
+    function BlockTruss(coords::Array{<:Real}, conns::Array{Int64,2}; shape=LIN2, tag=0, id=-1)
         ncols = size(coords,2)
         if !(ncols in (2,3)); error("Invalid coordinates matrix for BlockTruss") end
         if ncols==2
@@ -33,17 +33,17 @@ end
 
 
 """
-`BlockCoords(coords, conns, [shape=LIN2,] [tag="",])`
+`BlockCoords(coords, conns, [shape=LIN2,] [tag=0,])`
 
 Generates a 2D or 3D block object based on a matrix of coordinates and a matrix of connectivities.
 """
 type BlockCoords <: Block
     coords::Array{Float64,2}
     conns ::Array{Int64,2}
-    tag::AbstractString
+    tag::TagType
     id::Int64
 
-    function BlockCoords(coords::Array{<:Real}, conns::Array{Int64,2}; tag="", id=-1)
+    function BlockCoords(coords::Array{<:Real}, conns::Array{Int64,2}; tag=0, id=-1)
         ncols = size(coords,2)
         if !(ncols in (2,3)); error("Invalid coordinates matrix for BlockCoords") end
         if ncols==2
@@ -58,7 +58,7 @@ end
 
 
 """
-`Block2D(coords, [nx=1,] [ny=1,] [shape=QUAD4,] [tag=""] )`
+`Block2D(coords, [nx=1,] [ny=1,] [shape=QUAD4,] [tag=0] )`
 
 Generates a block object for the mesh generation of 2D meshes.
 `shape` can be TRI3, TRI6, QUAD4, QUAD8.
@@ -68,10 +68,10 @@ type Block2D <: Block
     nx::Int64
     ny::Int64
     shape::ShapeType
-    tag::AbstractString
+    tag::TagType
     id::Int64
 
-    function Block2D(coords::Array{<:Real}; nx=1, ny=1, shape=QUAD4, tag="", id=-1)
+    function Block2D(coords::Array{<:Real}; nx=1, ny=1, shape=QUAD4, tag=0, id=-1)
         shape in (TRI3, TRI6, QUAD4, QUAD8, QUAD9, QUAD12) || error("Block2D: shape must be TRI3, TRI6, QUAD4, QUAD8, QUAD9 or QUAD12")
         if size(coords,1)==2
             C = box_coords(coords[1,:], coords[2,:])
@@ -87,7 +87,7 @@ end
 
 
 """
-`Block3D(coords, [nx=1,] [ny=1,] [nz=1,] [shape=HEX8,] [tag=""] )`
+`Block3D(coords, [nx=1,] [ny=1,] [nz=1,] [shape=HEX8,] [tag=0] )`
 
 Generates a block object for the mesh generation of 3D meshes.
 """
@@ -97,10 +97,10 @@ type Block3D <: Block
     ny::Int64
     nz::Int64
     shape::ShapeType
-    tag::AbstractString
+    tag::TagType
     id::Int64
 
-    function Block3D(coords::Array{<:Real}; nx=1, ny=1, nz=1, shape=HEX8, tag="", id=-1)
+    function Block3D(coords::Array{<:Real}; nx=1, ny=1, nz=1, shape=HEX8, tag=0, id=-1)
         shape in (TET4, TET10, HEX8, HEX20) || error("Block3D: shape must be TET4, TET10, HEX8 or HEX20")
         C    = size(coords,1)==2? box_coords(coords[1,:], coords[2,:]): coords
         this = new(C, nx, ny, nz, shape, tag, id)
@@ -114,10 +114,10 @@ type BlockCylinder <: Block
     nr::Int64
     n::Int64
     shape::ShapeType # HEX8, HEX20
-    tag::AbstractString
+    tag::TagType
     id::Int64
 
-    function BlockCylinder(coords::Array{<:Real}; r=1.0, nr=3, n=2, shape=HEX8, tag="", id=-1)
+    function BlockCylinder(coords::Array{<:Real}; r=1.0, nr=3, n=2, shape=HEX8, tag=0, id=-1)
         size(coords,1) != 2 && error("Invalid coordinates matrix for BlockCylinder")
         nr<2 && error("Invalid nr=$nr value for BlockCylinder")
         shape in (HEX8, HEX20) || error("BlockCylinder: shape must be HEX8 or HEX20")
@@ -768,7 +768,7 @@ function split_block(bl::BlockCylinder, msh::Mesh)
 
     # polar and move
     blocks = polar(blocks, n=4)
-    move!(blocks, x=bl.coords[1,1], y=bl.coords[1,2], z=bl.coords[1,3])
+    move!(blocks, dx=bl.coords[1,1], dy=bl.coords[1,2], dz=bl.coords[1,3])
 
     # extrude
     len      = norm(bl.coords[1,:] - bl.coords[2,:])

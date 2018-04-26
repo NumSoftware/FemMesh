@@ -9,6 +9,8 @@ VERTEX_SHAPE  = 5,
 EMBEDDED      = 6
 )
 
+const TagType = Union{Int,String}
+
 # Export
 for s in instances(ShapeClass)
     @eval export $(Symbol(s))
