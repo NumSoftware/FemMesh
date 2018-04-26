@@ -67,6 +67,7 @@ const VTK2SHAPE = Dict{VTKCellType,ShapeType}(
     VTK_LINE                             => LIN2,
     VTK_TRIANGLE                         => TRI3,
     VTK_QUAD                             => QUAD4,
+    VTK_PYRAMID                          => PYR5,
     VTK_TETRA                            => TET4,
     VTK_HEXAHEDRON                       => HEX8,
     VTK_WEDGE                            => WED6,
@@ -89,6 +90,7 @@ const ALL_SHAPES = [
     QUAD8
     QUAD9
     QUAD12
+    PYR5
     TET4
     TET10
     WED6
@@ -129,7 +131,7 @@ end
 
 # For compatibility with gofem input file
 function get_shape_from_geo(geo, npoints=0)
-    types = [ LIN2, LIN3, -1, TRI3, TRI6, -1, QUAD4, QUAD8, QUAD9, TET4, TET10, HEX8, HEX20, -2, LIN4, TRI10, QUAD12, QUAD16]
+    types = [ LIN2, LIN3, -1, TRI3, TRI6, -1, QUAD4, QUAD8, QUAD9, PYR5, TET4, TET10, HEX8, HEX20, -2, LIN4, TRI10, QUAD12, QUAD16]
     shapetype = types[geo+1]
     if shapetype==-2 #joint
         shapetype = npoints==2? JLINK2: JLINK3

@@ -1,4 +1,23 @@
-# This file is part of FemMesh package. See copyright license in https://github.com/NumSoftware/FemMesh
+##############################################################################
+#    FemLab - Finite Element Library                                         #
+#    Copyright (C) 2014 Raul Durand <raul.durand at gmail.com>               #
+#                                                                            #
+#    This file is part of FemLab.                                            #
+#                                                                            #
+#    FemLab is free software: you can redistribute it and/or modify          #
+#    it under the terms of the GNU General Public License as published by    #
+#    the Free Software Foundation, either version 3 of the License, or       #
+#    any later version.                                                      #
+#                                                                            #
+#    FemLab is distributed in the hope that it will be useful,               #
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of          #
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the           #
+#    GNU General Public License for more details.                            #
+#                                                                            #
+#    You should have received a copy of the GNU General Public License       #
+#    along with FemLab.  If not, see <http://www.gnu.org/licenses/>.         #
+##############################################################################
+
 
 # ALL 1
 ALL_IP1 =  [  0.0  0.0  0.0  1.0  ]
@@ -133,6 +152,27 @@ TET_IP11 =
    __1mr_15d14_d4      __1mr_15d14_d4     __1pr_15d14_d4     56./2250.    ]
 
 
+
+# PYR 
+PYR_IP5 = 
+[     0.0000000000     0.0000000000     0.69370598373     0.21333333333
+     -0.4879500365    -0.4879500365     0.16548457453     0.28000000000
+      0.4879500365    -0.4879500365     0.16548457453     0.28000000000
+      0.4879500365     0.4879500365     0.16548457453     0.28000000000
+     -0.4879500365     0.4879500365     0.16548457453     0.28000000000    ]
+
+# PYR 
+PYR_IP8 = 
+[     0.263184055569714     0.263184055569714     0.544151844011225     0.100785882079825
+     -0.263184055569714     0.263184055569714     0.544151844011225     0.100785882079825
+      0.263184055569714    -0.263184055569714     0.544151844011225     0.100785882079825
+     -0.263184055569714    -0.263184055569714     0.544151844011225     0.100785882079825
+      0.506616303349788     0.506616303349788     0.122514822655441     0.232547451253508
+     -0.506616303349788     0.506616303349788     0.122514822655441     0.232547451253508
+      0.506616303349788    -0.506616303349788     0.122514822655441     0.232547451253508
+     -0.506616303349788    -0.506616303349788     0.122514822655441     0.232547451253508     ]
+
+
 # HEX 2x2x2
 HEX_IP2 = 
 [    -0.577350269189626     -0.577350269189626     -0.577350269189626      1.000000000000000    
@@ -192,7 +232,7 @@ WED_IP9 =
     0.666666666666667      0.166666666666667       0.000000000000000     0.1481481481481481  
     0.166666666666667      0.666666666666667       0.000000000000000     0.1481481481481481    ]
 
-# WEDGE
+# WEDGE ( This set does not work with WED15 shape)
 WED_IP18 = 
 [   0.166666666666667      0.166666666666667       0.774596669241483     0.0833333333333333  
     0.166666666666667      0.166666666666667      -0.774596669241483     0.0833333333333333   

@@ -502,6 +502,11 @@ function regular_surface(metric::Float64, shape::ShapeType)
         a = √A
         return 4*a
     end
+    if shape in [ PYR5 ] 
+        V = metric
+        a = ( 3.*√2.*V )^(1./3.)
+        return (1 + √3.)*a^2
+    end
     if shape in [ TET4, TET10 ] 
         V = metric
         a = ( 6.*√2.*V )^(1./3.)

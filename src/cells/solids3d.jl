@@ -223,6 +223,74 @@ end
 const  TET10 = MakeTET10()
 export TET10 
 
+# PYR5 shape
+# ==========
+
+
+# natural coordinates
+const coords_PYR5 = 
+[ -1.0 -1.0  0.0 
+   1.0 -1.0  0.0 
+   1.0  1.0  0.0 
+  -1.0  1.0  0.0 
+   0.0  0.0  1.0  ]
+
+const facet_idxs_PYR5 = 
+    [ [1, 4, 3, 2],     [1, 2, 5],     [1, 5, 4],      [3, 4, 5],     [2, 3, 5] ]
+
+const edge_idxs_PYR5 = 
+    [ [1, 2],    [2, 3],    [3, 4],     [4, 1],      [1, 5],      [2, 5],      [3, 5],      [4, 5] ]
+
+function shape_func_PYR5(R::Array{Float64,1})
+    r, s, t = R
+    w = t==1.0? 0.0:1/(1-t) 
+
+    N = Array{Float64}(5)
+    N[1] = 0.25*(1-r-s-t+r*s*w)
+    N[2] = 0.25*(1+r-s-t-r*s*w)
+    N[3] = 0.25*(1+r+s-t+r*s*w)
+    N[4] = 0.25*(1-r+s-t-r*s*w)
+    N[5] = t
+    return N
+end
+
+function shape_deriv_PYR5(R::Array{Float64,1})
+    r, s, t = R
+    w = t==1.0? 0.0:1/(1-t) 
+
+
+    D = Array{Float64}(3, 5)
+    D[1,1] = 0.25*(-1+s*w)  ;   D[2,1]= 0.25*(-1+r*w)  ;   D[3,1]= 0.25*(-1+r*s*w^2) 
+    D[1,2] = 0.25*(1-s*w)   ;   D[2,2]= 0.25*(-1-r*w)  ;   D[3,2]= 0.25*(-1-r*s*w^2) 
+    D[1,3] = 0.25*(1+s*w)   ;   D[2,3]= 0.25*(1+r*w)   ;   D[3,3]= 0.25*(-1+r*s*w^2)  
+    D[1,4] = 0.25*(-1-s*w)  ;   D[2,4]= 0.25*(1-r*w)   ;   D[3,4]= 0.25*(-1-r*s*w^2) 
+    D[1,5] =  0.0           ;   D[2,5]=  0.0           ;   D[3,5]=  1.0  
+    return D 
+end
+
+# constructor
+function MakePYR5()
+    shape             = ShapeType()
+    shape.name        = "PYR5"
+    shape.class       = SOLID_SHAPE
+    shape.ndim        = 3
+    shape.npoints     = 5
+    shape.basic_shape = shape
+    shape.vtk_type    = VTK_PYRAMID
+    shape.facet_idxs  = facet_idxs_PYR5
+    shape.edge_idxs   = edge_idxs_PYR5
+    shape.facet_shape = (QUAD4, TRI3, TRI3, TRI3, TRI3)
+    shape.nat_coords  = coords_PYR5
+    shape.quadrature  = Dict( 0 => PYR_IP5,  5 => PYR_IP5,  8 => PYR_IP8 )
+    shape.func        = shape_func_PYR5
+    shape.deriv       = shape_deriv_PYR5
+    return shape
+end
+
+
+# Registration
+const  PYR5 = MakePYR5()
+export PYR5 
 
 
 # HEX8 shape
@@ -558,7 +626,7 @@ function MakeWED6()
     shape.vtk_type    = VTK_WEDGE
     shape.facet_idxs  = facet_idxs_WED6
     shape.edge_idxs   = edge_idxs_WED6
-    shape.facet_shape = (QUAD4, QUAD4, QUAD4, TRI3, TRI3, TRI3)
+    shape.facet_shape = (QUAD4, QUAD4, QUAD4, TRI3, TRI3)
     shape.nat_coords  = coords_WED6
     shape.quadrature  = Dict( 0 => WED_IP9, 2 => WED_IP2, 9 => WED_IP9, 18 => WED_IP18 )
     shape.func        = shape_func_WED6

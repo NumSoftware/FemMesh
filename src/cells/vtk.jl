@@ -13,7 +13,7 @@ export VTKCellType
     VTK_VOXEL                            = 11,
     VTK_HEXAHEDRON                       = 12,
     VTK_WEDGE                            = 13,
-    VTK_PIRAMID                          = 14,
+    VTK_PYRAMID                          = 14,
     VTK_QUADRATIC_EDGE                   = 21,
     VTK_QUADRATIC_TRIANGLE               = 22,
     VTK_QUADRATIC_QUAD                   = 23,
