@@ -13,7 +13,7 @@ mutable struct VTK_unstructured_grid
     end
 end
 
-function save(vtk_data::VTK_unstructured_grid, filename::AbstractString)
+function save_vtk(vtk_data::VTK_unstructured_grid, filename::String)
     # Saves a VTK_unstructured_grid
     npoints = size(vtk_data.points, 1)
     ncells = length(vtk_data.cells)
@@ -23,6 +23,7 @@ function save(vtk_data::VTK_unstructured_grid, filename::AbstractString)
     for cell in vtk_data.cells
         nconns += 1 + length(cell)
     end
+
 
     # Open filename
     f = open(filename, "w")
@@ -119,7 +120,7 @@ function save(vtk_data::VTK_unstructured_grid, filename::AbstractString)
         end
     end
 
-    close(f)
+    close(f) 
 
     return nothing
 end
