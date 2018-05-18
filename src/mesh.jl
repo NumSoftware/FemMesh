@@ -424,7 +424,7 @@ function save(mesh::Mesh, filename::String; verbose::Bool=true)
         warn("save: the flag for embedded cells will be lost after saving mesh to file $filename")
     end
 
-    save(vtk_data, filename)
+    save_vtk(vtk_data, filename)
     verbose && print_with_color(:green, "  file $filename written (Mesh)\n")
 end
 
