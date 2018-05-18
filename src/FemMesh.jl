@@ -39,7 +39,7 @@ export get_coords, get_point, get_points, get_faces, cell_extent, cell_quality
 export tag!, iptag!, update!
 
 include("vtk-io.jl")
-export VTK_unstructured_grid, save, read_VTK_unstructured_grid
+export VTK_unstructured_grid, save_vtk, read_VTK_unstructured_grid
 
 include("mesh.jl")
 export Mesh, update!, quality!, reorder!, save, get_surface, get_neighbors
