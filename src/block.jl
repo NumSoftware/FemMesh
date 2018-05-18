@@ -71,12 +71,12 @@ type Block2D <: Block
     tag::TagType
     id::Int64
 
-    function Block2D(coords::Array{<:Real}; nx=1, ny=1, shape=QUAD4, tag=0, id=-1)
+    function Block2D(coords::Array{<:Real}; nx::Int=1, ny::Int=1, shape::ShapeType=QUAD4, tag::Int=0, id::Int=-1)
         shape in (TRI3, TRI6, QUAD4, QUAD8, QUAD9, QUAD12) || error("Block2D: shape must be TRI3, TRI6, QUAD4, QUAD8, QUAD9 or QUAD12")
         if size(coords,1)==2
             C = box_coords(coords[1,:], coords[2,:])
         elseif size(coords,2)==2
-            C = [coords zeros(size(coords,1)) ]
+            C = Float64[coords zeros(size(coords,1)) ]
         else
             C = coords
         end
@@ -127,14 +127,13 @@ type BlockCylinder <: Block
 end
 
 function box_coords(C1::Array{<:Real,1}, C2::Array{<:Real,1})
-    C = Array{Float64}(8, 3)
     x1 = C1[1]
     y1 = C1[2]
     lx = C2[1] - C1[1]
     ly = C2[2] - C1[2]
 
     if length(C1)==2
-        return [
+        return Float64[
             x1     y1     0.0
             x1+lx  y1     0.0
             x1+lx  y1+ly  0.0
@@ -142,7 +141,7 @@ function box_coords(C1::Array{<:Real,1}, C2::Array{<:Real,1})
     else
         z1 = C1[3]
         lz = C2[3] - C1[3]
-        return [
+        return Float64[
             x1      y1      z1 
             x1+lx   y1      z1 
             x1+lx   y1+ly   z1 
