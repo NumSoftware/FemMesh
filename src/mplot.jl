@@ -143,7 +143,7 @@ function mplot(ugrid::VTK_unstructured_grid, filename::String=""; axis=true,
         # imports: plt, matplotlib
         #eval(:(import PyCall))
         eval(:(import PyPlot))
-        eval(:(import PyPlot:plt, matplotlib, art3D))
+        eval(:(import PyPlot:plt, matplotlib, art3D, Axes3D))
     else
         error("mplot: Package PyPlot is required")
     end
