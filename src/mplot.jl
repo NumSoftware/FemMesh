@@ -176,10 +176,14 @@ function mplot(ugrid::VTK_unstructured_grid, filename::String=""; axis=true,
 
     # Configure plot
     if ndim==3
-        try # If this does not work use the line below (due to matplotlib versions)
+        try
             ax = plt[:gca](projection="3d")
         catch
-            ax = Axes3D(plt[:figure]()) # If this does not work use the line above
+            try
+                ax = Axes3D(plt[:figure]())
+            catch
+                ax = Axes3D(figure())
+            end
         end
 
         ax[:set_aspect]("equal")
