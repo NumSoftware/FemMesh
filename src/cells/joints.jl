@@ -18,7 +18,7 @@ function MakeJLIN2()
     shape.name        = "JLIN2"
     shape.class       = JOINT_SHAPE
     shape.ndim        = 1
-    shape.npoints     = 4
+    shape.npoints     = 2
     shape.basic_shape = LIN2
     shape.vtk_type    = VTK_POLY_VERTEX
     shape.facet_idxs  = []
@@ -47,7 +47,7 @@ function MakeJLIN3()
     shape.name        = "JLIN3"
     shape.class       = JOINT_SHAPE
     shape.ndim        = 1
-    shape.npoints     = 6
+    shape.npoints     = 3
     shape.basic_shape = LIN3
     shape.vtk_type    = VTK_POLY_VERTEX
     shape.facet_idxs  = []
@@ -76,7 +76,7 @@ function MakeJLIN4()
     shape.name        = "JLIN4"
     shape.class       = JOINT_SHAPE
     shape.ndim        = 1
-    shape.npoints     = 8
+    shape.npoints     = 4
     shape.basic_shape = LIN4
     shape.vtk_type    = VTK_POLY_VERTEX
     shape.facet_idxs  = []
@@ -105,7 +105,7 @@ function MakeJTRI3()
     shape.name        = "JTRI3"
     shape.class       = JOINT_SHAPE
     shape.ndim        = 2
-    shape.npoints     = 6
+    shape.npoints     = 3
     shape.basic_shape = TRI3
     shape.vtk_type    = VTK_POLY_VERTEX
     shape.facet_idxs  = []
@@ -134,7 +134,7 @@ function MakeJTRI6()
     shape.name        = "JTRI6"
     shape.class       = JOINT_SHAPE
     shape.ndim        = 2
-    shape.npoints     = 12
+    shape.npoints     = 6
     shape.basic_shape = TRI3
     shape.vtk_type    = VTK_POLY_VERTEX
     shape.facet_idxs  = []
@@ -163,7 +163,7 @@ function MakeJQUAD4()
     shape.name        = "JQUAD4"
     shape.class       = JOINT_SHAPE
     shape.ndim        = 2
-    shape.npoints     = 8
+    shape.npoints     = 4
     shape.basic_shape = QUAD4
     shape.vtk_type    = VTK_POLY_VERTEX
     shape.facet_idxs  = []
@@ -192,8 +192,8 @@ function MakeJQUAD8()
     shape.name        = "JQUAD8"
     shape.class       = JOINT_SHAPE
     shape.ndim        = 2
-    shape.npoints     = 16
-    shape.basic_shape = QUAD4
+    shape.npoints     = 8
+    shape.basic_shape = QUAD8
     shape.vtk_type    = VTK_POLY_VERTEX
     shape.facet_idxs  = []
     shape.edge_idxs   = []
