@@ -1,5 +1,6 @@
 # This file is part of FemMesh package. See copyright license in https://github.com/NumSoftware/FemMesh
 
+
 export triangulate
 import Base.repr
 import Base.show
@@ -229,7 +230,7 @@ function triangulate(coords::Array{Float64,2}; getedges=false)
     Con = [ cell.points[j].id for cell in cells, j=1:3 ]
 
     # generate edge connectivities
-    edges = Set{(Int64, Int64)}()
+    edges = Set{Tuple{Int64, Int64}}()
     lcon  = ((1,2), (2,3), (3,1)) # local connectivities
     for (i,cell) in enumerate(cells)
         for (pos1, pos2) in lcon
@@ -247,16 +248,16 @@ function triangulate(coords::Array{Float64,2}; getedges=false)
 end
 
 
-#if false
-#    #V = [ 1. 2; 2 1; 1 3 ; 2 4; 3 2; 4 3 ]
-#    #V = [ 0. 0; 1 0; 0 1 ]
-#    V = [ rand() for i=1:100, j=1:2]
-#    E = triangulate(V, getedges=true)
-#
-#    using FemLab
-#    bl = BlockTruss(V, E)
-#    mesh = generate_mesh(bl)
-#    save(mesh, "tri1.vtk")
-#end
+if true
+    #V = [ 1. 2; 2 1; 1 3 ; 2 4; 3 2; 4 3 ]
+    #V = [ 0. 0; 1 0; 0 1 ]
+    V = [ rand() for i=1:100, j=1:2]
+    E = triangulate(V, getedges=true)
+
+    using FemMesh
+    bl = BlockTruss(V, E)
+    mesh = Mesh(bl)
+    save(mesh, "tri1.vtk")
+end
 
 

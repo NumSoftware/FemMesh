@@ -1,6 +1,6 @@
 # This file is part of FemMesh package. See copyright license in https://github.com/NumSoftware/FemMesh
 
-include("delaunay.jl")
+#include("delaunay.jl")
 
 ### Type Mesh
 """
@@ -20,9 +20,9 @@ type Mesh
     quality::Float64
     qmin   ::Float64 
     # Data
-    point_scalar_data::Dict{String,Array}
-    point_vector_data::Dict{String,Array}
-    cell_scalar_data ::Dict{String,Array}
+    #point_scalar_data::Dict{String,Array}
+    #point_vector_data::Dict{String,Array}
+    #cell_scalar_data ::Dict{String,Array}
 
     function Mesh()
         this = new()
@@ -132,7 +132,7 @@ function reorder!(mesh::Mesh; sort_degrees=true, reversed=false)::Void
             continue
         end
 
-        # joint1D cells
+        # joint1D cells (semi-embedded approach)
         if cell.shape in (JLINK2, JLINK3)
             edge = Cell(LIN2, [ cell.points[1], cell.points[end-1] ])
             hs = hash(edge)
@@ -179,7 +179,7 @@ function reorder!(mesh::Mesh; sort_degrees=true, reversed=false)::Void
     mindeg, idx  = findmin(degrees)
 
     if mindeg == 0
-        # Case of overlapping elements where edges have at least a point with same coordinates
+        # Case of overlapping elements where edges have at least one point with the same coordinates
         warn("reorder!: Reordering nodes failed! Check for overlapping cells.")
         return
     end
@@ -505,21 +505,37 @@ function read_mesh_vtk(filename::String, verbose::Bool=false)
                     end
                 end
 
-                # look for joints and fix shape
+                # look for conventional joints and fix shape
                 if n%2==0 && n>=4
                     delta = 0.0
                     for i=1:div(n,2)
                         p1 = cell.points[i]
                         p2 = cell.points[div(n,2)+i]
-                        delta += abs(p1.x - p2.x)
-                        delta += abs(p1.y - p2.y)
-                        delta += abs(p1.z - p2.z)
+                        delta += abs(p1.x - p2.x) + abs(p1.y - p2.y) + abs(p1.z - p2.z)
                     end
                     if delta<1e-10
                         cell.shape = get_shape_from_vtk(VTK_POLY_VERTEX, n, ndim)
                         continue
                     end
                 end
+
+                # look for joint elements (with 2 or 3 layers)
+                # TODO
+                #=
+                if n%3==0 && n>=6
+                    string = div(n,3)
+                    delta = 0.0
+                    for i=1:stride
+                        p1 = cell.points[i]
+                        p2 = cell.points[stride+i]
+                        delta += abs(p1.x - p2.x) + abs(p1.y - p2.y) + abs(p1.z - p2.z)
+                    end
+                    if delta<1e-10
+                        cell.shape = get_shape_from_vtk(VTK_POLY_VERTEX, 2*stride, ndim, pointlayers=3)
+                        continue
+                    end
+                end
+                =#
 
                 # remaining polyvertex cells
                 cell.shape = get_shape_from_vtk(VTK_POLY_VERTEX, n, ndim)
