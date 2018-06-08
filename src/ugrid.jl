@@ -1,5 +1,5 @@
 
-mutable struct VTK_unstructured_grid
+mutable struct UnstructuredGrid
     title::String
     points::Array{Float64,2}
     cells ::Array{Array{Int64,1},1}
@@ -8,13 +8,13 @@ mutable struct VTK_unstructured_grid
     cell_scalar_data ::Dict{String,Array}
     point_vector_data::Dict{String,Array}
     version::String
-    function VTK_unstructured_grid(title, points, cells, cell_types; point_scalar_data=Dict(), cell_scalar_data=Dict(), point_vector_data=Dict())
+    function UnstructuredGrid(title, points, cells, cell_types; point_scalar_data=Dict(), cell_scalar_data=Dict(), point_vector_data=Dict())
         return new(title, points, cells, cell_types, point_scalar_data, cell_scalar_data, point_vector_data, "3.0")
     end
 end
 
-function save_vtk(vtk_data::VTK_unstructured_grid, filename::String)
-    # Saves a VTK_unstructured_grid
+function save_vtk(vtk_data::UnstructuredGrid, filename::String)
+    # Saves a UnstructuredGrid
     npoints = size(vtk_data.points, 1)
     ncells = length(vtk_data.cells)
 
@@ -125,7 +125,7 @@ function save_vtk(vtk_data::VTK_unstructured_grid, filename::String)
     return nothing
 end
 
-function read_VTK_unstructured_grid(filename::String)
+function read_ugrid_vtk(filename::String)
     file = open(filename)
 
     # read nodal information
@@ -199,6 +199,6 @@ function read_VTK_unstructured_grid(filename::String)
     # end of reading
     close(file)
 
-    vtk_data = VTK_unstructured_grid("VTK unstructured grid", points, cells, cell_types)
+    vtk_data = UnstructuredGrid("VTK unstructured grid", points, cells, cell_types)
     return vtk_data
 end

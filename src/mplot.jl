@@ -136,13 +136,13 @@ function mplot(items::Union{Block, Array}...; args...)
     stypes  = [ c.shape.vtk_type for c in cells ]
     colors  = Dict("family" => [ ty==LIN2? 0.0 : 1.0 for ty in stypes])
 
-    ugrid = VTK_unstructured_grid("Blocks", coords, conns, stypes, cell_scalar_data=colors)
+    ugrid = UnstructuredGrid("Blocks", coords, conns, stypes, cell_scalar_data=colors)
     mplot(ugrid; alpha=0.4, args...)
 end
 
 
 function mplot(mesh::Mesh; args...)
-    ugrid = convert(VTK_unstructured_grid, mesh)
+    ugrid = convert(UnstructuredGrid, mesh)
     if mesh.ndim==3
         # get surface cells and update ugrid
         scells = get_surface(mesh.cells)
@@ -176,7 +176,7 @@ end
 
 using PyCall
 
-function mplot(ugrid::VTK_unstructured_grid, filename::String=""; axis=true, 
+function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true, 
                pointmarkers=false, pointlabels=false, celllabels=false, elev=30, azim=45,
                fieldlims=nothing, cmap=nothing, field=nothing, alpha=1.0, warpscale=0.0)
 

@@ -40,8 +40,8 @@ export Point, Cell, hash, get_x, get_y, get_z
 export get_coords, get_point, get_points, get_faces, cell_extent, cell_quality
 export tag!, iptag!, update!
 
-include("vtk-io.jl")
-export VTK_unstructured_grid, save_vtk, read_VTK_unstructured_grid
+include("ugrid.jl")
+export UnstructuredGrid, save_vtk, read_ugrid_vtk
 
 include("mesh.jl")
 export Mesh, update!, quality!, reorder!, save, get_surface, get_neighbors
@@ -76,7 +76,7 @@ export mplot
 @show_array_function Block
 
 @show_function Mesh
-@show_function VTK_unstructured_grid
+@show_function UnstructuredGrid
 
 # precompile hint
 #bl = Block2D( [0 0; 1 1], nx=2, ny=2, shape=TRI3)

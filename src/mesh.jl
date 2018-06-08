@@ -370,7 +370,7 @@ function Mesh(items::Union{Block, Mesh, Array}...; verbose::Bool=true, genfacets
 end
 
 import Base.convert
-function convert(::Type{VTK_unstructured_grid}, mesh::Mesh)
+function convert(::Type{UnstructuredGrid}, mesh::Mesh)
     npoints = length(mesh.points)
     ncells  = length(mesh.cells)
 
@@ -381,7 +381,7 @@ function convert(::Type{VTK_unstructured_grid}, mesh::Mesh)
         points[i, 2] = P.y
         points[i, 3] = P.z
     end
-    cells   = [ [point.id for point in C.points] for C in mesh.cells ]
+    cells   = [ [point.id for point in C.points] for C in mesh.cells ] # TODO: make it not dependent of point.id
     cell_tys= [ C.shape.vtk_type for C in mesh.cells ]
     
     # point id
@@ -402,7 +402,7 @@ function convert(::Type{VTK_unstructured_grid}, mesh::Mesh)
     # title
     title = "FemMesh output"
 
-    return VTK_unstructured_grid(title, points, cells, cell_tys,
+    return UnstructuredGrid(title, points, cells, cell_tys,
                                  point_scalar_data = Dict("point-id"=>point_ids),
                                  cell_scalar_data  = cell_scalar_data)
 
@@ -416,7 +416,7 @@ end
 Saves a mesh object into a file in VTK legacy format
 """
 function save(mesh::Mesh, filename::String; verbose::Bool=true)
-    vtk_data = convert(VTK_unstructured_grid, mesh)
+    vtk_data = convert(UnstructuredGrid, mesh)
 
     # Warning for lost of embedded flag
     has_embedded = any( C -> C.embedded, mesh.cells )
@@ -432,7 +432,7 @@ end
 
 function read_mesh_vtk(filename::String, verbose::Bool=false)
 
-    vtk_data = read_VTK_unstructured_grid(filename)
+    vtk_data = read_ugrid_vtk(filename)
     mesh = Mesh()
 
     # Setting points

@@ -41,14 +41,7 @@ get_z(point::Point) = point.z
 #Base.hash(p::Point) = round(UInt, 1000000 + p.x*1001 + p.y*10000001 + p.z*100000000001)
 #Base.hash(p::Point) = hash( (p.x==0.0?0.0:p.x, p.y==0.0?0.0:p.y, p.z==0.0?0.0:p.z) ) # comparisons used to avoid signed zero
 Base.hash(p::Point) = hash( (p.x, p.y, p.z) ) 
-
-function hash(points::Array{Point,1})::UInt64
-    hs = 0x000000000::UInt64
-    for p in points
-        hs += hash(p)
-    end
-    return hs
-end
+Base.hash(points::Array{Point,1}) = sum(hash(p) for p in points)
 
 getcoords(p::Point) = [p.x, p.y, p.z]
 
@@ -109,8 +102,7 @@ const Face=Cell
 
 ### Cell methods
 
-
-hash(c::Cell) = sum(hash(p) for p in c.points)
+Base.hash(c::Cell) = sum(hash(p) for p in c.points)
 
 function get_coords(c::Cell, ndim=3)::Array{Float64,2}
     n = length(c.points)
