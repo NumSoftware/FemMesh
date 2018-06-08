@@ -7,29 +7,20 @@ const CURVE3 = 3
 const CURVE4 = 4
 const CLOSEPOLY = 79
 
-#function plot_data_for_cell2d(ugrid::VTK_unstructured_grid, icell::Int)
 function plot_data_for_cell2d(points::Array{Array{Float64,1},1}, ctype::Int)
-    #npoints = size(coords,1)
     npoints = length(points)
-    #shape = get_shape_from_vtk(VTKCellType(ugrid.cell_types[icell]), npoints, 2)
     shape = get_shape_from_vtk(VTKCellType(ctype), npoints, 2)
 
     if shape==LIN2
-        #con   = ugrid.cells[icell]
-        #verts = [ ugrid.points[i,1:2] for i in con ]
         verts = points
         codes = [ MOVETO, LINETO ]
     elseif shape == LIN3
-        #con   = ugrid.cells[icell]
-        #p1, p2, p3 = [ ugrid.points[i,1:2] for i in con ]
         p1, p2, p3 = points
         cp    = 2*p3 - 0.5*p1 - 0.5*p2
         verts = [ p1, cp, p2 ]
         codes = [ MOVETO, CURVE3, CURVE3]
     elseif shape in (TRI3, QUAD4)
         n = shape==TRI3? 3 : 4
-        #con   = ugrid.cells[icell]
-        #points = [ ugrid.points[i,1:2] for i in con ]
         codes = [ MOVETO ]
         verts = [ points[1] ]
         for i=1:n
@@ -39,8 +30,6 @@ function plot_data_for_cell2d(points::Array{Array{Float64,1},1}, ctype::Int)
         end
     elseif shape in (TRI6, QUAD8, QUAD9)
         n = shape==TRI6? 3 : 4
-        #con   = ugrid.cells[icell]
-        #points = [ ugrid.points[i,1:2] for i in con ]
         codes = [ MOVETO ]
         verts = [ points[1] ]
         for i=1:n
@@ -53,8 +42,6 @@ function plot_data_for_cell2d(points::Array{Array{Float64,1},1}, ctype::Int)
         end
     elseif shape in (QUAD12, QUAD16)
         n = 4
-        #con   = ugrid.cells[icell]
-        #points = [ ugrid.points[i,1:2] for i in con ]
         codes = [ MOVETO ]
         verts = [ points[1] ]
         for i=1:n
@@ -74,29 +61,85 @@ function plot_data_for_cell2d(points::Array{Array{Float64,1},1}, ctype::Int)
     return verts, codes
 end
 
-#function draw_cell3d(c::Cell)
-#function plot_data_for_cell3d(ugrid::VTK_unstructured_grid, icell::Int)
 function plot_data_for_cell3d(points::Array{Array{Float64,1},1}, ctype::Int)
     npoints = length(points)
     shape = get_shape_from_vtk(VTKCellType(ctype), npoints, 2)
-    #con   = ugrid.cells[icell]
-    #points = [ ugrid.points[i,1:3] for i in con ]
-    #ctype = ugrid.cell_types[icell]
-    if shape in (TRI3, QUAD4)
+    if shape == LIN2
         verts = points
-        #verts = [ Float64[p.x, p.y, p.z] for p in c.points ]
-        #verts = push!([], verts)
+    elseif shape in (TRI3, QUAD4)
+        verts = points
     elseif shape == TRI6
         verts = points[[1,4,2,5,3,6]]
-        #verts = [ Float64[p.x, p.y, p.z] for p in c.points[ [1,4,2,5,3,6] ] ]
-        #verts = push!([], verts)
     elseif shape == QUAD8
         verts = points[[1,5,2,6,3,7,4,8]]
-        #verts = [ Float64[p.x, p.y, p.z] for p in c.points[ [1,5,2,6,3,7,4,8] ] ]
-        #verts = push!([], verts)
     end
     return verts
 end
+
+
+function mplot(items::Union{Block, Array}...; args...)
+    # Get list of blocks and check type
+    blocks = unfold(items)
+
+    for item in blocks
+        isa(item, Block) || error("mplot: Block object expected")
+    end
+
+    # Using Point and Cell types
+    points = Array{Point,1}()
+    cells  = Array{Cell,1}()
+
+    for bl in blocks
+        npts = size(bl.coords,1)
+        pts = [ Point(bl.coords[i,:]) for i=1:npts ]
+        append!(points, pts)
+        bl_type = typeof(bl)
+        ndim = 0
+
+        if bl_type==BlockInset
+            shapetype = LIN2
+        elseif npts==4 && bl_type==Block2D
+            shapetype = QUAD4
+            ndim = 2
+        elseif npts==8 && bl_type==Block2D
+            ndim = 2
+            shapetype = QUAD8
+        elseif npts==8 && bl_type==Block3D
+            ndim = 3
+            shapetype = HEX8
+        elseif npts==20 && bl_type==Block3D
+            ndim = 3
+            shapetype = HEX20
+        end
+
+        if ndim==2
+            cell = Cell(shapetype, pts)
+            push!(cells, cell)
+            append!(points, pts)
+        else
+            if shapetype == LIN2
+                lines = [ Cell(shapetype, [pts[i-1], pts[i]]) for i=2:npts ]
+                append!(cells, lines)
+            else
+                cell  = Cell(shapetype, pts)
+                faces = get_faces(cell)
+                append!(cells, faces)
+            end
+        end
+    end
+
+    # points, cells and types
+    for (i,p) in enumerate(points); p.id = i end
+    pts_arr = [ [p.x, p.y, p.z] for p in points ]
+    coords  = [ pts_arr[i][j] for i=1:length(pts_arr), j=1:3]
+    conns   = [ [ p.id for p in c.points ] for c in cells ]
+    stypes  = [ c.shape.vtk_type for c in cells ]
+    colors  = Dict("family" => [ ty==LIN2? 0.0 : 1.0 for ty in stypes])
+
+    ugrid = VTK_unstructured_grid("Blocks", coords, conns, stypes, cell_scalar_data=colors)
+    mplot(ugrid; alpha=0.4, args...)
+end
+
 
 function mplot(mesh::Mesh; args...)
     ugrid = convert(VTK_unstructured_grid, mesh)
@@ -118,7 +161,6 @@ function mplot(mesh::Mesh; args...)
             ugrid.point_vector_data[field] = data[pt_ids, :]
         end
 
-
         # renumerate points
         id_dict = Dict{Int, Int}( p.id => i for (i,p) in enumerate(spoints) )
 
@@ -134,22 +176,13 @@ end
 
 using PyCall
 
-
 function mplot(ugrid::VTK_unstructured_grid, filename::String=""; axis=true, 
                pointmarkers=false, pointlabels=false, celllabels=false, elev=30, azim=45,
-               fieldlims=nothing, cmap=nothing, field=nothing, warpscale=0.0)
+               fieldlims=nothing, cmap=nothing, field=nothing, alpha=1.0, warpscale=0.0)
 
-    if "PyPlot" in keys(Pkg.installed())
-        # imports: plt, matplotlib
-        #eval(:(import PyCall))
-        eval(:(import PyPlot))
-        eval(:(import PyPlot:plt, matplotlib, figure, art3D, Axes3D))
-    else
-        error("mplot: Package PyPlot is required")
-    end
+    @eval import PyPlot:plt, matplotlib, figure, art3D, Axes3D
 
     plt[:rc]("font", family="serif", size=10)
-    #plt[:rc]("font", family="serif",size=15)
 
     ndim = all(p->p==0.0, ugrid.points[:,3]) ? 2: 3
     ncells = length(ugrid.cells)
@@ -176,16 +209,7 @@ function mplot(ugrid::VTK_unstructured_grid, filename::String=""; axis=true,
 
     # Configure plot
     if ndim==3
-        try
-            ax = plt[:gca](projection="3d")
-        catch
-            try
-                ax = Axes3D(plt[:figure]())
-            catch
-                ax = Axes3D(figure())
-            end
-        end
-
+        ax = @eval Axes3D(figure())
         ax[:set_aspect]("equal")
         
         # Set limits
@@ -254,25 +278,39 @@ function mplot(ugrid::VTK_unstructured_grid, filename::String=""; axis=true,
 
     # Plot cells
     if ndim==3
-        all_verts  = []
-        for i=1:ncells # those are surface cells
+        # Plot line cells
+        for i=1:ncells 
             ctype = ugrid.cell_types[i]
-            ctype in (3,21,5,22,9,23,28) || continue
-            #ugrid.cell_types[i] in (3,21,5,22,9,23,28) || continue
+            ctype in (3,21) || continue
+            con = ugrid.cells[i]
+            X = XYZ[con, 1]
+            Y = XYZ[con, 2]
+            Z = XYZ[con, 3]
+            plt[:plot](X, Y, Z, color="red", lw=1.0)
+        end
+
+        # Plot surface cells
+        all_verts  = []
+        for i=1:ncells 
+            ctype = ugrid.cell_types[i]
+            ctype in (5,22,9,23,28) || continue
             con = ugrid.cells[i]
             points = [ XYZ[i,1:3] for i in con ]
             verts = plot_data_for_cell3d(points, ctype)
             push!(all_verts, verts)
         end
 
-        #cltn = art3D.Poly3DCollection(all_verts, cmap=cmap, facecolor="aliceblue", edgecolor="black", lw=2)
-        cltn = art3D[:Poly3DCollection](all_verts, cmap=cmap, facecolor="aliceblue", edgecolor="black", lw=2)
+        #cltn = art3D[:Poly3DCollection](all_verts, cmap=cmap, facecolor="aliceblue", edgecolor="black", lw=2)
+        cltn = @eval art3D[:Poly3DCollection]($all_verts, cmap=$cmap, facecolor="aliceblue", edgecolor="black",
+                                              lw=1., alpha=$alpha)
+
         if has_field
             cltn[:set_array](fvals)
             cltn[:set_clim](fieldlims)
             plt[:colorbar](cltn, label=field, shrink=0.7)
         end
-        ax[:add_collection3d](cltn)
+        @eval $ax[:add_collection3d]($cltn)
+
     else
         all_patches = []
         for i=1:ncells
