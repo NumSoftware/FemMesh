@@ -101,29 +101,29 @@ end
 
 
 """
-`array(block, [n=2,] [x=0.0,] [y=0.0,] [z=0.0])` 
+    array(block; nx=1, ny=1, nz=1, dx=0.0, dy=0.0, dz=0.0)
 
-Creates `n-1` copies of a `block` separated by distances `x`, `y` and/or `z` along respective axes.
-Returns n objects.
+Creates a list with copies of `block` along x, y and z axes.
 """
-function array(bl::Block; n=2, x=0.0, y=0.0, z=0.0)
+function array(bl::Block; nx=1, ny=1, nz=1, dx=0.0, dy=0.0, dz=0.0)
     blocks = [ bl ]
-    for i=1:n-1
-        dx = i*x
-        dy = i*y
-        dz = i*z
-        cp = copy(bl)
-        move(cp, dx=dx, dy=dy, dz=dz)
-        push!(blocks, cp)
+    for k=0:nz-1
+        for j=0:ny-1
+            for i=0:nx-1
+                i==j==k==0 && continue
+                cp = copy(bl, dx=i*dx, dy=j*dy, dz=k*dz)
+                push!(blocks, cp)
+            end
+        end
     end
     return blocks
 end
 
 
 """
-`rotate!(block, [base=[0,0,0],] [axis=[0,0,1],] [angle=90.0])`
+    rotate!(block, base=[0,0,0], axis=[0,0,1], angle=90.0)`
 
-Rotates a `block` according to a `base` point, an `axis` vector and an `angle`.
+Rotate `block` according to the provided `base` point, `axis` vector and `angle`.
 """
 function rotate!(bl::Block; base=[0.,0,0], axis=[0.,0,1], angle=90.0 )
 
@@ -286,6 +286,34 @@ function rotate!(mesh::Mesh; base=[0.,0,0], axis=[0.,0,1], angle=90.0 )
     end
 
     return mesh
+end
+
+
+# Roll Axes
+# =========
+
+function roll_axes!(bl::Block)
+    ndim = size(bl.coords,2)
+    if ndim==2
+        bl.coords = bl.coords[:,[2,1]]
+    else
+        bl.coords = bl.coords[:,[3,1,2]]
+    end
+    return nothing
+end
+
+roll_axes!(bls::Array{<:Block,1}) = (roll_axes!.(bls); nothing)
+
+function roll_axes!(mesh::Mesh)
+    if mesh.ndim==2
+        for p in mesh.points
+            p.x, p.y = p.y, p.x
+        end
+    else
+        for p in mesh.points
+            p.x, p.y, p.z = p.z, p.x, p.y
+        end
+    end
 end
 
 
