@@ -24,12 +24,14 @@ using JSON
 include("tools/linalg.jl")
 include("tools/expr.jl")
 include("tools/show.jl")
+include("tools/iteration.jl")
+export unfold
 
 # Generic exports
 export getindex
 
 include("shape.jl")
-export ShapeType, TagType, ALL_SHAPES, ShapeClass
+export ShapeType, TagType, ALL_SHAPES, ShapeFamily
 export get_ip_coords, get_shape_from_vtk
 export inverse_map, extrapolator
 
@@ -48,7 +50,7 @@ include("block.jl")
 export Block2D, Block3D, BlockTruss, BlockCoords, BlockCylinder
 
 include("operators.jl")
-export move!, array, copy, mirror, rotate!, polar
+export move!, array, copy, mirror, rotate!, polar, roll_axes!
 
 include("extrude.jl") 
 export extrude

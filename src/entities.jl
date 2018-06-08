@@ -1,7 +1,5 @@
 # This file is part of FemMesh package. See copyright license in https://github.com/NumSoftware/FemMesh
 
-import Base.getindex
-
 abstract type Block end
 
 # Point
@@ -16,13 +14,14 @@ mutable struct Point
     extra::Int64 # TODO: check where is used
     function Point(x::Real, y::Real, z::Real=0.0; tag=0)
         const NDIG = 14
-        # Zero is added to avoid negative bit sign for zero signed values
+        # zero is added to avoid negative bit sign for zero signed values
         x = round(x, NDIG) + 0.0
         y = round(y, NDIG) + 0.0
         z = round(z, NDIG) + 0.0
         return new(x, y, z, tag,-1,-1)
     end
     function Point(C::AbstractArray{<:Real}; tag=0)
+        # zero is added to avoid negative bit sign for zero signed values
         if length(C)==2
             return new(C[1]+0.0, C[2]+0.0, 0.0, tag, -1, -1)
         else
@@ -39,10 +38,9 @@ get_x(point::Point) = point.x
 get_y(point::Point) = point.y
 get_z(point::Point) = point.z
 
-import Base.hash
-#hash(p::Point) = round(UInt, 1000000 + p.x*1001 + p.y*10000001 + p.z*100000000001)
-#hash(p::Point) = hash( (p.x==0.0?0.0:p.x, p.y==0.0?0.0:p.y, p.z==0.0?0.0:p.z) ) # comparisons used to avoid signed zero
-hash(p::Point) = hash( (p.x, p.y, p.z) ) 
+#Base.hash(p::Point) = round(UInt, 1000000 + p.x*1001 + p.y*10000001 + p.z*100000000001)
+#Base.hash(p::Point) = hash( (p.x==0.0?0.0:p.x, p.y==0.0?0.0:p.y, p.z==0.0?0.0:p.z) ) # comparisons used to avoid signed zero
+Base.hash(p::Point) = hash( (p.x, p.y, p.z) ) 
 
 function hash(points::Array{Point,1})::UInt64
     hs = 0x000000000::UInt64
@@ -62,15 +60,13 @@ function get_point(points::Dict{UInt64,Point}, C::AbstractArray{<:Real})
     return get(points, hs, nothing)
 end
 
-function get_coords(points::Array{Point,1}, ndim::Int64=3)::Array{Float64,2}
+function get_coords(points::Array{Point,1}, ndim::Int64=3)
     np = length(points)
     C  = Array{Float64}(np, ndim)
     for i=1:np
         C[i,1] = points[i].x
         C[i,2] = points[i].y
-        if ndim>2
-            C[i,3] = points[i].z
-        end
+        ndim>2 && (C[i,3] = points[i].z)
     end
 
     return C
@@ -155,37 +151,26 @@ end
 
 # Index operator for a collection of elements
 # This function is not type stable
-function getindex(cells::Array{Cell,1}, s::Symbol)
-    s == :all && return cells
-
-    if s == :solids
-        return filter(cell -> cell.shape.class==SOLID_SHAPE, cells)
-    end
-    if s == :lines
-        return filter(cell -> cell.shape.class==LINE_SHAPE, cells)
-    end
-    if s == :joints
-        return filter(cell -> cell.shape.class==JOINT_SHAPE, cells)
-    end
-    if s == :joints1D
-        return filter(cell -> cell.shape.class==JOINT1D_SHAPE, cells)
-    end
-    if s == :points
-        return get_points(cells)
-    end
-    error("Cell getindex: Invalid symbol $s")
+function Base.getindex(cells::Array{Cell,1}, s::Symbol)
+    s == :all      && return cells
+    s == :solids   && return filter(cell -> cell.shape.family==SOLID_SHAPE, cells)
+    s == :lines    && return filter(cell -> cell.shape.family==LINE_SHAPE, cells)
+    s == :joints   && return filter(cell -> cell.shape.family==JOINT_SHAPE, cells)
+    s == :joints1D && return filter(cell -> cell.shape.family==JOINT1D_SHAPE, cells)
+    s == :points   && return get_points(cells)
+    error("Cell getindex: Invalid filter symbol $s")
 end
 
 
-function getindex(cells::Array{Cell,1}, cond::Expr)
+function Base.getindex(cells::Array{Cell,1}, cond::Expr)
     condm = fix_comparison_arrays(cond)
     funex = :( (x,y,z,id,tag) -> false )
     funex.args[2].args[2] = condm
     fun = nothing
     try
-        fun   = eval(funex)
+        fun = eval(funex)
     catch
-        error("Cell getindex: Invalid condition ", cond)
+        error("Cell getindex: Invalid filter expression ", cond)
     end
 
     result = Array{Cell}(0)
@@ -329,7 +314,7 @@ function build_bins(cells::Array{Cell,1}, bins::Bins)
     # Get max cell lengths
     max_l = 0.0
     for cell in cells
-        if cell.shape.class!=SOLID_SHAPE continue end
+        if cell.shape.family!=SOLID_SHAPE continue end
         bbox = bounding_box(cell)
         l    = maximum(bbox[2,:] - bbox[1,:])
         if l>max_l; max_l = l end

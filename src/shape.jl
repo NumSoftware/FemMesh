@@ -1,6 +1,6 @@
 # This file is part of FemMesh package. See copyright license in https://github.com/NumSoftware/FemMesh
 
-@enum(ShapeClass,
+@enum(ShapeFamily,
 LINE_SHAPE    = 1,
 SOLID_SHAPE   = 2,
 JOINT_SHAPE   = 3,
@@ -12,14 +12,14 @@ EMBEDDED      = 6
 const TagType = Union{Int,String}
 
 # Export
-for s in instances(ShapeClass)
+for s in instances(ShapeFamily)
     @eval export $(Symbol(s))
 end 
 
 
 mutable struct ShapeType 
     name       ::String
-    class      ::ShapeClass
+    family     ::ShapeFamily
     ndim       ::Int
     npoints    ::Int
     basic_shape::ShapeType
@@ -47,7 +47,7 @@ include("cells/joints.jl")
 function MakePOLIV()
     shape             = ShapeType()
     shape.name        = "POLYV"
-    shape.class       = VERTEX_SHAPE
+    shape.family      = VERTEX_SHAPE
     shape.ndim        = 0
     shape.npoints     = 0
     shape.vtk_type    = VTK_POLY_VERTEX
@@ -205,7 +205,7 @@ end
 
 
 function is_inside(shape::ShapeType, C::Array{Float64,2}, X::Array{Float64,1}, Tol = 1.e-7)
-    if shape.class!=SOLID_SHAPE return false end
+    if shape.family!=SOLID_SHAPE return false end
 
     # Testing with bounding box
     ndim = size(C,1)

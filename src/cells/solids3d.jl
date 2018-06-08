@@ -55,7 +55,7 @@ end
 function MakeTET4()
     shape             = ShapeType()
     shape.name        = "TET4"
-    shape.class       = SOLID_SHAPE
+    shape.family      = SOLID_SHAPE
     shape.ndim        = 3
     shape.npoints     = 4
     shape.basic_shape = shape
@@ -203,7 +203,7 @@ end
 function MakeTET10()
     shape             = ShapeType()
     shape.name        = "TET10"
-    shape.class       = SOLID_SHAPE
+    shape.family      = SOLID_SHAPE
     shape.ndim        = 3
     shape.npoints     = 10
     shape.basic_shape = TET4
@@ -272,7 +272,7 @@ end
 function MakePYR5()
     shape             = ShapeType()
     shape.name        = "PYR5"
-    shape.class       = SOLID_SHAPE
+    shape.family      = SOLID_SHAPE
     shape.ndim        = 3
     shape.npoints     = 5
     shape.basic_shape = shape
@@ -367,7 +367,7 @@ end
 function MakeHEX8()
     shape             = ShapeType()
     shape.name        = "HEX8"
-    shape.class       = SOLID_SHAPE
+    shape.family      = SOLID_SHAPE
     shape.ndim        = 3
     shape.npoints     = 8
     shape.basic_shape = shape
@@ -553,7 +553,7 @@ end
 function MakeHEX20()
     shape             = ShapeType()
     shape.name        = "HEX20"
-    shape.class       = SOLID_SHAPE
+    shape.family      = SOLID_SHAPE
     shape.ndim        = 3
     shape.npoints     = 20
     shape.basic_shape = HEX8
@@ -619,7 +619,7 @@ end
 function MakeWED6()
     shape             = ShapeType()
     shape.name        = "WED6"
-    shape.class       = SOLID_SHAPE
+    shape.family      = SOLID_SHAPE
     shape.ndim        = 3
     shape.npoints     = 6
     shape.basic_shape = shape
@@ -750,7 +750,7 @@ end
 function MakeWED15()
     shape             = ShapeType()
     shape.name        = "WED15"
-    shape.class       = SOLID_SHAPE
+    shape.family      = SOLID_SHAPE
     shape.ndim        = 3
     shape.npoints     = 15
     shape.basic_shape = WED6

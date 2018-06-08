@@ -60,7 +60,7 @@ end
 function MakeTRI3()
     shape             = ShapeType()
     shape.name        = "TRI3"
-    shape.class       = SOLID_SHAPE
+    shape.family      = SOLID_SHAPE
     shape.ndim        = 2
     shape.npoints     = 3
     shape.basic_shape = shape
@@ -146,7 +146,7 @@ end
 function MakeTRI6()
     shape             = ShapeType()
     shape.name        = "TRI6"
-    shape.class       = SOLID_SHAPE
+    shape.family      = SOLID_SHAPE
     shape.ndim        = 2
     shape.npoints     = 6
     shape.basic_shape = TRI3
@@ -198,7 +198,7 @@ end
 function MakeTRI9()
     shape             = ShapeType()
     shape.name        = "TRI9"
-    shape.class       = SOLID_SHAPE
+    shape.family      = SOLID_SHAPE
     shape.ndim        = 2
     shape.npoints     = 9
     shape.basic_shape = TRI3
@@ -250,7 +250,7 @@ end
 function MakeTRI10()
     shape             = ShapeType()
     shape.name        = "TRI10"
-    shape.class       = SOLID_SHAPE
+    shape.family      = SOLID_SHAPE
     shape.ndim        = 2
     shape.npoints     = 10
     shape.basic_shape = TRI3
@@ -322,7 +322,7 @@ end
 function MakeQUAD4()
     shape             = ShapeType()
     shape.name        = "QUAD4"
-    shape.class       = SOLID_SHAPE
+    shape.family      = SOLID_SHAPE
     shape.ndim        = 2
     shape.npoints     = 4
     shape.basic_shape = shape
@@ -421,7 +421,7 @@ end
 function MakeQUAD8()
     shape             = ShapeType()
     shape.name        = "QUAD8"
-    shape.class       = SOLID_SHAPE
+    shape.family      = SOLID_SHAPE
     shape.ndim        = 2
     shape.npoints     = 8
     shape.basic_shape = QUAD4
@@ -525,7 +525,7 @@ end
 function MakeQUAD9()
     shape             = ShapeType()
     shape.name        = "QUAD9"
-    shape.class       = SOLID_SHAPE
+    shape.family      = SOLID_SHAPE
     shape.ndim        = 2
     shape.npoints     = 9
     shape.basic_shape = QUAD4
@@ -647,7 +647,7 @@ end
 function MakeQUAD12()
     shape             = ShapeType()
     shape.name        = "QUAD12"
-    shape.class       = SOLID_SHAPE
+    shape.family      = SOLID_SHAPE
     shape.ndim        = 2
     shape.npoints     = 12
     shape.basic_shape = QUAD4
@@ -697,7 +697,7 @@ end
 function MakeQUAD16()
     shape             = ShapeType()
     shape.name        = "QUAD16"
-    shape.class       = SOLID_SHAPE
+    shape.family      = SOLID_SHAPE
     shape.ndim        = 2
     shape.npoints     = 16
     shape.basic_shape = QUAD4

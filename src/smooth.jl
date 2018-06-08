@@ -548,8 +548,8 @@ function smooth!(mesh::Mesh; verbose=true, alpha::Float64=0.3, target::Float64=0
 
     # check for not allowed cells
     for c in mesh.cells
-        if c.shape.class != SOLID_SHAPE
-            error("smooth!: cells of class $(c.shape.class) are not allowed for smoothing: $(c.shape.name)")
+        if c.shape.family != SOLID_SHAPE
+            error("smooth!: cells of family $(c.shape.family) are not allowed for smoothing: $(c.shape.name)")
         end
     end
 

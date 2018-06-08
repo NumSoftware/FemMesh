@@ -46,7 +46,7 @@ end
 function MakeLIN2()
     shape             = ShapeType()
     shape.name        = "LIN2"
-    shape.class       = LINE_SHAPE
+    shape.family      = LINE_SHAPE
     shape.ndim        = 1
     shape.npoints     = 2
     shape.basic_shape = shape
@@ -98,7 +98,7 @@ end
 function MakeLIN3()
     shape             = ShapeType()
     shape.name        = "LIN3"
-    shape.class       = LINE_SHAPE
+    shape.family      = LINE_SHAPE
     shape.ndim        = 1
     shape.npoints     = 3
     shape.basic_shape = LIN2
@@ -156,7 +156,7 @@ end
 function MakeLIN4()
     shape             = ShapeType()
     shape.name        = "LIN4"
-    shape.class       = LINE_SHAPE
+    shape.family      = LINE_SHAPE
     shape.ndim        = 1
     shape.npoints     = 4
     shape.basic_shape = LIN2

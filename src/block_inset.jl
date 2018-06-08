@@ -19,17 +19,18 @@ type BlockInset <: Block
     closed   ::Bool
     embedded ::Bool
     shape    ::ShapeType
-    tag      ::AbstractString
+    tag      ::TagType
+    jointtag ::TagType
     ε        ::Float64 # bisection tolerance
     εn       ::Float64 # increment to find next cell
     εc       ::Float64 # tolerance to find cells
-    λ        ::Float64 # jump to find multiple intersections in one cell
+    λ        ::Float64 # jump distance to find multiple intersections in one cell
     id       ::Int64
     icount   ::Int64
     _endpoint  ::Union{Point, Void}
     _startpoint::Union{Point, Void}
 
-    function BlockInset(coords; curvetype=0, closed=false, embedded=false, shape=LIN3, tag="", tol=1e-9, toln=1e-4, tolc=1e-9, lam=1., id=-1) 
+    function BlockInset(coords; curvetype=0, closed=false, embedded=false, shape=LIN3, tag="", jointtag="", tol=1e-9, toln=1e-4, tolc=1e-9, lam=1., id=-1) 
         # TODO: add option: merge_points
         # TODO: add case: endpoints outside mesh
         if typeof(curvetype)<:Integer
@@ -46,7 +47,7 @@ type BlockInset <: Block
             coords = hcat(coords, zeros(nrows))
         end
 
-        this = new(coords, ctype, closed, embedded, shape, tag, tol, toln, tolc, lam, id)
+        this = new(coords, ctype, closed, embedded, shape, tag, jointtag, tol, toln, tolc, lam, id)
         this.icount = 0
         this.ε  = tol
         this.εn = toln
@@ -58,7 +59,8 @@ type BlockInset <: Block
     end
 end
 
-copy(bl::BlockInset) = BlockInset(copy(bl.coords), curvetype=bl.curvetype, closed=bl.closed, embedded=bl.embedded, shape=bl.shape, tag=bl.tag)
+copy(bl::BlockInset) = BlockInset(copy(bl.coords), curvetype=bl.curvetype, closed=bl.closed, embedded=bl.embedded, shape=bl.shape,
+                                  tag=bl.tag, jointtag=bl.jointtag)
 
 function cubicBezier(s::Float64, PorQ::Array{Float64,2}, isQ::Bool=false)
     # check
@@ -300,7 +302,7 @@ function split_curve(coords::Array{Float64,2}, bl::BlockInset, closed::Bool, msh
         else
             # Generate a continuous joint element
             jntpts  = vcat( ccell.points, lcell.points )
-            jntcell = Cell(jntshape, jntpts, bl.tag)
+            jntcell = Cell(jntshape, jntpts, bl.jointtag)
             push!(msh.cells, jntcell)
             jntcell.linked_cells = [ccell, lcell]
         end

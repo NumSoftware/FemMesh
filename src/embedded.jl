@@ -6,7 +6,7 @@ function generate_embedded_cells!(mesh::Mesh)
     newcells = []
     id = 0 
     for cell in mesh.cells
-        if cell.shape.class==JOINT1D_SHAPE
+        if cell.shape.family==JOINT1D_SHAPE
             # link solid cell to line cells
             solid, line = cell.linked_cells
             line.linked_cells = [ solid ]

@@ -18,9 +18,9 @@ function joint_shape(shape::ShapeType)
 end
 
 # Adds joint cells over all shared faces
-function generate_joints!(mesh::Mesh)
+function generate_joints!(mesh::Mesh; inner_points::Bool=false)
     cells  = mesh.cells
-    solids = filter(c -> c.shape.class==SOLID_SHAPE, cells)
+    solids = filter(c -> c.shape.family==SOLID_SHAPE, cells)
 
     newpoints = Point[]
 
@@ -28,8 +28,6 @@ function generate_joints!(mesh::Mesh)
     for c in solids
         for (i,p) in enumerate(c.points)
             newp = Point(p.x, p.y, p.z)
-            p.id = 0 # set id=0 as a flag for points to be removed
-            #newp.extra = c.id
             push!(newpoints, newp)
             c.points[i] = newp
         end
@@ -90,19 +88,24 @@ function generate_joints!(mesh::Mesh)
             ncpoints = length(c.points) - njpoints  # number of points of crossed cell
             hs    = sum([ hash(p) for p in c.points[1:ncpoints]])
             ccell = cdict[hs]  # crossed cell
-            c.points[1:ncpoints] = ccell.points[:]
+            c.points[1:ncpoints] = ccell.points[:] # replace link cell connectivities
         end
     end
 
-    spoints = Set{Point}()
-    for c in mesh.cells
-        for p in c.points
-            push!(spoints, p)
+    # Generate inner points at joints (used in hydromechanical analyses)
+    if inner_points
+        node_dict = Dict( hash(p) => p for p in mesh.points ) # a dict with original points
+        for jcell in jcells
+            npts = div(length(jcell.points),2) # number of points in one side
+            side_pts = jcell.points[1:npts]
+            for p in side_pts
+                push!(jcell.points, node_dict[hash(p)])
+            end
         end
     end
 
-    mesh.points = collect(spoints)
     mesh.cells  = vcat(cells, jcells)
+    mesh.points = collect(Set(p for c in mesh.cells for p in c.points))
 
     # check for generation of edges
     genedges = length(mesh.edges) > 0
@@ -130,30 +133,28 @@ mutable struct FacePair
     FacePair() = new()
 end
 
-function generate_joints!(mesh::Mesh, expr::Expr, cell_tag::String="")
-    solids = filter(c -> c.shape.class==SOLID_SHAPE, mesh.cells)
-    cell_tag!="" && (solids=solids[cell_tag])
+function generate_joints_candidate!(mesh::Mesh, expr::Expr, tag::TagType="") # TODO: needs checking
+    solids = mesh.cells[:solids][expr]
     @assert length(solids)>0
 
-    # List all repeated faces
+    # List for all paired faces
     face_pairs = FacePair[]
-    face_idxs  = Array{Int,1}[]
 
-    # Joints generation
+    # Dict for face pairs: hash(face) => facepair
     fp_dict = Dict{UInt64, FacePair}()
 
     # Get paired faces 
     for cell in solids
-        faces_idxs = cell.shape.facet_idxs
+        faces_idxs = cell.shape.facet_idxs # vertex connectivities of all faces from cell
         for (i,face) in enumerate(get_faces(cell))
             hs = hash(face)
             fp = get(fp_dict, hs, nothing)
-            if fp==nothing
+            if fp==nothing # fill first face in fp
                 fp = FacePair()
                 fp.face1 = face
                 fp.idxs1 = faces_idxs[i]
                 fp_dict[hs] = fp
-            else
+            else # fill second face in fp
                 fp.face2 = face
                 fp.idxs2 = faces_idxs[i]
                 push!(face_pairs, fp)
@@ -162,13 +163,14 @@ function generate_joints!(mesh::Mesh, expr::Expr, cell_tag::String="")
         end
     end
 
-    # Filtering
+    # Filtering faces
     faces = [ fp.face1 for fp in face_pairs] 
     for (i,face) in enumerate(faces); face.id = i end
     faces = faces[expr]
 
     in_idxs  = [ face.id for face in faces ]
     out_idxs = setdiff(1:length(face_pairs), in_idxs) 
+    @show out_idxs
 
     # Generating new points
     for fp in face_pairs[in_idxs]
@@ -240,4 +242,6 @@ function generate_joints!(mesh::Mesh, expr::Expr, cell_tag::String="")
     # update and reorder mesh
     update!(mesh)
     reorder!(mesh)
+
+    tag!(jcells, tag)
 end

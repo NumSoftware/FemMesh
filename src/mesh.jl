@@ -117,7 +117,7 @@ function reorder!(mesh::Mesh; sort_degrees=true, reversed=false)::Void
     for cell in mesh.cells
 
         # adding cell edges
-        if cell.shape.class == SOLID_SHAPE #is_solid(cell.shape)
+        if cell.shape.family == SOLID_SHAPE #is_solid(cell.shape)
             for edge in get_edges(cell)
                 hs = hash(edge)
                 all_edges[hs] = edge
@@ -141,7 +141,7 @@ function reorder!(mesh::Mesh; sort_degrees=true, reversed=false)::Void
         end
 
         # embedded line cells
-        if cell.shape.class == LINE_SHAPE && length(cell.linked_cells)>0
+        if cell.shape.family == LINE_SHAPE && length(cell.linked_cells)>0
             edge1 = Cell(cell.shape, cell.points)
             edge2 = Cell(LIN2, [ cell.points[1], cell.linked_cells[1].points[1] ])
             all_edges[hash(edge1)] = edge1
@@ -322,14 +322,15 @@ function Mesh(items::Union{Block, Mesh, Array}...; verbose::Bool=true, genfacets
     nblocks = length(blocks)
     if verbose
         print_with_color(:cyan, "Mesh generation:\n", bold=true)
-        println("  analyzing $nblocks block(s)") 
+        #println("  analyzing $nblocks block(s)") 
     end
 
     # Split blocks: generates points and cells
+    @printf "  %5d blocks\n" nblocks
     for (i,b) in enumerate(blocks)
         b.id = i
         split_block(b, mesh)
-        verbose && print("  spliting block ",i,"...\r")
+        verbose && print("  spliting block ", i, "...    \r")
     end
 
     # Updates numbering, quality, facets and edges
@@ -337,7 +338,7 @@ function Mesh(items::Union{Block, Mesh, Array}...; verbose::Bool=true, genfacets
 
     # Reorder nodal numbering
     if reorder
-        verbose && print("  reordering points...\r")
+        verbose && print("  reordering points...             \r")
         reorder!(mesh)
     end
 
@@ -346,21 +347,21 @@ function Mesh(items::Union{Block, Mesh, Array}...; verbose::Bool=true, genfacets
         ncells  = length(mesh.cells)
         nfaces  = length(mesh.faces)
         nedges  = length(mesh.edges)
-        println("  ", mesh.ndim, "D mesh             ")
-        @printf "  %5d points obtained\n" npoints
-        @printf "  %5d cells obtained\n" ncells
+        @printf "  %4dd mesh                             \n" mesh.ndim
+        @printf "  %5d points\n" npoints
+        @printf "  %5d cells\n" ncells
         if genfacets
-            @printf "  %5d faces obtained\n" nfaces
+            @printf "  %5d faces\n" nfaces
         end
         if genedges
-            @printf "  %5d surface edges obtained\n" nedges
+            @printf "  %5d surface edges\n" nedges
         end
         icount = 0
         for block in blocks
             if typeof(block) == BlockInset; icount += block.icount end
         end
         if icount>0
-            @printf "  %5d intersections found\n" icount
+            @printf "  %5d intersections\n" icount
         end
         println("  done.")
     end
@@ -545,7 +546,7 @@ function read_mesh_vtk(filename::String, verbose::Bool=false)
         # Update linked cells in joints
 
         # check if there are joints
-        has_joints = any( C -> C.shape.class==JOINT_SHAPE, mesh.cells )
+        has_joints = any( C -> C.shape.family==JOINT_SHAPE, mesh.cells )
 
         if has_joints
             # generate dict of faces
@@ -559,7 +560,7 @@ function read_mesh_vtk(filename::String, verbose::Bool=false)
             end
 
             for cell in mesh.cells
-                if cell.shape.class == JOINT_SHAPE
+                if cell.shape.family == JOINT_SHAPE
                     n = length(cell.points)
                     hs1 = hash( [ cell.points[i] for i=1:div(n,2)] )
                     hs2 = hash( [ cell.points[i] for i=div(n,2)+1:n] )
@@ -572,7 +573,7 @@ function read_mesh_vtk(filename::String, verbose::Bool=false)
     end
 
     # Fix linked_cells for embedded elements (line cells not connected to other elements)
-    has_line = any(C->C.shape.class==LINE_SHAPE, mesh.cells)
+    has_line = any(C->C.shape.family==LINE_SHAPE, mesh.cells)
     if has_line
         # TODO: find the owner of orphan line cells OR use parent id information
     end
@@ -671,7 +672,7 @@ function load_mesh_json(filename; format="json")
 
     all_faces = Face[]
     for (i,C) in enumerate(mesh.cells)
-        if C.shape.class == SOLID_SHAPE #is_solid(C.shape)
+        if C.shape.family == SOLID_SHAPE #is_solid(C.shape)
             faces = get_faces(C)
             ftags = get(cells[i],"ftags", [])
             if length(ftags) > 0

@@ -16,7 +16,7 @@
 function MakeJLIN2()
     shape             = ShapeType()
     shape.name        = "JLIN2"
-    shape.class       = JOINT_SHAPE
+    shape.family      = JOINT_SHAPE
     shape.ndim        = 1
     shape.npoints     = 2
     shape.basic_shape = LIN2
@@ -45,7 +45,7 @@ export JLIN2
 function MakeJLIN3()
     shape             = ShapeType()
     shape.name        = "JLIN3"
-    shape.class       = JOINT_SHAPE
+    shape.family      = JOINT_SHAPE
     shape.ndim        = 1
     shape.npoints     = 3
     shape.basic_shape = LIN3
@@ -74,7 +74,7 @@ export JLIN3
 function MakeJLIN4()
     shape             = ShapeType()
     shape.name        = "JLIN4"
-    shape.class       = JOINT_SHAPE
+    shape.family      = JOINT_SHAPE
     shape.ndim        = 1
     shape.npoints     = 4
     shape.basic_shape = LIN4
@@ -103,7 +103,7 @@ export JLIN4
 function MakeJTRI3()
     shape             = ShapeType()
     shape.name        = "JTRI3"
-    shape.class       = JOINT_SHAPE
+    shape.family      = JOINT_SHAPE
     shape.ndim        = 2
     shape.npoints     = 3
     shape.basic_shape = TRI3
@@ -132,7 +132,7 @@ export JTRI3
 function MakeJTRI6()
     shape             = ShapeType()
     shape.name        = "JTRI6"
-    shape.class       = JOINT_SHAPE
+    shape.family      = JOINT_SHAPE
     shape.ndim        = 2
     shape.npoints     = 6
     shape.basic_shape = TRI3
@@ -161,7 +161,7 @@ export JTRI6
 function MakeJQUAD4()
     shape             = ShapeType()
     shape.name        = "JQUAD4"
-    shape.class       = JOINT_SHAPE
+    shape.family      = JOINT_SHAPE
     shape.ndim        = 2
     shape.npoints     = 4
     shape.basic_shape = QUAD4
@@ -190,7 +190,7 @@ export JQUAD4
 function MakeJQUAD8()
     shape             = ShapeType()
     shape.name        = "JQUAD8"
-    shape.class       = JOINT_SHAPE
+    shape.family      = JOINT_SHAPE
     shape.ndim        = 2
     shape.npoints     = 8
     shape.basic_shape = QUAD8
@@ -218,7 +218,7 @@ export JQUAD8
 function MakeJLINK2()
     shape             = ShapeType()
     shape.name        = "JLINK2"
-    shape.class       = JOINT1D_SHAPE
+    shape.family      = JOINT1D_SHAPE
     shape.ndim        = 1
     shape.npoints     = 2
     shape.basic_shape = LIN2
@@ -246,7 +246,7 @@ export JLINK2
 function MakeJLINK3()
     shape             = ShapeType()
     shape.name        = "JLINK3"
-    shape.class       = JOINT1D_SHAPE
+    shape.family      = JOINT1D_SHAPE
     shape.ndim        = 1
     shape.npoints     = 3
     shape.basic_shape = LIN3
