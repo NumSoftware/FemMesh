@@ -369,6 +369,18 @@ function Mesh(items::Union{Block, Mesh, Array}...; verbose::Bool=true, genfacets
     return mesh
 end
 
+
+function Mesh(cells::Array{Cell,1})
+    # New mesh object
+    mesh = Mesh()
+    mesh.points = cells[:points]
+    mesh.cells  = cells
+    update!(mesh)
+    reorder!(mesh)
+
+    return mesh
+end
+
 import Base.convert
 function convert(::Type{UnstructuredGrid}, mesh::Mesh)
     npoints = length(mesh.points)
