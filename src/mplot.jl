@@ -141,7 +141,7 @@ function mplot(items::Union{Block, Array}...; args...)
 end
 
 
-function mplot(mesh::Mesh; args...)
+function mplot(mesh::Mesh, filename::String=""; args...)
     ugrid = convert(UnstructuredGrid, mesh)
     if mesh.ndim==3
         # get surface cells and update ugrid
@@ -170,11 +170,11 @@ function mplot(mesh::Mesh; args...)
         ugrid.cells  = [ Int[ id_dict[p.id] for p in c.points ] for c in scells ]
         ugrid.cell_types = [ c.shape.vtk_type for c in scells ]
     end
-    mplot(ugrid; args...)
+    mplot(ugrid, filename; args...)
 end
 
 
-using PyCall
+using PyCall # required
 
 function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true, 
                pointmarkers=false, pointlabels=false, celllabels=false, elev=30, azim=45,
@@ -258,12 +258,13 @@ function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true,
 
     cm = matplotlib[:colors][:LinearSegmentedColormap]("my_colormap",cdict,256)
 
-    if cmap==nothing
+    if cmap==nothing # cmap may be "bone", "plasma", "inferno", etc.
         cmap = cm
     end
 
     has_field = field != nothing
     if has_field
+        field = string(field)
         found = haskey(ugrid.cell_scalar_data, field)
         if found
             fvals = ugrid.cell_scalar_data[field]
@@ -318,9 +319,7 @@ function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true,
             ctype in (3,21,5,22,9,23,28) || continue
             lw = ugrid.cell_types[i] in (3,21)? 1 : 0.5
             
-            #verts, codes = plot_data_for_cell2d(ugrid, i)
             con = ugrid.cells[i]
-            #coords = XYZ[con, 1:2]
             points = [ XYZ[i,1:2] for i in con ]
             verts, codes = plot_data_for_cell2d(points, ctype)
             path  = matplotlib[:path][:Path](verts, codes)
@@ -377,11 +376,12 @@ function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true,
     if filename==""
         plt[:show]()
     else
-        plt[:savefig](filename, bbox_inches="tight", pad_inches=0.25, format="png")
+        plt[:savefig](filename, bbox_inches="tight", pad_inches=0.25, format="pdf")
     end
 
-    # close de figure
-    isinteractive() || plt[:close]("all")
+    # close the figure
+    #isinteractive() || 
+    plt[:close]("all")
     return nothing
 end
 
