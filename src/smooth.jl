@@ -327,21 +327,21 @@ function normal_to_faces(faces::Array{Cell, 1})
 end
 
 
-function faces_normal(faces::Array{Cell,1}, eps_face)
+function faces_normal(faces::Array{Cell,1}, facetol)
     ndim = 1 + faces[1].shape.ndim
     
     #normals = Set{Array{Float64,1}}()
     normals = Array{Float64,1}[]
 
     for f in faces
-        C  = get_coords(f, ndim) + eps_face
+        C  = get_coords(f, ndim) + facetol
         I = ones(size(C,1))
         N = pinv(C)*I # best fit normal
 
-        if norm(C*N - I) < eps_face
+        if norm(C*N - I) < facetol
             N = N/norm(N)
             #check if the normal already exists
-            if all( [ norm(N-NN)>eps_face for NN in normals ]) 
+            if all( [ norm(N-NN)>facetol for NN in normals ]) 
                 push!(normals, N)
             end
         else
@@ -360,7 +360,7 @@ type sNode
 end
 
 # Mount global matrix A
-function mountA(mesh::Mesh, fixed::Bool, conds, eps_face)
+function mountA(mesh::Mesh, fixed::Bool, conds, facetol)
     # get border faces
     ndim = mesh.ndim
     border_fcs = get_surface(mesh.cells)
@@ -402,7 +402,7 @@ function mountA(mesh::Mesh, fixed::Bool, conds, eps_face)
             end
         end
 
-        node.normals = faces_normal(node.faces, eps_face)
+        node.normals = faces_normal(node.faces, facetol)
         nnorm        = length(node.normals)
         if nnorm==1 || nnorm==2
             n += nnorm
@@ -541,8 +541,11 @@ function force_bc(mesh::Mesh, E::Float64, nu::Float64, α::Float64)
     return Fbc
 end
 
-function smooth!(mesh::Mesh; verbose=true, alpha::Float64=0.3, target::Float64=0.97, fixed::Bool=false, maxit::Int64=20, epsmin::Float64=1e-3,
-    eps::Float64=1e-4, eps_face=1e-5, save_steps::Bool=false, filekey::AbstractString="smooth", conds=nothing)
+function smooth!(mesh::Mesh; verbose=true, alpha::Float64=0.3, target::Float64=0.97, fixed::Bool=false, maxit::Int64=20, mintol::Float64=1e-3,
+    tol::Float64=1e-4, facetol=1e-5, savesteps::Bool=false, filekey::String="smooth", conds=nothing)
+
+    # tol   : tolerance in change of mesh quality for succesive iterations
+    # mintol: tolerance in change of worst cell quality in a mesh for succesive iterations
 
     verbose && print_with_color(:cyan, "Mesh smoothing:\n", bold=true)
 
@@ -560,7 +563,7 @@ function smooth!(mesh::Mesh; verbose=true, alpha::Float64=0.3, target::Float64=0
 
     ndim = mesh.ndim
     quality!(mesh)
-    save_steps && save(mesh, "$filekey-0.vtk", verbose=false)
+    savesteps && save(mesh, "$filekey-0.vtk", verbose=false)
 
     # Stats
     Q = Float64[ c.quality for c in mesh.cells]
@@ -575,7 +578,7 @@ function smooth!(mesh::Mesh; verbose=true, alpha::Float64=0.3, target::Float64=0
     verbose && println("  hist: ", fit(Histogram, Q, 0.5:0.05:1.0, closed=:right).weights)
 
     # Lagrange multipliers matrix
-    A   = mountA(mesh, fixed, conds, eps_face) 
+    A   = mountA(mesh, fixed, conds, facetol) 
     nbc = size(A,1)
 
     for i=1:maxit
@@ -607,18 +610,17 @@ function smooth!(mesh::Mesh; verbose=true, alpha::Float64=0.3, target::Float64=0
         Q = Float64[ c.quality for c in mesh.cells]
         mesh.quality = sum(Q)/length(mesh.cells)
         mesh.qmin    = minimum(Q)
-        save_steps && save(mesh, "$filekey-$i.vtk", verbose=false)
+        savesteps && save(mesh, "$filekey-$i.vtk", verbose=false)
 
         if any(Q .== 0.0)
             error("smooth!: Smooth procedure got invalid element(s). Try using alpha<1.")
         end
 
-        temp  = minimum(Q)
         Δq    = abs(q - mesh.quality)
-        Δqmin = abs(qmin - temp)
+        Δqmin = abs(qmin - mesh.qmin)
 
         q    = mesh.quality
-        qmin = temp
+        qmin = mesh.qmin
         dev  = stdm(Q, q)
 
         hist  = fit(Histogram, Q, 0.0:0.05:1.0, closed=:right).weights
@@ -627,7 +629,7 @@ function smooth!(mesh::Mesh; verbose=true, alpha::Float64=0.3, target::Float64=0
         verbose && @printf("  it: %2d  qmin: %5.3f  qavg: %5.3f  dev: %7.5f", i, qmin, q, dev)
         verbose && println("  hist: ", fit(Histogram, Q, 0.5:0.05:1.0, closed=:right).weights)
 
-        if Δq<eps && Δqmin<epsmin
+        if Δq<tol && Δqmin<mintol
             break
         end
     end
@@ -639,8 +641,8 @@ end
 
 precompile(smooth!, (Mesh,) )
 
-function laplacian_smooth!(mesh::Mesh; alpha::Float64=1.0, maxit::Int64=100, verbose::Bool=true, epsmin::Float64=1e-3,
-    eps::Float64=1e-4, eps_face::Float64=1e-5, save_steps::Bool=false, filekey::AbstractString="smooth")
+function laplacian_smooth!(mesh::Mesh; alpha::Float64=1.0, maxit::Int64=100, verbose::Bool=true, mintol::Float64=1e-3,
+    tol::Float64=1e-4, facetol::Float64=1e-5, savesteps::Bool=false, filekey::String="smooth")
 
     ndim = mesh.ndim
 
@@ -677,7 +679,7 @@ function laplacian_smooth!(mesh::Mesh; alpha::Float64=1.0, maxit::Int64=100, ver
 
     # find normals for nodes
     for node in border_nodes
-        node.normals = faces_normal(node.faces, eps_face)
+        node.normals = faces_normal(node.faces, facetol)
     end
 
     # arrays of flags
@@ -696,7 +698,7 @@ function laplacian_smooth!(mesh::Mesh; alpha::Float64=1.0, maxit::Int64=100, ver
     q    = mesh.quality
     qmin = minimum(Q)
     dev  = stdm(Q, q)
-    save_steps && save(mesh, "$filekey-0.vtk", verbose=false)
+    savesteps && save(mesh, "$filekey-0.vtk", verbose=false)
     verbose && @printf("  it: %2d  qmin: %7.5f  qavg: %7.5f  dev: %7.5f", 0, qmin, q, dev)
     verbose && println("  hist: ", fit(Histogram, Q, 0.5:0.05:1.0, closed=:right).weights)
 
@@ -741,7 +743,7 @@ function laplacian_smooth!(mesh::Mesh; alpha::Float64=1.0, maxit::Int64=100, ver
         Q = Float64[ c.quality for c in mesh.cells]
         mesh.quality = sum(Q)/length(mesh.cells)
         mesh.qmin    = minimum(Q)
-        save_steps && save(mesh, "$filekey-$i.vtk", verbose=false)
+        savesteps && save(mesh, "$filekey-$i.vtk", verbose=false)
 
         if any(Q .== 0.0)
             error("smooth!: Smooth procedure got invalid element(s). Try using alpha<1.")
@@ -758,7 +760,7 @@ function laplacian_smooth!(mesh::Mesh; alpha::Float64=1.0, maxit::Int64=100, ver
         verbose && @printf("  it: %2d  qmin: %7.5f  qavg: %7.5f  dev: %7.5f", i, qmin, q, dev)
         verbose && println("  hist: ", fit(Histogram, Q, 0.5:0.05:1.0, closed=:right).weights)
 
-        if Δq<eps && Δqmin<epsmin
+        if Δq<tol && Δqmin<mintol
             break
         end
     end
