@@ -5,15 +5,19 @@
 
 Creates a copy of a `block` object.
 """
-copy(bl::BlockTruss) = BlockTruss(copy(bl.coords), bl.conns, shape=bl.shape, tag=bl.tag)
+Base.copy(bl::BlockTruss) = BlockTruss(copy(bl.coords), bl.conns, shape=bl.shape, tag=bl.tag)
 
-copy(bl::Block2D) = Block2D(copy(bl.coords), nx=bl.nx, ny=bl.ny, shape=bl.shape, tag=bl.tag)
+Base.copy(bl::Block2D) = Block2D(copy(bl.coords), nx=bl.nx, ny=bl.ny, shape=bl.shape, tag=bl.tag)
 
-copy(bl::Block3D) = Block3D(copy(bl.coords), nx=bl.nx, ny=bl.ny, nz=bl.nz, shape=bl.shape, tag=bl.tag)
+Base.copy(bl::Block3D) = Block3D(copy(bl.coords), nx=bl.nx, ny=bl.ny, nz=bl.nz, shape=bl.shape, tag=bl.tag)
 
-function copy(bl::Block; dx=0.0, dy=0.0, dz=0.0)
+function Base.copy(bl::Block; dx=0.0, dy=0.0, dz=0.0)
     newbl = copy(bl)
     move!(newbl, dx=dx, dy=dy, dz=dz)
+end
+
+function Base.copy(bls::Array{<:Block,1}; dx=0.0, dy=0.0, dz=0.0)
+    return [ copy(obj, dx=dx, dy=dy, dz=dz) for obj in bls ]
 end
 
 """
@@ -22,9 +26,9 @@ end
 Changes the coordinates of a `block`. Also returns a reference.
 """
 function move!(bl::Block; dx=0.0, dy=0.0, dz=0.0)
-    bl.coords[:, 1] += dx
-    bl.coords[:, 2] += dy
-    bl.coords[:, 3] += dz
+    bl.coords[:, 1] .+= dx
+    bl.coords[:, 2] .+= dy
+    bl.coords[:, 3] .+= dz
     return bl
 end
 
@@ -36,9 +40,9 @@ Changes the coordinates of an array of blocks. Also returns a reference.
 """
 function move!(blocks::Array; dx=0.0, dy=0.0, dz=0.0)
     for bl in blocks
-        bl.coords[:, 1] += dx
-        bl.coords[:, 2] += dy
-        bl.coords[:, 3] += dz
+        bl.coords[:, 1] .+= dx
+        bl.coords[:, 2] .+= dy
+        bl.coords[:, 3] .+= dz
     end
     return blocks
 end

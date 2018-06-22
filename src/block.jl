@@ -1,7 +1,5 @@
 # This file is part of FemMesh package. See copyright license in https://github.com/NumSoftware/FemMesh
 
-import Base.copy
-
 ### Block types:
 
 include("block_inset.jl")

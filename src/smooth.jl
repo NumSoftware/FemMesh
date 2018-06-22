@@ -455,8 +455,6 @@ function mountA(mesh::Mesh, fixed::Bool, conds, facetol)
     return A
 end
 
-using Base.Test
-
 function rigid_transform(source::Array{Float64,2}, target::Array{Float64,2})
     A, B = copy(source), copy(target)
     #@test size(A) == size(B)

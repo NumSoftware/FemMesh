@@ -12,7 +12,7 @@ mutable struct Point
     tag  ::TagType
     id   ::Int64
     extra::Int64 # TODO: check where is used
-    function Point(x::Real, y::Real, z::Real=0.0; tag=0)
+    function Point(x::Real, y::Real, z::Real=0.0, tag::TagType=0)
         const NDIG = 14
         # zero is added to avoid negative bit sign for zero signed values
         x = round(x, NDIG) + 0.0

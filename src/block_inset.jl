@@ -59,7 +59,7 @@ type BlockInset <: Block
     end
 end
 
-copy(bl::BlockInset) = BlockInset(copy(bl.coords), curvetype=bl.curvetype, closed=bl.closed, embedded=bl.embedded, shape=bl.shape,
+Base.copy(bl::BlockInset) = BlockInset(copy(bl.coords), curvetype=bl.curvetype, closed=bl.closed, embedded=bl.embedded, shape=bl.shape,
                                   tag=bl.tag, jointtag=bl.jointtag)
 
 function cubicBezier(s::Float64, PorQ::Array{Float64,2}, isQ::Bool=false)
@@ -154,7 +154,7 @@ function split_block(bl::BlockInset, msh::Mesh)
         split_curve(coords, bl, false, msh)
     end
     if bl.closed
-        coords = [ bl.coords[n,:] ; bl.coords[1,:] ]
+        coords = [ bl.coords[n:n,:] ; bl.coords[1:1,:] ]
         split_curve(coords, bl, true, msh)
     end
 end

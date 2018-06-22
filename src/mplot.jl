@@ -222,7 +222,7 @@ function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true,
         ax[:set_xlim]( meanX-L/2, meanX+L/2)
         ax[:set_ylim]( meanY-L/2, meanY+L/2)
         ax[:set_zlim]( meanZ-L/2, meanZ+L/2)
-        ax[:scatter](limX, limY, limZ, color="w", marker="o", alpha=0.0)
+        #ax[:scatter](limX, limY, limZ, color="w", marker="o", alpha=0.0)
 
         # Labels
         ax[:set_xlabel]("x")
@@ -380,8 +380,8 @@ function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true,
     end
 
     # close the figure
-    #isinteractive() || 
-    plt[:close]("all")
+    isinteractive() || plt[:close]("all")
+    #plt[:close]("all")
     return nothing
 end
 
