@@ -743,3 +743,76 @@ function Mesh(filename::String; verbose::Bool=true, reorder::Bool=false)::Mesh
     return mesh
 end
 
+# Read a meshe from TetGen output files
+export tetreader
+function tetreader(filekey::String)
+    # reading .node file
+    f = open(filekey*".node")
+    data = readlines(f)
+    npoints, ndim, att, hasmarker = parse.(split(data[1]))
+    points = Array{Point,1}(npoints)
+
+    for i=1:npoints
+        pdata = parse.(split(data[i+1]))
+        tag   = hasmarker==1? pdata[end] : ""
+        point = Point(pdata[2], pdata[3], pdata[4], tag)
+        point.id = i
+        points[i] = point
+    end
+
+    # reading .ele file
+    f = open(filekey*".ele")
+    data = readlines(f)
+    ncells, ntetpts, hasatt = parse.(split(data[1]))
+    celltype = ntetpts==4 ? TET4 : TET10
+    cells = Array{Cell,1}(ncells)
+
+    for i=1:ncells
+        cdata = parse.(split(data[i+1]))
+        tag   = hasatt==1? cdata[end] : 0
+        cellpoints = points[cdata[2:ntetpts+1]]
+        cell = Cell(celltype, cellpoints, tag)
+        cell.id = i
+        cells[i] = cell
+    end
+
+    # reading .face file
+    f = open(filekey*".face")
+    data = readlines(f)
+    nfaces, hasmarker = parse.(split(data[1]))
+    nfacepts = ntetpts==4 ? 3 : 6
+    celltype = ntetpts==4 ? TRI3 : TRI6
+    faces = Array{Cell,1}(nfaces)
+
+    for i=1:nfaces
+        fdata = parse.(split(data[i+1]))
+        tag   = hasmarker==1? fdata[end] : 0
+        facepts = points[fdata[2:nfacepts+1]]
+        nfacepts==6 && (facepts = facepts[[1,2,3,6,4,5]])
+        faces[i] = Cell(celltype, facepts, tag)
+    end
+
+    # reading .edge file
+    f    = open(filekey*".edge")
+    data = readlines(f)
+    nedges, hasmarker = parse.(split(data[1]))
+    nedgepts = ntetpts==4 ? 2 : 3
+    celltype = ntetpts==4 ? LIN2 : LIN3
+    edges = Array{Cell,1}(nedges)
+
+    for i=1:nedges
+        edata = parse.(split(data[i+1]))
+        tag   = hasmarker==1? edata[end] : 0
+        edgepts = points[edata[2:nedgepts+1]]
+        edges[i] = Cell(celltype, edgepts, tag)
+    end
+
+    mesh = Mesh()
+    mesh.points = points
+    mesh.cells  = cells
+    mesh.faces  = faces
+    mesh.edges  = edges
+
+    return mesh
+end
+
