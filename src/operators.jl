@@ -5,11 +5,11 @@
 
 Creates a copy of a `block` object.
 """
-Base.copy(bl::BlockTruss) = BlockTruss(copy(bl.coords), bl.conns, shape=bl.shape, tag=bl.tag)
+Base.copy(bl::BlockTruss) = BlockTruss(copy(getcoords(bl.points)), bl.conns, cellshape=bl.cellshape, tag=bl.tag)
 
-Base.copy(bl::Block2D) = Block2D(copy(bl.coords), nx=bl.nx, ny=bl.ny, shape=bl.shape, tag=bl.tag)
+Base.copy(bl::Block2D) = Block2D(copy(getcoords(bl.points)), nx=bl.nx, ny=bl.ny, cellshape=bl.cellshape, tag=bl.tag)
 
-Base.copy(bl::Block3D) = Block3D(copy(bl.coords), nx=bl.nx, ny=bl.ny, nz=bl.nz, shape=bl.shape, tag=bl.tag)
+Base.copy(bl::Block3D) = Block3D(copy(getcoords(bl.points)), nx=bl.nx, ny=bl.ny, nz=bl.nz, cellshape=bl.cellshape, tag=bl.tag)
 
 function Base.copy(bl::Block; dx=0.0, dy=0.0, dz=0.0)
     newbl = copy(bl)
@@ -26,9 +26,11 @@ end
 Changes the coordinates of a `block`. Also returns a reference.
 """
 function move!(bl::Block; dx=0.0, dy=0.0, dz=0.0)
-    bl.coords[:, 1] .+= dx
-    bl.coords[:, 2] .+= dy
-    bl.coords[:, 3] .+= dz
+    for p in bl.points
+        p.x += dx
+        p.y += dy
+        p.z += dz
+    end
     return bl
 end
 
@@ -40,23 +42,31 @@ Changes the coordinates of an array of blocks. Also returns a reference.
 """
 function move!(blocks::Array; dx=0.0, dy=0.0, dz=0.0)
     for bl in blocks
-        bl.coords[:, 1] .+= dx
-        bl.coords[:, 2] .+= dy
-        bl.coords[:, 3] .+= dz
+        for p in bl.points
+            p.x += dx
+            p.y += dy
+            p.z += dz
+        end
     end
     return blocks
 end
 
 
 function scale!(bl::Block; factor=1.0, base=[0.,0,0])
-    bl.coords = ( base .+ factor*(bl.coords' .- base) )'
+    coords = getcoords(bl)
+    coords = ( base .+ factor*(coords' .- base) )'
+
+    for (i,p) in enumerate(bl.points)
+        p.x, p.y, p.z = coords[i,:]
+    end
+
     return bl
 end
 
 
 function scale!(blocks::Array{Block,1}; factor=1.0, base=[0.,0,0])
     for bl in blocks
-        bl.coords = ( base .+ factor*(bl.coords' .- base) )'
+        scale!(bl, factor=factor, base=base)
     end
     return blocks
 end

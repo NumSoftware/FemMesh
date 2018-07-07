@@ -33,6 +33,9 @@ end
 
 ### Point methods
 
+copy(point::Point) = Point(point.x, point.y, point.z, tag)
+copy(points::Array{Point,1}) = [ copy(p) for p in points ]
+
 # The functions below can be used in conjuntion with sort
 get_x(point::Point) = point.x
 get_y(point::Point) = point.y
@@ -53,7 +56,7 @@ function get_point(points::Dict{UInt64,Point}, C::AbstractArray{<:Real})
     return get(points, hs, nothing)
 end
 
-function get_coords(points::Array{Point,1}, ndim::Int64=3)
+function getcoords(points::Array{Point,1}, ndim::Int64=3)
     np = length(points)
     C  = Array{Float64}(np, ndim)
     for i=1:np
@@ -104,7 +107,7 @@ const Face=Cell
 
 Base.hash(c::Cell) = sum(hash(p) for p in c.points)
 
-function get_coords(c::Cell, ndim=3)::Array{Float64,2}
+function getcoords(c::Cell, ndim=3)::Array{Float64,2}
     n = length(c.points)
     C = Array{Float64, 2}(n, ndim)
     for (i,p) in enumerate(c.points)
@@ -373,7 +376,7 @@ function find_cell(X::Array{Float64,1}, cells::Array{Cell,1}, bins::Bins, tol::F
         # Search cell in bin
         bin = bins.bins[ix, iy, iz]
         for cell in bin
-            coords = get_coords(cell)
+            coords = getcoords(cell)
             if is_inside(cell.shape, coords, X, tol) && !(cell in exc_cells)
                 return cell
             end
@@ -458,7 +461,7 @@ function cell_extent(c::Cell)
 
 
     # get coordinates matrix
-    C = get_coords(c)
+    C = getcoords(c)
     J = Array{Float64}(nldim, size(C,2))
 
     # calc metric
