@@ -493,7 +493,7 @@ end
 
 
 # Mount a vector with nodal forces
-function force_bc(mesh::Mesh, E::Float64, nu::Float64, α::Float64)
+function force_bc(mesh::Mesh, E::Float64, nu::Float64, α::Float64, fast::Bool)
     n    = length(mesh.points)
     ndim = mesh.ndim
     Fbc  = zeros(n*ndim)
@@ -521,7 +521,7 @@ function force_bc(mesh::Mesh, E::Float64, nu::Float64, α::Float64)
         K = matrixK(c, ndim, E, nu)
         β = 0.97
 
-        if mesh.qmin>0.9
+        if mesh.qmin>0.9 || fast
             F = K*U
         else
             F = K*U*(β-c.quality)/(β-mesh.qmin)*α
@@ -540,7 +540,7 @@ function force_bc(mesh::Mesh, E::Float64, nu::Float64, α::Float64)
 end
 
 function smooth!(mesh::Mesh; verbose=true, alpha::Float64=0.3, target::Float64=0.97, fixed::Bool=false, maxit::Int64=20, mintol::Float64=1e-3,
-    tol::Float64=1e-4, facetol=1e-5, savesteps::Bool=false, filekey::String="smooth", conds=nothing)
+    tol::Float64=1e-4, facetol=1e-5, savesteps::Bool=false, filekey::String="smooth", conds=nothing, fast=false)
 
     # tol   : tolerance in change of mesh quality for succesive iterations
     # mintol: tolerance in change of worst cell quality in a mesh for succesive iterations
@@ -582,7 +582,7 @@ function smooth!(mesh::Mesh; verbose=true, alpha::Float64=0.3, target::Float64=0
     for i=1:maxit
 
         # Forces vector needed for smoothing
-        F   = vcat( force_bc(mesh, E, nu, alpha), zeros(nbc) )
+        F   = vcat( force_bc(mesh, E, nu, alpha, fast), zeros(nbc) )
 
         # global stiffness plus LM
         K = mountKg(mesh, E, nu, A)

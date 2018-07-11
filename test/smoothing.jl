@@ -26,6 +26,6 @@ smooth!(mesh)
 
 bl = Block2D( [ 1.0 0.0; 2.0 0.0; 0.0 2.0; 0.0 1.0; 1.5 0.0; 1.5 1.5; 0.0 1.5; 0.7 0.7 ], nx=3, ny=6, shape=TRI6)
 mesh = Mesh(bl)
-smooth!(mesh, eps=1e-3, epsmin=1e-2)
+smooth!(mesh, tol=1e-3, mintol=1e-2, fast=true)
 @test mesh.quality ≈ 0.94 atol=1e-2
 
