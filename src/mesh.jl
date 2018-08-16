@@ -20,9 +20,9 @@ type Mesh
     quality::Float64
     qmin   ::Float64 
     # Data
-    #point_scalar_data::Dict{String,Array}
-    #point_vector_data::Dict{String,Array}
-    #cell_scalar_data ::Dict{String,Array}
+    point_scalar_data::Dict{String,Array}
+    cell_scalar_data ::Dict{String,Array}
+    point_vector_data::Dict{String,Array}
 
     function Mesh()
         this = new()
@@ -35,6 +35,10 @@ type Mesh
         this.bins   = Bins()
         this.quality = 0.0
         this.qmin    = 0.0
+
+        this.point_scalar_data = Dict()
+        this.cell_scalar_data  = Dict()
+        this.point_vector_data = Dict()
         return this
     end
 end
@@ -184,10 +188,9 @@ function reorder!(mesh::Mesh; sort_degrees=true, reversed=false)::Void
         return
     end
 
-    N = [ mesh.points[idx] ] # new list of cells
+    N = [ mesh.points[idx] ] # new list of points
     R = [ mesh.points[idx] ] # first levelset
-
-    R0 = [ ] # to be the last levelset
+    L = [ ] # to be the last levelset
 
     while length(N) < npoints
         # Generating current levelset A
@@ -195,7 +198,7 @@ function reorder!(mesh::Mesh; sort_degrees=true, reversed=false)::Void
 
         for p in R
             for q in neighs[p.id]
-                if q in R0 || q in R continue end
+                if q in L || q in R continue end
                 push!(A, q)
             end
         end
@@ -208,7 +211,7 @@ function reorder!(mesh::Mesh; sort_degrees=true, reversed=false)::Void
         end
 
         append!(N, RA)
-        R0 = R
+        L = copy(R)
         R  = A
     end
 
@@ -311,9 +314,19 @@ function Mesh(items::Union{Block, Mesh, Array}...; verbose::Bool=true, genfacets
         if isa(item, Block)
             push!(blocks, item)
         elseif isa(item, Mesh)
-            append!(mesh.points, item.points)
-            append!(mesh.cells, item.cells)
-            mesh.bpoints = merge(mesh.bpoints, item.bpoints)
+            cmesh = copy(item)
+
+            mesh.cells = append!(mesh.cells, cmesh.cells)
+            dpoints = Dict( hash(p) => p for p in [mesh.points; cmesh.points] )
+
+            # fix connectivities at mesh boundaries
+            for c in mesh.cells
+                for (i,p) in enumerate(c.points)
+                    c.points[i] = dpoints[hash(p)]
+                end
+            end
+            mesh.points = collect(values(dpoints))
+            #mesh.bpoints = merge(mesh.bpoints, cmesh.bpoints)  # TODO: fix it, no warranty which points remain (from 1st or 2nd array)
         else
             error("Mesh: item of type $(typeof(item)) cannot be used as Block or Mesh")
         end
@@ -381,8 +394,7 @@ function Mesh(cells::Array{Cell,1})
     return mesh
 end
 
-import Base.convert
-function convert(::Type{UnstructuredGrid}, mesh::Mesh)
+function Base.convert(::Type{UnstructuredGrid}, mesh::Mesh)
     npoints = length(mesh.points)
     ncells  = length(mesh.cells)
 
@@ -400,7 +412,7 @@ function convert(::Type{UnstructuredGrid}, mesh::Mesh)
     point_ids = [ P.id for P in mesh.points ]
 
     # cell data
-    cell_scalar_data = Dict()
+    cell_scalar_data = copy(mesh.cell_scalar_data)
     # cell id
     cell_scalar_data["cell-id"] = [ C.id for C in mesh.cells ]
     # cell quality
@@ -411,13 +423,17 @@ function convert(::Type{UnstructuredGrid}, mesh::Mesh)
         cell_scalar_data["crossed"] = Int.(cell_crs)
     end
 
+    point_scalar_data = copy(mesh.point_scalar_data)
+    point_scalar_data["point-id"] = point_ids
+    point_vector_data = copy(mesh.point_vector_data)
+
     # title
     title = "FemMesh output"
 
     return UnstructuredGrid(title, points, cells, cell_tys,
-                                 point_scalar_data = Dict("point-id"=>point_ids),
+                                 point_scalar_data = point_scalar_data,
+                                 point_vector_data = point_vector_data,
                                  cell_scalar_data  = cell_scalar_data)
-
 end
 
 
@@ -479,6 +495,11 @@ function read_mesh_vtk(filename::String, verbose::Bool=false)
         cell  = Cell(shape, conn)
         push!(mesh.cells, cell)
     end
+
+    # Setting data
+    mesh.point_scalar_data = vtk_data.point_scalar_data
+    mesh.point_vector_data = vtk_data.point_vector_data
+    mesh.cell_scalar_data  = vtk_data.cell_scalar_data
 
     # Fix shape for polyvertex cells
     if has_polyvertex
