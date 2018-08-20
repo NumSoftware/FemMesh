@@ -189,30 +189,31 @@ function reorder!(mesh::Mesh; sort_degrees=true, reversed=false)::Void
     end
 
     N = [ mesh.points[idx] ] # new list of points
-    R = [ mesh.points[idx] ] # first levelset
-    L = [ ] # to be the last levelset
+    L = Dict{Int64,Point}()  # last levelset. Use ids as keys instead of hash to avoid collisions of points with same coordinates
+    L[idx] = mesh.points[idx]
+    LL = Dict{Int64,Point}()  # levelset before the last one
 
     while length(N) < npoints
         # Generating current levelset A
-        A = Set{Point}([ ])
+        A = Dict{Int64,Point}() 
 
-        for p in R
+        for p in values(L)
             for q in neighs[p.id]
-                if q in L || q in R continue end
-                push!(A, q)
+                (haskey(L, q.id) || haskey(LL, q.id)) && continue
+                #haskey(A, q.id) && continue
+                A[q.id] = q
             end
         end
         
-        # Convert set A into an array RA
-        RA = collect(A)
+        # Convert A into an array RA
+        RA = collect(values(A))
         if sort_degrees
             D  = [ degrees[point.id] for point in RA ]
             RA = RA[sortperm(D)]
         end
 
         append!(N, RA)
-        L = copy(R)
-        R  = A
+        LL, L = L, A
     end
 
     # Reverse list of new nodes
@@ -280,6 +281,44 @@ function quality!(mesh::Mesh)::Void
     return nothing
 end
 
+# Adds m2 to m1
+function join_mesh!(m1::Mesh, m2::Mesh)
+    pid = length(m1.points)
+    cid = length(m1.cells)
+
+    # Add new points from m2
+    for p in m2.points
+        hs = hash(p)
+        if !haskey(m1.bpoints, hs)
+            pid += 1
+            p.id = pid
+            push!(m1.points, p)
+        end
+    end
+
+    # Fix m2 cells connectivities for points at m1 border
+    for c in m2.cells
+        for (i,p) in enumerate(c.points)
+            hs = hash(p)
+            if haskey(m1.bpoints, hs)
+                p = m1.bpoints[hs]
+                c.points[i] = p
+            else
+                # update bpoints dict
+                if haskey(m2.bpoints, hs)
+                    m1.bpoints[hs] = p
+                end
+            end
+        end
+
+        cid += 1
+        c.id = cid
+        push!(m1.cells, c)
+    end
+
+    return nothing
+end
+
 # flattens a list of nested lists
 function flatten(x, y)
     ty = typeof(x)
@@ -302,44 +341,39 @@ Generates a mesh based on an array of geometry blocks
 """
 function Mesh(items::Union{Block, Mesh, Array}...; verbose::Bool=true, genfacets::Bool=true, genedges::Bool=true, reorder=true)
 
-    # New mesh object
-    mesh = Mesh()
-
     # Flatten items list
     fitems = flatten(items)
 
     # Get list of blocks and update mesh objects
     blocks = []
+    meshes = []
     for item in fitems
         if isa(item, Block)
             push!(blocks, item)
         elseif isa(item, Mesh)
-            cmesh = copy(item)
-
-            mesh.cells = append!(mesh.cells, cmesh.cells)
-            dpoints = Dict( hash(p) => p for p in [mesh.points; cmesh.points] )
-
-            # fix connectivities at mesh boundaries
-            for c in mesh.cells
-                for (i,p) in enumerate(c.points)
-                    c.points[i] = dpoints[hash(p)]
-                end
-            end
-            mesh.points = collect(values(dpoints))
-            #mesh.bpoints = merge(mesh.bpoints, cmesh.bpoints)  # TODO: fix it, no warranty which points remain (from 1st or 2nd array)
+            push!(meshes, copy(item))
         else
             error("Mesh: item of type $(typeof(item)) cannot be used as Block or Mesh")
         end
     end
 
+    nmeshes = length(meshes)
     nblocks = length(blocks)
     if verbose
         print_with_color(:cyan, "Mesh generation:\n", bold=true)
-        #println("  analyzing $nblocks block(s)") 
+        nmeshes>0 && @printf "  %5d meshes\n" nmeshes
+        @printf "  %5d blocks\n" nblocks
+    end
+
+    # New mesh object
+    mesh = Mesh()
+
+    # Join meshes
+    for m in meshes
+        join_mesh!(mesh, m)
     end
 
     # Split blocks: generates points and cells
-    @printf "  %5d blocks\n" nblocks
     for (i,b) in enumerate(blocks)
         b.id = i
         split_block(b, mesh)
@@ -516,6 +550,7 @@ function read_mesh_vtk(filename::String, verbose::Bool=false)
                 n = length(cell.points)
                 # look for joints1D and fix shape
                 if n>=5
+                    # check if cell is related to a JLINK2
                     hss = hash( [ cell.points[i] for i=1:n-2] )
                     if haskey(cdict, hss) 
                         cell.shape = JLINK2
@@ -527,6 +562,7 @@ function read_mesh_vtk(filename::String, verbose::Bool=false)
                         continue
                     end
 
+                    # check if cell is related to a JLINK3
                     hss = hash( [ cell.points[i] for i=1:n-3] )
                     if haskey(cdict, hss) 
                         cell.shape = JLINK3
@@ -541,35 +577,38 @@ function read_mesh_vtk(filename::String, verbose::Bool=false)
 
                 # look for conventional joints and fix shape
                 if n%2==0 && n>=4
-                    delta = 0.0
+                    isjoint = true
                     for i=1:div(n,2)
                         p1 = cell.points[i]
                         p2 = cell.points[div(n,2)+i]
-                        delta += abs(p1.x - p2.x) + abs(p1.y - p2.y) + abs(p1.z - p2.z)
+                        if hash(p1) != hash(p2) 
+                            isjoint = false
+                            break
+                        end
                     end
-                    if delta<1e-10
-                        cell.shape = get_shape_from_vtk(VTK_POLY_VERTEX, n, ndim)
+                    if isjoint
+                        cell.shape = get_shape_from_vtk(VTK_POLY_VERTEX, n, ndim, 2)
                         continue
                     end
                 end
 
-                # look for joint elements (with 2 or 3 layers)
-                # TODO
-                #=
+                # look for joint elements with 3 layers and fix shape
                 if n%3==0 && n>=6
-                    string = div(n,3)
+                    stride= div(n,3)
                     delta = 0.0
                     for i=1:stride
                         p1 = cell.points[i]
                         p2 = cell.points[stride+i]
-                        delta += abs(p1.x - p2.x) + abs(p1.y - p2.y) + abs(p1.z - p2.z)
+                        if hash(p1) != hash(p2) 
+                            isjoint = false
+                            break
+                        end
                     end
-                    if delta<1e-10
-                        cell.shape = get_shape_from_vtk(VTK_POLY_VERTEX, 2*stride, ndim, pointlayers=3)
+                    if isjoint
+                        cell.shape = get_shape_from_vtk(VTK_POLY_VERTEX, n, ndim, 3)
                         continue
                     end
                 end
-                =#
 
                 # remaining polyvertex cells
                 cell.shape = get_shape_from_vtk(VTK_POLY_VERTEX, n, ndim)
@@ -764,7 +803,7 @@ function Mesh(filename::String; verbose::Bool=true, reorder::Bool=false)::Mesh
     return mesh
 end
 
-# Read a meshe from TetGen output files
+# Read a mesh from TetGen output files
 export tetreader
 function tetreader(filekey::String)
     # reading .node file

@@ -125,7 +125,7 @@ function save_vtk(vtk_data::UnstructuredGrid, filename::String)
     return nothing
 end
 
-function read_ugrid_vtk(filename::String)
+function read_ugrid_vtk_old(filename::String)
     file = open(filename)
 
     # read nodal information
@@ -195,10 +195,156 @@ function read_ugrid_vtk(filename::String)
 
     # read data
     # TODO
+    #while data[idx] != "POINT_DATA"
+        #idx += 1
+    #end
+    #idx += 2
+#
+    #while true
+        #data[idx] == "CELL_DATA" && break
+    #end
+#
+    #if data[idx] == "CELL_DATA" 
+        #idx += 2
+    #end
+
+
 
     # end of reading
     close(file)
 
     vtk_data = UnstructuredGrid("VTK unstructured grid", points, cells, cell_types)
+    return vtk_data
+end
+
+
+function read_ugrid_vtk(filename::String)
+    file = open(filename)
+
+    # read nodal information
+    alltext = readstring(filename)
+    data    = split(alltext)
+    close(file)
+
+    local points, cells, cell_types
+    point_scalar_data = Dict{String,Array}()
+    point_vector_data = Dict{String,Array}()
+    cell_scalar_data  = Dict{String,Array}()
+    reading_point_data = false
+    reading_cell_data  = false
+
+    TYPES = Dict("float32"=>Float32, "float64"=>Float64, "int"=>Int64)
+
+    idx = 1
+    while idx<=length(data)
+        if data[idx] == "DATASET"
+            gridtype = data[idx+1]
+            gridtype == "UNSTRUCTURED_GRID" || error("load_VTK_unstructured_grid: this reader only support files of VTK UNSTRUCTURED_GRID")
+        end
+
+        # read points
+        if data[idx] == "POINTS"
+            npoints = parse(data[idx+1]) # read number of points
+            points  = zeros(npoints,3)
+            idx += 2
+            for i=1:npoints
+                points[i,1] = parse(Float64, data[idx+1])
+                points[i,2] = parse(Float64, data[idx+2])
+                points[i,3] = parse(Float64, data[idx+3])
+                idx += 3
+            end
+        end
+
+        # read cells connectivities
+        if data[idx] == "CELLS"
+            ncells = parse(data[idx+1])
+            ncdata = parse(data[idx+2])
+            idx += 2
+
+            cells = Array{Int,1}[]
+            for i=1:ncells
+                npoints = parse(data[idx+1])
+                idx += 1
+                conn = Int[]
+                for j=1:npoints
+                    idx += 1
+                    #@show data[idx]
+                    id = parse(data[idx]) + 1
+                    push!(conn, id)
+                end
+                push!(cells, conn)
+            end
+        end
+
+        # read type of cells
+        if data[idx] == "CELL_TYPES"
+            idx += 1
+            cell_types = Int[]
+            for i=1:ncells
+                idx += 1
+                vtk_shape = VTKCellType(parse(data[idx]))
+                push!(cell_types, vtk_shape)
+            end
+        end
+
+        if data[idx] == "POINT_DATA"
+            idx += 1
+            reading_point_data = true
+            reading_cell_data  = false
+        end
+
+        if data[idx] == "VECTORS" && reading_point_data
+            label = data[idx+1]
+            @show label
+            idx += 2
+            vectors = zeros(npoints,3)
+            for i=1:npoints
+                vectors[i,1] = parse(Float64, data[idx+1])
+                vectors[i,2] = parse(Float64, data[idx+2])
+                vectors[i,3] = parse(Float64, data[idx+3])
+                idx += 3
+            end
+            point_vector_data[label] = vectors
+        end
+
+        if data[idx] == "SCALARS" && reading_point_data
+            label = data[idx+1]
+            ty = data[idx+2]
+            idx += 5
+            scalars = zeros(TYPES[ty], npoints)
+            for i=1:npoints
+                idx += 1
+                scalars[i] = parse(TYPES[ty], data[idx])
+            end
+            point_scalar_data[label] = scalars
+        end
+
+        if data[idx] == "CELL_DATA"
+            idx += 1
+            reading_cell_data  = true
+            reading_point_data = false
+        end
+
+        if data[idx] == "SCALARS" && reading_cell_data
+            label = data[idx+1]
+            ty = data[idx+2]
+            idx += 5
+            scalars = zeros(TYPES[ty], npoints)
+            for i=1:npoints
+                idx += 1
+                scalars[i] = parse(TYPES[ty], data[idx])
+            end
+            cell_scalar_data[label] = scalars
+        end
+
+        idx += 1
+
+    end
+
+    vtk_data = UnstructuredGrid("VTK unstructured grid", points, cells, cell_types, 
+                                point_scalar_data=point_scalar_data,
+                                point_vector_data=point_vector_data,
+                                cell_scalar_data =cell_scalar_data)
+
     return vtk_data
 end

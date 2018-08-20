@@ -27,7 +27,7 @@ function generate_joints!(mesh::Mesh; inner_points::Bool=false)
     # Splitting
     for c in solids
         for (i,p) in enumerate(c.points)
-            newp = Point(p.x, p.y, p.z)
+            newp = Point([p.x, p.y, p.z])
             push!(newpoints, newp)
             c.points[i] = newp
         end
@@ -94,18 +94,31 @@ function generate_joints!(mesh::Mesh; inner_points::Bool=false)
 
     # Generate inner points at joints (used in hydromechanical analyses)
     if inner_points
-        node_dict = Dict( hash(p) => p for p in mesh.points ) # a dict with original points
         for jcell in jcells
             npts = div(length(jcell.points),2) # number of points in one side
             side_pts = jcell.points[1:npts]
             for p in side_pts
-                push!(jcell.points, node_dict[hash(p)])
+                newp = Point(p.x, p.y, p.z)
+                push!(newpoints, newp)
+                push!(jcell.points, newp)
             end
         end
     end
 
     mesh.cells  = vcat(cells, jcells)
-    mesh.points = collect(Set(p for c in mesh.cells for p in c.points))
+
+    # Get points from non-separated cells
+    points_dict = Dict{UInt64, Point}()
+    for c in mesh.cells
+        if !(c.shape.family in (SOLID_SHAPE, JOINT_SHAPE))
+            for p in c.points
+                points_dict[hash(p)] = p
+            end
+        end
+    end
+
+    # Get points from solid and joint cells
+    mesh.points = [ collect(values(points_dict)); newpoints ]
 
     # check for generation of edges
     genedges = length(mesh.edges) > 0
@@ -113,7 +126,7 @@ function generate_joints!(mesh::Mesh; inner_points::Bool=false)
 
     # update and reorder mesh
     update!(mesh, genedges=genedges)
-    reorder!(mesh)
+    #reorder!(mesh)
 
     return mesh
     

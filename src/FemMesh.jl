@@ -18,13 +18,14 @@ copy, move!, array, rotate!, polar, extrude.
 
 """
 module FemMesh
-using JSON
+using JSON, DataStructures
 
 # Mesh module
 include("tools/linalg.jl")
 include("tools/expr.jl")
 include("tools/show.jl")
 include("tools/iteration.jl")
+include("tools/table.jl")
 export unfold
 
 # Generic exports

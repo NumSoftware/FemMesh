@@ -177,12 +177,23 @@ end
 using PyCall # required
 
 function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true, 
-               pointmarkers=false, pointlabels=false, celllabels=false, elev=30, azim=45,
-               fieldlims=nothing, cmap=nothing, field=nothing, alpha=1.0, warpscale=0.0)
+               pointmarkers=false, pointlabels=false, arrows=false, arrowsfield=nothing, celllabels=false, 
+               fieldlims=nothing, cmap=nothing, field=nothing, alpha=1.0, warpscale=0.0, highlightcell=0,
+               elev=30.0, azim=45.0, dist=10.0)
 
     @eval import PyPlot:plt, matplotlib, figure, art3D, Axes3D
 
-    plt[:rc]("font", family="serif", size=10)
+
+    plt[:close]("all")
+
+    plt[:rc]("font", family="serif", size=7)
+    plt[:rc]("lines", lw=0.5)
+    plt[:rc]("legend", fontsize=7)
+    #if ndim==2
+        plt[:rc]("figure", figsize=(4, 3))
+    #else
+        #plt[:rc]("figure", figsize=(5, 3))
+    #end
 
     ndim = all(p->p==0.0, ugrid.points[:,3]) ? 2: 3
     ncells = length(ugrid.cells)
@@ -303,12 +314,13 @@ function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true,
 
         #cltn = art3D[:Poly3DCollection](all_verts, cmap=cmap, facecolor="aliceblue", edgecolor="black", lw=2)
         cltn = @eval art3D[:Poly3DCollection]($all_verts, cmap=$cmap, facecolor="aliceblue", edgecolor="black",
-                                              lw=1., alpha=$alpha)
+                                              lw=0.5, alpha=$alpha)
 
         if has_field
             cltn[:set_array](fvals)
             cltn[:set_clim](fieldlims)
-            plt[:colorbar](cltn, label=field, shrink=0.7)
+            cbar = plt[:colorbar](cltn, label=field, shrink=0.9)
+            cbar[:ax][:tick_params](labelsize=7)
         end
         @eval $ax[:add_collection3d]($cltn)
 
@@ -317,7 +329,7 @@ function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true,
         for i=1:ncells
             ctype = ugrid.cell_types[i]
             ctype in (3,21,5,22,9,23,28) || continue
-            lw = ugrid.cell_types[i] in (3,21)? 1 : 0.5
+            lw = ugrid.cell_types[i] in (3,21)? 1.0 : 0.5
             
             con = ugrid.cells[i]
             points = [ XYZ[i,1:2] for i in con ]
@@ -326,13 +338,20 @@ function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true,
             patch = matplotlib[:patches][:PathPatch](path, lw=lw)
             push!(all_patches, patch)
 
+            if highlightcell==i
+                patch = matplotlib[:patches][:PathPatch](path, facecolor="cadetblue", lw=lw, edgecolor="black")
+                ax[:add_patch](patch)
+            end
+
         end
         cltn = matplotlib[:collections][:PatchCollection](all_patches, cmap=cmap, edgecolor="black", 
-                                                          facecolor="aliceblue", lw=1)
+                                                          facecolor="aliceblue")
         if has_field
             cltn[:set_array](fvals)
             cltn[:set_clim](fieldlims)
-            plt[:colorbar](cltn, label=field, shrink=0.7)
+            cbar = plt[:colorbar](cltn, label=field, shrink=0.9)
+            cbar[:ax][:tick_params](labelsize=7)
+            cbar[:outline][:set_linewidth](0.5)
         end
         ax[:add_collection](cltn)
     end
@@ -343,6 +362,19 @@ function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true,
             ax[:scatter](X, Y, Z, color="k", marker="o")
         else
             plt[:plot](X, Y, color="black", marker="o", markersize=4, lw=0)
+        end
+    end
+
+    # Draw arrows
+    if arrows && ndim==2
+        max_length = 1.0
+        scale = 0.1*L/max_length
+        #@show keys(ugrid.point_vector_data)
+        data  = ugrid.point_vector_data[arrowsfield]
+        @show data
+        for i=1:npoints
+            dx, dy, dz = scale*data[i,:]
+            plt[:arrow](X[i], Y[i], X[i]+dx, Y[i]+dy, color="blue")
         end
     end
 
@@ -367,20 +399,24 @@ function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true,
             coo = ugrid.points[ ugrid.cells[i], : ]
             x = mean(coo[:,1])
             y = mean(coo[:,2])
-            ax[:text](x, y, i, va="top", ha="left", color="blue", backgroundcolor="none")
+            ax[:text](x, y, i, va="top", ha="left", color="blue", backgroundcolor="none", size=8)
         end
     end
 
-    ndim==3 && ax[:view_init](elev=elev, azim=azim)
+    if ndim==3 
+        ax[:view_init](elev=elev, azim=azim)
+        ax[:dist] = dist
+    end
 
     if filename==""
         plt[:show]()
     else
-        plt[:savefig](filename, bbox_inches="tight", pad_inches=0.25, format="pdf")
+        plt[:savefig](filename, bbox_inches="tight", pad_inches=0.00, format="pdf")
     end
 
     # close the figure
-    isinteractive() || plt[:close]("all")
+    plt[:isinteractive]() || plt[:close]("all")
+    #isinteractive() || plt[:close]("all")
     #plt[:close]("all")
     return nothing
 end

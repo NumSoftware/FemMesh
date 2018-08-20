@@ -43,6 +43,8 @@ get_z(point::Point) = point.z
 Base.hash(p::Point) = hash( (p.x, p.y, p.z) ) 
 Base.hash(points::Array{Point,1}) = sum(hash(p) for p in points)
 
+Base.:(==)(p1::Point, p2::Point) = hash(p1)==hash(p2)
+
 getcoords(p::Point) = [p.x, p.y, p.z]
 
 # Sentinel instance for not found point

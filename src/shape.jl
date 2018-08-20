@@ -65,23 +65,24 @@ end
 
 # Available shape types
 const VTK2SHAPE = Dict{VTKCellType,ShapeType}(
-    VTK_POLY_VERTEX                      => POLYV,
-    VTK_LINE                             => LIN2,
-    VTK_TRIANGLE                         => TRI3,
-    VTK_QUAD                             => QUAD4,
-    VTK_PYRAMID                          => PYR5,
-    VTK_TETRA                            => TET4,
-    VTK_HEXAHEDRON                       => HEX8,
-    VTK_WEDGE                            => WED6,
-    VTK_QUADRATIC_EDGE                   => LIN3,
-    VTK_QUADRATIC_TRIANGLE               => TRI6,
-    VTK_QUADRATIC_QUAD                   => QUAD8,
-    VTK_QUADRATIC_TETRA                  => TET10,
-    VTK_QUADRATIC_HEXAHEDRON             => HEX20,
-    VTK_QUADRATIC_WEDGE                  => WED15,
-    VTK_BIQUADRATIC_QUAD                 => QUAD9
+    VTK_POLY_VERTEX          => POLYV,
+    VTK_LINE                 => LIN2,
+    VTK_TRIANGLE             => TRI3,
+    VTK_QUAD                 => QUAD4,
+    VTK_PYRAMID              => PYR5,
+    VTK_TETRA                => TET4,
+    VTK_HEXAHEDRON           => HEX8,
+    VTK_WEDGE                => WED6,
+    VTK_QUADRATIC_EDGE       => LIN3,
+    VTK_QUADRATIC_TRIANGLE   => TRI6,
+    VTK_QUADRATIC_QUAD       => QUAD8,
+    VTK_QUADRATIC_TETRA      => TET10,
+    VTK_QUADRATIC_HEXAHEDRON => HEX20,
+    VTK_QUADRATIC_WEDGE      => WED15,
+    VTK_BIQUADRATIC_QUAD     => QUAD9
 )
 
+# All bulk cell shapes
 const ALL_SHAPES = [
     LIN2
     LIN3
@@ -102,29 +103,61 @@ const ALL_SHAPES = [
 ]
 
 
-function get_shape_from_vtk(vtk_type::VTKCellType, npoints::Int64, ndim::Int64)::ShapeType
+function get_shape_from_vtk(vtk_type::VTKCellType, npoints::Int64, ndim::Int64, layers::Int64=0)::ShapeType
+    # vtk_type: VTK cell code
+    # npoints : total number of cell points
+    # ndim    : analysis dimension
+    # layers  : number of layers for joint elements
 
-    if vtk_type!=VTK_POLY_VERTEX return VTK2SHAPE[vtk_type] end
+    vtk_type!=VTK_POLY_VERTEX && return VTK2SHAPE[vtk_type]
 
+    # Check if it is a joint cell with layers
+    if layers in (2,3)
+        # dictionary (ndim,nfpoints) => basic_shape
+        shapedict = Dict( (2,2)=>:LIN2, (2,3)=>:LIN3, (2,4)=>:LIN4, (3,3)=>:TRI3, (3,4)=>:QUAD4, (3,6)=>:TRI6, (3,8)=>:QUAD8 )
+        nfpoints = div(npoints,layers)
+        if haskey(shapedict, (ndim, nfpoints))
+            numstr = layers==3?"3":""
+            shape = Symbol("J$(numstr)$(shapedict[(ndim, nfpoints)])")
+            return eval(shape)
+        end
+
+        #=
+        if npoints==4 
+            ndim==2 && layers==2 && return JLIN2
+        elseif npoints==6   
+            ndim==2 && layers==2 && return JLIN3
+            ndim==3 && layers==2 && return JTRI3
+            ndim==2 && layers==3 && return J3LIN2
+        elseif npoints==8
+            ndim==2 && layers==2 && return JLIN4 
+            ndim==3 && layers==2 && return JQUAD4
+        elseif npoints==9   
+            ndim==2 && layers==3 && return J3LIN3
+            ndim==3 && layers==3 && return J3TRI3
+        elseif npoints==12  
+            ndim==3 && layers==2 && return JTRI6 
+            ndim==2 && layers==3 && return J3LIN4
+            ndim==3 && layers==3 && return J3QUAD4 
+        elseif npoints==16
+            ndim==3 && layers==2 && return JQUAD8 
+        elseif npoints==18
+            ndim==3 && layers==3 && return J3TRI6
+        elseif npoints==24  
+            ndim==3 && layers==3 && return J3QUAD8
+        end
+        =#
+    end
+
+    # Check for other cells
     if     npoints==2   return JLINK2
     elseif npoints==3   return JLINK3
-    elseif npoints==4   return JLIN2
-    elseif npoints==6   
-        if ndim==2 return JLIN3 end
-        if ndim==3 return JTRI3 end
-    elseif npoints==8
-        if ndim==2 return JLIN4  end
-        if ndim==3 return JQUAD4 end
     elseif npoints==9   return TRI9
     elseif npoints==10  return TRI10
     elseif npoints==12  
         #if ndim==2 return QUAD12 end
-        if ndim==3 return JTRI6  end
     elseif npoints==16
         if ndim==2 return QUAD16 end
-        if ndim==3 return JQUAD8 end
-    #elseif npoints==18  return JTRI9
-    #elseif npoints==20  return JTRI10
     end
 
     error("get_shape_from_vtk: Unknown shape for vtk_type $vtk_type and npoints $npoints with ndim $ndim")

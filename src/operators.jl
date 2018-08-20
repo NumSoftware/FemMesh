@@ -1,5 +1,9 @@
 # This file is part of FemMesh package. See copyright license in https://github.com/NumSoftware/FemMesh
 
+
+Base.copy(p::Point) = Point(p.x, p.y, p.z, p.tag)
+Base.copy(c::Cell)  = Cell(c.shape, c.points, c.tag, c.ocell)
+
 """
 `copy(block)` 
 
@@ -18,6 +22,22 @@ end
 
 function Base.copy(bls::Array{<:Block,1}; dx=0.0, dy=0.0, dz=0.0)
     return [ copy(obj, dx=dx, dy=dy, dz=dz) for obj in bls ]
+end
+
+
+function Base.copy(mesh::Mesh)
+    newmesh = Mesh()
+    newmesh.ndim = mesh.ndim
+    newmesh.points = copy.(mesh.points)
+    newmesh.cells  = copy.(mesh.cells)
+    for c in newmesh.cells
+        ids = [ p.id for p in c.points ]
+        c.points = newmesh.points[ids]
+    end
+
+    newmesh.bpoints = Dict( k => newmesh.points[p.id] for (k,p) in mesh.bpoints )
+    update!(newmesh)
+    return newmesh
 end
 
 """
@@ -99,8 +119,50 @@ function mirror(block::Block; face=[0. 0 0; 0 1 0; 0 0 1])
     return bl
 end
 
-function mirror(blocks::Array{Block,1}; face=[0. 0 0; 0 1 0; 0 0 1])
+function mirror(blocks::Array{<:Block,1}; face=[0. 0 0; 0 1 0; 0 0 1])
     return [ mirror(bl, face=face) for bl in blocks ]
+end
+
+
+function mirror(mesh::Mesh; face=[0. 0 0; 0 1 0; 0 0 1])
+    nr, nc = size(face)
+    if nc==2
+        face = [ face zeros(nr) ]
+    end
+    if nr==2
+        face = [ face; [face[1,1] face[1,2] 1.0] ]
+    end
+    p1 = face[1,:]
+    p2 = face[2,:]
+    p3 = face[3,:]
+    normal = cross(p2-p1, p3-p1)
+    normal = normal/norm(normal)
+
+    # copy mesh
+    newmesh = copy(mesh)
+
+    # mirror
+    coords = get_coords(newmesh.points) 
+    distances = (coords .- p1')*normal       # d = n^.(xi - xp)
+    coords    = coords .- 2*distances.*normal'  # xi = xi - 2*d*n^
+
+    # updating points
+    for (i,p) in enumerate(newmesh.points)
+        p.x = coords[i,1]
+        p.y = coords[i,2]
+        p.z = coords[i,3]
+    end
+
+    # fix connectivities
+    for c in newmesh.cells
+        if c.shape==HEX8
+            idxs = [ 5:8; 1:4 ]
+            c.points = c.points[idxs]
+        end
+    end
+
+    update!(newmesh)
+    return newmesh
 end
 
 
