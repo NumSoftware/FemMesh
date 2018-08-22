@@ -18,13 +18,17 @@ function joint_shape(shape::ShapeType)
 end
 
 # Adds joint cells over all shared faces
-function generate_joints!(mesh::Mesh; inner_points::Bool=false)
+function generate_joints!(mesh::Mesh; layers::Int64=2, verbose::Bool=true)
+
+    verbose && print_with_color(:cyan, "Mesh generation of joint elements:\n", bold=true)
     cells  = mesh.cells
-    solids = filter(c -> c.shape.family==SOLID_SHAPE, cells)
+
+    any(c.shape.family==JOINT_SHAPE for c in cells) && error("generate_joints!: mesh already contains joint elements.")
+    solids = [ c for c in cells if c.shape.family==SOLID_SHAPE ]
 
     newpoints = Point[]
 
-    # Splitting
+    # Splitting: generating new points
     for c in solids
         for (i,p) in enumerate(c.points)
             newp = Point([p.x, p.y, p.z])
@@ -74,26 +78,8 @@ function generate_joints!(mesh::Mesh; inner_points::Bool=false)
         push!(jcells, cell)
     end
 
-    # Fix 1d joint elements
-    cdict = Dict{UInt64, Cell}()
-    for c in solids
-        if c.crossed
-            cdict[ hash(c) ] = c
-        end
-    end
-
-    for c in cells
-        if c.shape in (JLINK2, JLINK3)
-            njpoints = c.shape==JLINK2? 2 : 3
-            ncpoints = length(c.points) - njpoints  # number of points of crossed cell
-            hs    = sum([ hash(p) for p in c.points[1:ncpoints]])
-            ccell = cdict[hs]  # crossed cell
-            c.points[1:ncpoints] = ccell.points[:] # replace link cell connectivities
-        end
-    end
-
     # Generate inner points at joints (used in hydromechanical analyses)
-    if inner_points
+    if layers==3
         for jcell in jcells
             npts = div(length(jcell.points),2) # number of points in one side
             side_pts = jcell.points[1:npts]
@@ -105,28 +91,46 @@ function generate_joints!(mesh::Mesh; inner_points::Bool=false)
         end
     end
 
-    mesh.cells  = vcat(cells, jcells)
+    # Fix JOINT1D_SHAPE cells connectivities
+    for c in cells
+        c.shape.family != JOINT1D_SHAPE && continue
+        scell = c.linked_cells[1]
+        nspts = length(scell.points)
+        c.points[1:nspts] .= scell.points
+    end
+
 
     # Get points from non-separated cells
     points_dict = Dict{UInt64, Point}()
     for c in mesh.cells
-        if !(c.shape.family in (SOLID_SHAPE, JOINT_SHAPE))
-            for p in c.points
-                points_dict[hash(p)] = p
-            end
+        c.shape.family == SOLID_SHAPE && continue # skip because they have points with same coordinates
+        c.shape.family == JOINT1D_SHAPE && continue # skip because their points were already considered
+        for p in c.points
+            points_dict[hash(p)] = p
         end
     end
+
+    # Add new cells
+    mesh.cells  = vcat(cells, jcells)
 
     # Get points from solid and joint cells
     mesh.points = [ collect(values(points_dict)); newpoints ]
 
-    # check for generation of edges
-    genedges = length(mesh.edges) > 0
-    mesh.edges = []
-
     # update and reorder mesh
-    update!(mesh, genedges=genedges)
-    #reorder!(mesh)
+    update!(mesh, verbose=verbose)
+    reorder!(mesh)
+
+    if verbose
+        @printf "  %4dd mesh                             \n" mesh.ndim
+        @printf "  %5d points\n" length(mesh.points)
+        @printf "  %5d total cells\n" length(mesh.cells)
+        @printf "  %5d new joint cells\n" length(jcells)
+        nfaces = length(mesh.faces)
+        nfaces>0 && @printf("  %5d faces\n", nfaces)
+        nedges = length(mesh.edges)
+        nedges>0 && @printf("  %5d edges\n", nedges)
+        println("  done.")
+    end
 
     return mesh
     
@@ -183,7 +187,7 @@ function generate_joints_candidate!(mesh::Mesh, expr::Expr, tag::TagType="") # T
 
     in_idxs  = [ face.id for face in faces ]
     out_idxs = setdiff(1:length(face_pairs), in_idxs) 
-    @show out_idxs
+    #@show out_idxs
 
     # Generating new points
     for fp in face_pairs[in_idxs]

@@ -138,7 +138,7 @@ function reorder!(mesh::Mesh; sort_degrees=true, reversed=false)::Void
 
         # joint1D cells (semi-embedded approach)
         if cell.shape in (JLINK2, JLINK3)
-            edge = Cell(LIN2, [ cell.points[1], cell.points[end-1] ])
+            edge = Cell(POLYV, [ cell.points[1], cell.points[end-1] ])
             hs = hash(edge)
             all_edges[hs] = edge
             continue
@@ -155,28 +155,36 @@ function reorder!(mesh::Mesh; sort_degrees=true, reversed=false)::Void
 
         # all other cells
         edge = Cell(cell.shape, cell.points)
+        #@show cell.shape.name
+        #@show [p.id for p in edge.points]
         hs = hash(edge)
         all_edges[hs] = edge
 
     end
 
-    # Get points neighbors
+    #@show mesh.points[3]
+    #@show mesh.points[5]
+    #@show mesh.points[6]
+
+    # Get neighbors ids
     npoints = length(mesh.points)
-    neighs  = Array{Point}[ [] for i in 1:npoints  ]
+    neighs_ids = Array{Int64}[ [] for i in 1:npoints ]
 
     for edge in values(all_edges)
         points = edge.points
         np = length(points)
         for i=1:np-1
             for j=i+1:np
-                push!(neighs[points[i].id], points[j])
-                push!(neighs[points[j].id], points[i])
+                push!(neighs_ids[points[i].id], points[j].id)
+                push!(neighs_ids[points[j].id], points[i].id)
             end
         end
     end
 
-    # removing duplicates
-    neighs  = Array{Point}[ unique(list) for list in neighs  ]
+    # removing duplicates and get neighbors
+    neighs = Array{Point}[ mesh.points[unique(list)] for list in neighs_ids ]
+    #neighs = Array{Point}[ mesh.points[unique(list)] for list in neighs_ids ]
+    #@show neighs_ids
 
     # list of degrees per point
     degrees = Int64[ length(list) for list in neighs]
@@ -184,7 +192,7 @@ function reorder!(mesh::Mesh; sort_degrees=true, reversed=false)::Void
 
     if mindeg == 0
         # Case of overlapping elements where edges have at least one point with the same coordinates
-        warn("reorder!: Reordering nodes failed! Check for overlapping cells.")
+        warn("reorder!: Reordering nodes failed! Check for overlapping cells or non used points.")
         return
     end
 
@@ -200,9 +208,12 @@ function reorder!(mesh::Mesh; sort_degrees=true, reversed=false)::Void
         for p in values(L)
             for q in neighs[p.id]
                 (haskey(L, q.id) || haskey(LL, q.id)) && continue
-                #haskey(A, q.id) && continue
                 A[q.id] = q
             end
+        end
+        if length(A)==0
+            error("reorder!: Reordering nodes failed! Possible error with cell connectivities.")
+            return
         end
         
         # Convert A into an array RA
