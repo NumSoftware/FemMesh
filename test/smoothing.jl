@@ -1,7 +1,7 @@
 using FemMesh
-using Base.Test
+using Test
 
-print_with_color(:cyan, "\nMesh smoothing\n")
+printstyled("\nMesh smoothing\n", color=:cyan)
 bl   = Block2D( [0 0; 1 1], nx=2, ny=2, shape=QUAD4)
 mesh = Mesh(bl)
 smooth!(mesh, maxit=5)

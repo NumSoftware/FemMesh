@@ -20,21 +20,21 @@ function plot_data_for_cell2d(points::Array{Array{Float64,1},1}, ctype::Int)
         verts = [ p1, cp, p2 ]
         codes = [ MOVETO, CURVE3, CURVE3]
     elseif shape in (TRI3, QUAD4)
-        n = shape==TRI3? 3 : 4
+        n = shape==TRI3 ? 3 : 4
         codes = [ MOVETO ]
         verts = [ points[1] ]
         for i=1:n
-            p2 = i<n? points[i+1] : points[1]
+            p2 = i<n ? points[i+1] : points[1]
             push!(verts, p2)
             push!(codes, LINETO)
         end
     elseif shape in (TRI6, QUAD8, QUAD9)
-        n = shape==TRI6? 3 : 4
+        n = shape==TRI6 ? 3 : 4
         codes = [ MOVETO ]
         verts = [ points[1] ]
         for i=1:n
             p1 = points[i]
-            p2 = i<n? points[i+1] : points[1]
+            p2 = i<n ? points[i+1] : points[1]
             p3 = points[i+n]
             cp = 2*p3 - 0.5*p1 - 0.5*p2
             append!(verts, [cp, p2])
@@ -46,7 +46,7 @@ function plot_data_for_cell2d(points::Array{Array{Float64,1},1}, ctype::Int)
         verts = [ points[1] ]
         for i=1:n
             p1 = points[i]
-            p2 = i<n? points[i+1] : points[1]
+            p2 = i<n ? points[i+1] : points[1]
             p3 = points[2*i+3]
             p4 = points[2*i+4]
             cp2 = 1/6*(-5*p1+18*p2-9*p3+2*p4)
@@ -134,7 +134,7 @@ function mplot(items::Union{Block, Array}...; args...)
     coords  = [ pts_arr[i][j] for i=1:length(pts_arr), j=1:3]
     conns   = [ [ p.id for p in c.points ] for c in cells ]
     stypes  = [ c.shape.vtk_type for c in cells ]
-    colors  = Dict("family" => [ ty==LIN2? 0.0 : 1.0 for ty in stypes])
+    colors  = Dict("family" => [ ty==LIN2 ? 0.0 : 1.0 for ty in stypes])
 
     ugrid = UnstructuredGrid("Blocks", coords, conns, stypes, cell_scalar_data=colors)
     mplot(ugrid; alpha=0.4, args...)
@@ -195,7 +195,7 @@ function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true,
         #plt[:rc]("figure", figsize=(5, 3))
     #end
 
-    ndim = all(p->p==0.0, ugrid.points[:,3]) ? 2: 3
+    ndim = all(p->p==0.0, ugrid.points[:,3]) ? 2 : 3
     ncells = length(ugrid.cells)
     npoints = size(ugrid.points,1)
 
@@ -329,7 +329,7 @@ function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true,
         for i=1:ncells
             ctype = ugrid.cell_types[i]
             ctype in (3,21,5,22,9,23,28) || continue
-            lw = ugrid.cell_types[i] in (3,21)? 1.0 : 0.5
+            lw = ugrid.cell_types[i] in (3,21) ? 1.0 : 0.5
             
             con = ugrid.cells[i]
             points = [ XYZ[i,1:2] for i in con ]

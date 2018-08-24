@@ -17,13 +17,16 @@ for s in instances(ShapeFamily)
 end 
 
 
+include("cells/vtk.jl")
+include("cells/quadrature.jl")
+
 mutable struct ShapeType 
     name       ::String
     family     ::ShapeFamily
     ndim       ::Int
     npoints    ::Int
     basic_shape::ShapeType
-    vtk_type   ::Int
+    vtk_type   ::VTKCellType
     facet_idxs ::Array
     edge_idxs  ::Array
     facet_shape::Union{ShapeType, Tuple}
@@ -36,8 +39,6 @@ mutable struct ShapeType
     end
 end
 
-include("cells/quadrature.jl")
-include("cells/vtk.jl")
 include("cells/lines.jl")
 include("cells/solids2d.jl")
 include("cells/solids3d.jl")
@@ -117,7 +118,7 @@ function get_shape_from_vtk(vtk_type::VTKCellType, npoints::Int64, ndim::Int64, 
         shapedict = Dict( (2,2)=>:LIN2, (2,3)=>:LIN3, (2,4)=>:LIN4, (3,3)=>:TRI3, (3,4)=>:QUAD4, (3,6)=>:TRI6, (3,8)=>:QUAD8 )
         nfpoints = div(npoints,layers)
         if haskey(shapedict, (ndim, nfpoints))
-            numstr = layers==3?"3":""
+            numstr = layers==3 ? "3" : ""
             shape = Symbol("J$(numstr)$(shapedict[(ndim, nfpoints)])")
             return eval(shape)
         end
@@ -169,7 +170,7 @@ function get_shape_from_geo(geo, npoints=0)
     types = [ LIN2, LIN3, -1, TRI3, TRI6, -1, QUAD4, QUAD8, QUAD9, PYR5, TET4, TET10, HEX8, HEX20, -2, LIN4, TRI10, QUAD12, QUAD16]
     shapetype = types[geo+1]
     if shapetype==-2 #joint
-        shapetype = npoints==2? JLINK2: JLINK3
+        shapetype = npoints==2 ?  JLINK2 : JLINK3
     end
 
     return shapetype
@@ -242,12 +243,12 @@ function is_inside(shape::ShapeType, C::Array{Float64,2}, X::Array{Float64,1}, T
 
     # Testing with bounding box
     ndim = size(C,1)
-    Cmin = vec(minimum(C,1))
-    Cmax = vec(maximum(C,1))
+    Cmin = vec(minimum(C,dims=1))
+    Cmax = vec(maximum(C,dims=1))
     maxl = maximum(Cmax-Cmin)
     ttol = 0.1*maxl # 10% is important for curved elements
 
-    if any(X .< Cmin-ttol) || any(X .> Cmax+ttol)
+    if any(X .< Cmin .- ttol) || any(X .> Cmax .+ ttol)
         return false
     end
 
@@ -283,7 +284,7 @@ function extrapolator(shape::ShapeType, nips::Int)
     ndim    = shape.ndim # not related with the analysis ndim
 
     #filling N matrix with shape functions of all ips
-    N = Array{Float64}(nips, npoints)
+    N = Array{Float64}(undef, nips, npoints)
     for i=1:nips
         N[i,:] = shape.func(vec(IP[i,:]))
     end
@@ -298,7 +299,7 @@ function extrapolator(shape::ShapeType, nips::Int)
     end
 
     # Case for nips<npoints
-    I = eye(nips)
+    #I = eye(nips)
 
     # εip matrix: Local ip coordinates of integration points
     εip = [ IP[:,1:ndim] ones(nips) ]

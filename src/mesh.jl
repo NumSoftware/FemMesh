@@ -9,7 +9,7 @@
 constructs an unitialized mesh object to be used in finite element analyses.
 It contains geometric fields as: points, cells, faces, edges, ndim, quality, etc.
 """
-type Mesh
+mutable struct Mesh
     ndim   ::Int
     points ::Array{Point,1}
     cells  ::Array{Cell,1}
@@ -114,7 +114,7 @@ function get_patches(mesh::Mesh)::Array{Array{Cell,1},1}
 end
 
 # Reverse Cuthill–McKee algorithm (RCM) 
-function reorder!(mesh::Mesh; sort_degrees=true, reversed=false)::Void
+function reorder!(mesh::Mesh; sort_degrees=true, reversed=false)
 
     # Get all mesh edges
     all_edges = Dict{UInt64, Cell}()
@@ -245,7 +245,7 @@ end
 
 
 # Updates numbering, faces and edges in a Mesh object
-function update!(mesh::Mesh; verbose::Bool=false, genfacets::Bool=true, genedges::Bool=true)::Void
+function update!(mesh::Mesh; verbose::Bool=false, genfacets::Bool=true, genedges::Bool=true)
 
     # Get ndim
     ndim = 2
@@ -285,7 +285,7 @@ function update!(mesh::Mesh; verbose::Bool=false, genfacets::Bool=true, genedges
 end
 
 # Mesh quality
-function quality!(mesh::Mesh)::Void
+function quality!(mesh::Mesh)
     Q = Float64[ cell_quality(c) for c in mesh.cells]
     mesh.quality = sum(Q)/length(mesh.cells)
     mesh.qmin    = minimum(Q)
@@ -371,7 +371,7 @@ function Mesh(items::Union{Block, Mesh, Array}...; verbose::Bool=true, genfacets
     nmeshes = length(meshes)
     nblocks = length(blocks)
     if verbose
-        print_with_color(:cyan, "Mesh generation:\n", bold=true)
+        printstyled("Mesh generation:\n", bold=true, color=:cyan)
         nmeshes>0 && @printf "  %5d meshes\n" nmeshes
         @printf "  %5d blocks\n" nblocks
     end
@@ -451,7 +451,7 @@ function Base.convert(::Type{UnstructuredGrid}, mesh::Mesh)
         points[i, 3] = P.z
     end
     cells   = [ [point.id for point in C.points] for C in mesh.cells ] # TODO: make it not dependent of point.id
-    cell_tys= [ C.shape.vtk_type for C in mesh.cells ]
+    cell_tys= [ Int64(C.shape.vtk_type) for C in mesh.cells ]
     
     # point id
     point_ids = [ P.id for P in mesh.points ]
@@ -499,7 +499,7 @@ function save(mesh::Mesh, filename::String; verbose::Bool=true)
     end
 
     save_vtk(vtk_data, filename)
-    verbose && print_with_color(:green, "  file $filename written (Mesh)\n")
+    verbose && printstyled( "  file $filename written (Mesh)\n", color=:cyan)
 end
 
 
@@ -781,7 +781,7 @@ end
 """
 function Mesh(filename::String; verbose::Bool=true, reorder::Bool=false)::Mesh
     if verbose
-        print_with_color(:cyan, "Mesh loading:\n", bold=true)
+        printstyled("Mesh loading:\n", bold=true, color=:cyan)
     end
 
     basename, ext = splitext(filename)
@@ -825,7 +825,7 @@ function tetreader(filekey::String)
 
     for i=1:npoints
         pdata = parse.(split(data[i+1]))
-        tag   = hasmarker==1? pdata[end] : ""
+        tag   = hasmarker==1 ? pdata[end] : ""
         point = Point(pdata[2], pdata[3], pdata[4], tag)
         point.id = i
         points[i] = point
@@ -840,7 +840,7 @@ function tetreader(filekey::String)
 
     for i=1:ncells
         cdata = parse.(split(data[i+1]))
-        tag   = hasatt==1? cdata[end] : 0
+        tag   = hasatt==1 ? cdata[end] : 0
         cellpoints = points[cdata[2:ntetpts+1]]
         cell = Cell(celltype, cellpoints, tag)
         cell.id = i
@@ -857,7 +857,7 @@ function tetreader(filekey::String)
 
     for i=1:nfaces
         fdata = parse.(split(data[i+1]))
-        tag   = hasmarker==1? fdata[end] : 0
+        tag   = hasmarker==1 ? fdata[end] : 0
         facepts = points[fdata[2:nfacepts+1]]
         nfacepts==6 && (facepts = facepts[[1,2,3,6,4,5]])
         faces[i] = Cell(celltype, facepts, tag)
@@ -873,7 +873,7 @@ function tetreader(filekey::String)
 
     for i=1:nedges
         edata = parse.(split(data[i+1]))
-        tag   = hasmarker==1? edata[end] : 0
+        tag   = hasmarker==1 ? edata[end] : 0
         edgepts = points[edata[2:nedgepts+1]]
         edges[i] = Cell(celltype, edgepts, tag)
     end

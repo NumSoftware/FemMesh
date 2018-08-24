@@ -13,7 +13,7 @@ that represents the inset shape and can be:
 `shape` represents the shape for 1D elements used in the final mesh. Possible values are LIN2 and LIN3.
 `closed=true` can be used if a closed inset curve is required.
 """
-type BlockInset <: Block
+mutable struct BlockInset <: Block
     coords   ::Array{Float64,2}
     curvetype::Union{Int,AbstractString} # 0:polyline, 1:closed polyline, 2: lagrangian, 3:cubic Bezier with inner points
     closed   ::Bool
@@ -27,10 +27,10 @@ type BlockInset <: Block
     λ        ::Float64 # jump distance to find multiple intersections in one cell
     id       ::Int64
     icount   ::Int64
-    _endpoint  ::Union{Point, Void}
-    _startpoint::Union{Point, Void}
+    _endpoint  ::Union{Point, Nothing}
+    _startpoint::Union{Point, Nothing}
 
-    function BlockInset(coords; curvetype=0, closed=false, embedded=false, shape=LIN3, tag="", jointtag="", tol=1e-9, toln=1e-4, tolc=1e-9, lam=1., id=-1) 
+    function BlockInset(coords; curvetype=0, closed=false, embedded=false, shape=LIN3, tag="", jointtag="", tol=1e-9, toln=1e-4, tolc=1e-9, lam=1.0, id=-1) 
         # TODO: add option: merge_points
         # TODO: add case: endpoints outside mesh
         if typeof(curvetype)<:Integer
@@ -160,7 +160,7 @@ function split_block(bl::BlockInset, msh::Mesh)
 end
 
 function get_point(s::Float64, coords::Array{Float64,2}, curvetype::Int)
-    s = s>1.0? 1.0 : s
+    s = s>1.0 ? 1.0 : s
     if curvetype<=2; 
         return interLagrange(s, coords) 
     else
@@ -179,8 +179,8 @@ function split_curve(coords::Array{Float64,2}, bl::BlockInset, closed::Bool, msh
 
     # Constants
     shape   = bl.shape
-    npoints = shape==LIN2? 2 : 3
-    jntshape = shape==LIN2? JLINK2 : JLINK3
+    npoints = shape==LIN2 ? 2 : 3
+    jntshape = shape==LIN2 ? JLINK2 : JLINK3
     curvetype = bl.curvetype
 
     # Initial conditions
@@ -192,7 +192,7 @@ function split_curve(coords::Array{Float64,2}, bl::BlockInset, closed::Bool, msh
     Xn = vec(coords[end,:])
 
     # Find the initial and final element
-    ecells = Array{Cell}(0)
+    ecells = Cell[]
     s0 = get_point(εn,coords,curvetype)
     icell = find_cell(s0, msh.cells, msh.bins, εc, ecells) # The first tresspased cell
 
@@ -202,14 +202,14 @@ function split_curve(coords::Array{Float64,2}, bl::BlockInset, closed::Bool, msh
 
     # Initializing more variables
     ccell  = icell
-    points = Array{Point}(npoints)
+    points = Array{Point}(undef, npoints)
 
     # Do not set _endpoint to nothing ( bl._endpoint = nothing ) to allow connectivity between segments!
 
     end_reached  = false
     s  = 0.0
     sp = 0.0
-    nits = round(Int, 1./λ)
+    nits = round(Int, 1.0/λ)
 
 
     # Splitting inset
@@ -263,7 +263,7 @@ function split_curve(coords::Array{Float64,2}, bl::BlockInset, closed::Bool, msh
         end
 
         # Counter
-        bl.icount += end_reached? 0 : 1
+        bl.icount += end_reached ? 0 : 1
 
         # Getting line cell points
         if bl._endpoint==nothing

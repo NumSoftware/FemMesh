@@ -8,7 +8,7 @@ export smooth!, laplacian_smooth!
 # Returns a matrix with the cell coordinates
 function cellcoords(c::Cell)
     ndim = c.shape.ndim
-    C = Array{Float64}(length(c.points), ndim)
+    C = Array{Float64}(undef, length(c.points), ndim)
     for (i,point) in enumerate(c.points)
         C[i,1] = point.x
         C[i,2] = point.y
@@ -23,39 +23,39 @@ end
 # TODO: change to reference_coords
 function basic_coords(shape::ShapeType) #check
     if shape == TRI3
-        #return √2*[0. 0; 1 0 ; 0 1]
-        a = 2./3.^0.25
-        return [ 0. 0.; a 0.; a/2. a/2*√3 ]
+        #return √2*[0.0 0; 1 0 ; 0 1]
+        a = 2.0/3.0^0.25
+        return [ 0.0 0.0; a 0.0; a/2.0 a/2*√3 ]
     end
     if shape == TRI6
-        #return √2*[0. 0; 1 0 ; 0 1; 0.5 0; 0.5 0.5; 0 0.5]
-        a = 2./3.^0.25
+        #return √2*[0.0 0; 1 0 ; 0 1; 0.5 0; 0.5 0.5; 0 0.5]
+        a = 2.0/3.0^0.25
         h = a/2*√3
-        return [ 0. 0; a 0; a/2. a/2*√3; a/2. 0; 0.75*a h/2.; 0.25*a h/2. ]
+        return [ 0.0 0; a 0; a/2.0 a/2*√3; a/2.0 0; 0.75*a h/2.0; 0.25*a h/2.0 ]
     end
     if shape == QUAD4
-        return [ 0. 0.; 1. 0.; 1. 1. ; 0. 1. ]
+        return [ 0.0 0.0; 1.0 0.0; 1.0 1.0 ; 0.0 1.0 ]
     end
     if shape == TET4
-        a = (6.*√2.)^(1./3.)
-        return [   0.        0.          0. ; 
-                   a         0.          0. ;
-                 a/2.  √3./2.*a          0. ;
-                 a/2.  √3./6.*a  1./3.*√6*a ]
+        a = (6.0*√2.0)^(1.0/3.0)
+        return [   0.0        0.0          0.0 ; 
+                   a         0.0          0.0 ;
+                 a/2.0  √3.0/2.0*a          0.0 ;
+                 a/2.0  √3.0/6.0*a  1.0/3.0*√6*a ]
     end
     if shape == QUAD8
-        return [ 0. 0; 1 0; 1 1 ; 0 1; 0.5 0; 1 0.5; 0.5 1; 0 0.5 ]
+        return [ 0.0 0; 1 0; 1 1 ; 0 1; 0.5 0; 1 0.5; 0.5 1; 0 0.5 ]
     end
     if shape == QUAD9
-        return [ 0. 0; 1 0; 1 1 ; 0 1; 0.5 0; 1 0.5; 0.5 1; 0 0.5; 0.5 0.5 ]
+        return [ 0.0 0; 1 0; 1 1 ; 0 1; 0.5 0; 1 0.5; 0.5 1; 0 0.5; 0.5 0.5 ]
     end
     if shape == QUAD12
-        return [ 0. 0; 1 0; 1 1 ; 0 1; 
+        return [ 0.0 0; 1 0; 1 1 ; 0 1; 
         1/3 0.0; 1.0 1/3; 2/3 1.0; 0.0 2/3;
         2/3 0.0; 1.0 2/3; 1/3 1.0; 0.0 1/3 ]
     end
     if shape == HEX8  
-        return [ 0. 0. 0.; 1. 0. 0.; 1. 1. 0.; 0. 1. 0.; 0. 0. 1.; 1. 0. 1.; 1. 1. 1.; 0. 1. 1. ]
+        return [ 0.0 0.0 0.0; 1.0 0.0 0.0; 1.0 1.0 0.0; 0.0 1.0 0.0; 0.0 0.0 1.0; 1.0 0.0 1.0; 1.0 1.0 1.0; 0.0 1.0 1.0 ]
     end
     if shape == HEX20
         return [ 0.0 0.0 0.0; 
@@ -80,12 +80,12 @@ function basic_coords(shape::ShapeType) #check
                  0.0 1.0 0.5 ]
     end
     if shape == WED6
-        a = (4./√3.)^(1./3.)
-        return [ 0.  0.  0.; a  0.  0.; a/2.  a/2*√3  0. ;
-                 0.  0.   a; a  0.   a; a/2.  a/2*√3   a ]
+        a = (4.0/√3.0)^(1.0/3.0)
+        return [ 0.0  0.0  0.0; a  0.0  0.0; a/2.0  a/2*√3  0.0 ;
+                 0.0  0.0   a; a  0.0   a; a/2.0  a/2*√3   a ]
     end
     if shape == WED15
-        a = (4./√3.)^(1./3.)
+        a = (4.0/√3.0)^(1.0/3.0)
         b = a/2*√3
         return [   0  0    0; a        0     0; a/2    b    0;
                    0  0    a; a        0     a; a/2    b    a;
@@ -141,9 +141,9 @@ end
 # Matrix D for the simplified FEM analysis
 function matrixD(E::Float64, nu::Float64)
     c = E/((1.0+nu)*(1.0-2.0*nu))
-    [ c*(1.-nu)      c*nu        c*nu             0.0             0.0             0.0
-          c*nu   c*(1.-nu)       c*nu             0.0             0.0             0.0
-          c*nu       c*nu    c*(1.-nu)            0.0             0.0             0.0
+    [ c*(1.0-nu)      c*nu        c*nu             0.0             0.0             0.0
+          c*nu   c*(1.0-nu)       c*nu             0.0             0.0             0.0
+          c*nu       c*nu    c*(1.0-nu)            0.0             0.0             0.0
            0.0        0.0         0.0   c*(1.0-2.0*nu)            0.0             0.0
            0.0        0.0         0.0             0.0   c*(1.0-2.0*nu)            0.0
            0.0        0.0         0.0             0.0             0.0   c*(1.0-2.0*nu) ]
@@ -156,7 +156,7 @@ end
 function matrixB(ndim::Int, dNdX::Matx, detJ::Float64, B::Matx)
     nnodes = size(dNdX,2)
     sqr2 = √2.0
-    B[:] = 0.0
+    B .= 0.0
     if ndim==2
         for i in 1:nnodes
             j = i-1
@@ -189,9 +189,9 @@ function matrixK(cell::Cell, ndim::Int64, E::Float64, nu::Float64)
     K = zeros(nnodes*ndim, nnodes*ndim)
     B = zeros(6, nnodes*ndim)
 
-    DB = Array{Float64}(6, nnodes*ndim)
-    J  = Array{Float64}(ndim, ndim)
-    dNdX = Array{Float64}(ndim, nnodes)
+    DB = Array{Float64}(undef, 6, nnodes*ndim)
+    J  = Array{Float64}(undef, ndim, ndim)
+    dNdX = Array{Float64}(undef, ndim, nnodes)
 
     IP = get_ip_coords(cell.shape)
     D = matrixD(E, nu)
@@ -222,7 +222,7 @@ function matrixK2(cell::Cell, ndim::Int64, E::Float64, nu::Float64)
     C = cellcoords(cell)
     K = zeros(nnodes*ndim, nnodes*ndim)
     B = zeros(6, nnodes*ndim)
-    DB = Array{Float64}(6, nnodes*ndim)
+    DB = Array{Float64}(undef, 6, nnodes*ndim)
 
     IP = get_ip_coords(cell.shape)
 
@@ -297,7 +297,7 @@ end
 # If the face is not flat returns [0,0,0]
 function normal_to_faces(faces::Array{Cell, 1})
     ndim = 1 + faces[1].shape.ndim
-    points = Array{Point}(0)
+    points = Point[]
 
     for f in faces
         for p in f.points
@@ -306,7 +306,7 @@ function normal_to_faces(faces::Array{Cell, 1})
     end
 
     # mount coordinates matrix
-    C = Array{Float64}(length(points), ndim)
+    C = Array{Float64}(undef, length(points), ndim)
     for (i,p) in enumerate(points)
         C[i,1] = p.x
         C[i,2] = p.y
@@ -334,7 +334,7 @@ function faces_normal(faces::Array{Cell,1}, facetol)
     normals = Array{Float64,1}[]
 
     for f in faces
-        C = get_coords(f, ndim) + facetol
+        C = get_coords(f, ndim) .+ facetol
         I = ones(size(C,1))
         N = pinv(C)*I # best fit normal
 
@@ -354,7 +354,7 @@ function faces_normal(faces::Array{Cell,1}, facetol)
 end
 
 # Auxiliary structure
-type sNode
+mutable struct sNode
     point::Point
     faces::Array{Cell}
     normals
@@ -467,8 +467,8 @@ function rigid_transform(source::Array{Float64,2}, target::Array{Float64,2})
     ndim = size(A,2)
 
     # Centralizing both sets of points
-    cA = mean(A,1)
-    cB = mean(B,1)
+    cA = mean(A, dims=1)
+    cB = mean(B, dims=1)
     for i = 1:n
         for j = 1:ndim
             A[i,j] -= cA[1,j]
@@ -511,7 +511,7 @@ function force_bc(mesh::Mesh, E::Float64, nu::Float64, α::Float64, fast::Bool)
         fast || (V = α*V)
 
         T = cell_orientation(c)
-        factor = V^(1./ndim)
+        factor = V^(1.0/ndim)
         BC = basic_coords(c.shape)*factor
 
         # initial alignment
@@ -519,7 +519,7 @@ function force_bc(mesh::Mesh, E::Float64, nu::Float64, α::Float64, fast::Bool)
 
         # align C with cell orientation
         R, d = rigid_transform(C, C0)
-        D = repmat( d , np, 1)
+        D = repeat( d , np, 1)
         C1 = C*R' + D
         U  = C1 - C0  # displacements matrix
 
@@ -557,7 +557,7 @@ function smooth!(mesh::Mesh; verbose=true, alpha::Float64=0.3, target::Float64=0
     # tol   : tolerance in change of mesh quality for succesive iterations
     # mintol: tolerance in change of worst cell quality in a mesh for succesive iterations
 
-    verbose && print_with_color(:cyan, "Mesh smoothing:\n", bold=true)
+    verbose && printstyled("Mesh smoothing:\n", bold=true, color=:cyan)
 
     # check for not allowed cells
     for c in mesh.cells
@@ -617,7 +617,7 @@ function smooth!(mesh::Mesh; verbose=true, alpha::Float64=0.3, target::Float64=0
         K = mountKg(mesh, E, nu, A)
 
         # Solve system
-        LUf = lufact(K)
+        LUf = lu(K)
         U = LUf\F
 
         # Update mesh
@@ -678,7 +678,7 @@ precompile(smooth!, (Mesh,) )
 function laplacian_smooth!(mesh::Mesh; alpha::Float64=1.0, maxit::Int64=20, verbose::Bool=true, mintol::Float64=1e-3,
     tol::Float64=1e-4, facetol::Float64=1e-5, savesteps::Bool=false, savedata::Bool=false, filekey::String="smooth", fast=true)
 
-    verbose && print_with_color(:cyan, "Mesh Laplacian smoothing:\n", bold=true)
+    verbose && printstyled("Mesh Laplacian smoothing:\n", bold=true, color=:cyan)
 
     ndim = mesh.ndim
 
@@ -720,7 +720,7 @@ function laplacian_smooth!(mesh::Mesh; alpha::Float64=1.0, maxit::Int64=20, verb
     # arrays of flags
     in_border = falses(length(mesh.points))
     border_idxs = [ n.point.id for n in border_nodes ]
-    in_border[border_idxs] = true
+    in_border[border_idxs] .= true
 
     map_pn = zeros(Int, length(mesh.points)) # map point-node
     for (i,node) in enumerate(border_nodes)
@@ -758,7 +758,7 @@ function laplacian_smooth!(mesh::Mesh; alpha::Float64=1.0, maxit::Int64=20, verb
                 normals = node.normals
                 nnorm   = length(normals)
                 (nnorm == 1 && ndim==2) || (nnorm in (1,2) && ndim==3) || continue
-                X  = vec(mean(get_coords(P[id],ndim),1))
+                X  = vec(mean(get_coords(P[id],ndim),dims=1))
                 ΔX = alpha*(X - X0)
                 X = X0 + ΔX
                 if nnorm==1
@@ -770,7 +770,7 @@ function laplacian_smooth!(mesh::Mesh; alpha::Float64=1.0, maxit::Int64=20, verb
                 end
 
             else
-                X  = mean(get_coords(P[id]),1)[1:ndim]
+                X  = mean(get_coords(P[id]),dims=1)[1:ndim]
                 ΔX = (X - X0)*alpha
             end
 

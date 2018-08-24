@@ -20,7 +20,7 @@ end
 # Adds joint cells over all shared faces
 function generate_joints!(mesh::Mesh; layers::Int64=2, verbose::Bool=true)
 
-    verbose && print_with_color(:cyan, "Mesh generation of joint elements:\n", bold=true)
+    verbose && printstyled("Mesh generation of joint elements:\n", bold=true, color=:cyan)
     cells  = mesh.cells
 
     any(c.shape.family==JOINT_SHAPE for c in cells) && error("generate_joints!: mesh already contains joint elements.")
@@ -61,7 +61,7 @@ function generate_joints!(mesh::Mesh; layers::Int64=2, verbose::Bool=true)
     jcells = Cell[]
     for (f1, f2) in face_pairs
         n   = length(f1.points)
-        con = Array{Point}(2*n)
+        con = Array{Point}(undef, 2*n)
         for (i,p1) in enumerate(f1.points)
             for p2 in f2.points
                 if hash(p1)==hash(p2)

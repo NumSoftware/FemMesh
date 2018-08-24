@@ -9,7 +9,7 @@ include("block_inset.jl")
 
 Generates a block object for the mesh generation of trusses:
 """
-type BlockTruss <: Block
+mutable struct BlockTruss <: Block
     coords::Array{Float64,2}
     conns ::Array{Int64,2}
     shape ::ShapeType
@@ -35,7 +35,7 @@ end
 
 Generates a 2D or 3D block object based on a matrix of coordinates and a matrix of connectivities.
 """
-type BlockCoords <: Block
+mutable struct BlockCoords <: Block
     coords::Array{Float64,2}
     conns ::Array{Int64,2}
     tag::TagType
@@ -61,7 +61,7 @@ end
 Generates a block object for the mesh generation of 2D meshes.
 `shape` can be TRI3, TRI6, QUAD4, QUAD8.
 """
-type Block2D <: Block
+mutable struct Block2D <: Block
     coords::Array{Float64,2}
     nx::Int64
     ny::Int64
@@ -89,7 +89,7 @@ end
 
 Generates a block object for the mesh generation of 3D meshes.
 """
-type Block3D <: Block
+mutable struct Block3D <: Block
     coords::Array{Float64,2}
     nx::Int64
     ny::Int64
@@ -100,13 +100,13 @@ type Block3D <: Block
 
     function Block3D(coords::Array{<:Real}; nx=1, ny=1, nz=1, shape=HEX8, tag=0, id=-1)
         shape in (TET4, TET10, HEX8, HEX20) || error("Block3D: shape must be TET4, TET10, HEX8 or HEX20")
-        C    = size(coords,1)==2? box_coords(coords[1,:], coords[2,:]): coords
+        C    = size(coords,1)==2 ? box_coords(coords[1,:], coords[2,:]) : coords
         this = new(C, nx, ny, nz, shape, tag, id)
         return this
     end
 end
 
-type BlockCylinder <: Block
+mutable struct BlockCylinder <: Block
     coords::Array{Float64,2} # two end points
     r::Float64
     nr::Int64
@@ -158,7 +158,7 @@ function split_block(bl::Block2D, msh::Mesh)
     nx, ny = bl.nx, bl.ny
     shape  = bl.shape # cell shape
     nbpoints = size(bl.coords,1)
-    #bshape = nbpoints==4? QUAD4:QUAD8 # block shape
+    #bshape = nbpoints==4 ? QUAD4:QUAD8 # block shape
     
     nbpoints in (3, 4, 6, 8) || error("Block2D: Wrong number of block points ($nbpoints)")
     if nbpoints==4
@@ -174,7 +174,7 @@ function split_block(bl::Block2D, msh::Mesh)
     quadrilat_bshape = nbpoints in (4, 8)
 
     if shape==QUAD4
-        p_arr = Array{Point}(nx+1, ny+1)
+        p_arr = Array{Point}(undef, nx+1, ny+1)
         for j = 1:ny+1
             for i = 1:nx+1
                 r = (2.0/nx)*(i-1) - 1.0
@@ -183,7 +183,7 @@ function split_block(bl::Block2D, msh::Mesh)
                 C = N'*bl.coords
                 p::Any = nothing
                 if i in (1, nx+1) || j in (1, ny+1)
-                    C = round.(C, 8)
+                    C = round.(C, digits=8)
                     p = get_point(msh.bpoints, C)
                     if p==nothing
                         p = Point(C); push!(msh.points, p)
@@ -212,7 +212,7 @@ function split_block(bl::Block2D, msh::Mesh)
     end
 
     if shape == QUAD8 || shape == QUAD9
-        p_arr = Array{Point}(2*nx+1, 2*ny+1)
+        p_arr = Array{Point}(undef, 2*nx+1, 2*ny+1)
         for j = 1:2*ny+1
             for i = 1:2*nx+1
                 if shape==QUAD8 && iseven(i) && iseven(j) continue end
@@ -223,7 +223,7 @@ function split_block(bl::Block2D, msh::Mesh)
                 C = N'*bl.coords
                 p::Any = nothing
                 if i in (1, 2*nx+1) || j in (1, 2*ny+1)
-                    C = round.(C, 8)
+                    C = round.(C, digits=8)
                     p = get_point(msh.bpoints, C)
                     if p==nothing
                         p = Point(C); push!(msh.points, p)
@@ -261,7 +261,7 @@ function split_block(bl::Block2D, msh::Mesh)
     end
 
     if shape == QUAD12
-        p_arr = Array{Point}(3*nx+1, 3*ny+1)
+        p_arr = Array{Point}(undef, 3*nx+1, 3*ny+1)
         for j = 1:3*ny+1
             for i = 1:3*nx+1
                 if shape==QUAD12 && (i-1)%3>0 && (j-1)%3>0 continue end
@@ -272,7 +272,7 @@ function split_block(bl::Block2D, msh::Mesh)
                 C = N'*bl.coords
                 p::Any = nothing
                 if i in (1, 3*nx+1) || j in (1, 3*ny+1)
-                    C = round.(C, 8)
+                    C = round.(C, digits=8)
                     p = get_point(msh.bpoints, C)
                     if p==nothing
                         p = Point(C); push!(msh.points, p)
@@ -310,7 +310,7 @@ function split_block(bl::Block2D, msh::Mesh)
     end
 
     if shape == TRI3 && quadrilat_bshape
-        p_arr = Array{Point}(nx+1, ny+1)
+        p_arr = Array{Point}(undef, nx+1, ny+1)
         for j = 1:ny+1
             for i = 1:nx+1
                 r = (2.0/nx)*(i-1) - 1.0
@@ -319,7 +319,7 @@ function split_block(bl::Block2D, msh::Mesh)
                 C = N'*bl.coords
                 p::Any = nothing
                 if i in (1, nx+1) || j in (1, ny+1)
-                    C = round.(C, 8)
+                    C = round.(C, digits=8)
                     p = get_point(msh.bpoints, C)
                     if p==nothing
                         p = Point(C); push!(msh.points, p)
@@ -349,7 +349,7 @@ function split_block(bl::Block2D, msh::Mesh)
     end
 
     if shape == TRI3 && !quadrilat_bshape
-        p_arr = Array{Point}(nx+1, nx+1)
+        p_arr = Array{Point}(undef, nx+1, nx+1)
         for j = 1:ny+1
             for i = 1:nx+1
                 j>i && continue
@@ -361,7 +361,7 @@ function split_block(bl::Block2D, msh::Mesh)
                 C = N'*bl.coords
                 p::Any = nothing
                 if i in (1, nx+1) || j in (1, ny+1) || i==j
-                    C = round.(C, 8)
+                    C = round.(C, digits=8)
                     p = get_point(msh.bpoints, C)
                     if p==nothing
                         p = Point(C); push!(msh.points, p)
@@ -406,7 +406,7 @@ function split_block(bl::Block2D, msh::Mesh)
                @-----@-----@
              1       5       2     =#
 
-        p_arr = Array{Point}(2*nx+1, 2*ny+1)
+        p_arr = Array{Point}(undef, 2*nx+1, 2*ny+1)
         for j = 1:2*ny+1
             for i = 1:2*nx+1
                 r = (1.0/nx)*(i-1) - 1.0
@@ -415,7 +415,7 @@ function split_block(bl::Block2D, msh::Mesh)
                 C = N'*bl.coords
                 p::Any = nothing
                 if i in (1, 2*nx+1) || j in (1, 2*ny+1)
-                    C = round.(C, 8)
+                    C = round.(C, digits=8)
                     p = get_point(msh.bpoints, C)
                     if p==nothing
                         p = Point(C); push!(msh.points, p)
@@ -463,7 +463,7 @@ function split_block(bl::Block2D, msh::Mesh)
                @-----@-----@
              1       5       2     =#
 
-        p_arr = Array{Point}(2*nx+1, 2*ny+1)
+        p_arr = Array{Point}(undef, 2*nx+1, 2*ny+1)
         for j = 1:2*ny+1
             for i = 1:2*nx+1
                 j>i && continue
@@ -475,7 +475,7 @@ function split_block(bl::Block2D, msh::Mesh)
                 C = N'*bl.coords
                 p::Any = nothing
                 if i in (1, 2*nx+1) || j in (1, 2*ny+1) || i==j
-                    C = round.(C, 8)
+                    C = round.(C, digits=8)
                     p = get_point(msh.bpoints, C)
                     if p==nothing
                         p = Point(C); push!(msh.points, p)
@@ -523,10 +523,10 @@ function split_block(bl::Block3D, msh::Mesh)
     nx, ny, nz = bl.nx, bl.ny, bl.nz
     shape  = bl.shape 
     #shape == TET10 && error("block: Cannot generate mesh with TET10 cells jet")
-    bshape = size(bl.coords,1)==8? HEX8:HEX20 # block shape (not cell shape)
+    bshape = size(bl.coords,1)==8 ? HEX8 : HEX20 # block shape (not cell shape)
 
     if shape==HEX8 || shape==TET4
-        p_arr = Array{Point}(nx+1, ny+1, nz+1)
+        p_arr = Array{Point}(undef, nx+1, ny+1, nz+1)
         for k = 1:nz+1
             for j = 1:ny+1
                 for i = 1:nx+1
@@ -537,7 +537,7 @@ function split_block(bl::Block3D, msh::Mesh)
                     C = N'*bl.coords
                     p::Any = nothing
                     if i in (1, nx+1) || j in (1, ny+1) || k in (1, nz+1)
-                        C = round.(C, 8)
+                        C = round.(C, digits=8)
                         p = get_point(msh.bpoints, C)
                         if p==nothing
                             p = Point(C); push!(msh.points, p)
@@ -582,7 +582,7 @@ function split_block(bl::Block3D, msh::Mesh)
     end
 
     if shape == HEX20 || shape == TET10
-        p_arr = Array{Point}(2*nx+1, 2*ny+1, 2*nz+1)
+        p_arr = Array{Point}(undef, 2*nx+1, 2*ny+1, 2*nz+1)
         for k = 1:2*nz+1
             for j = 1:2*ny+1
                 for i = 1:2*nx+1
@@ -599,7 +599,7 @@ function split_block(bl::Block3D, msh::Mesh)
                     C = N'*bl.coords
                     p::Any = nothing
                     if i in (1, 2*nx+1) || j in (1, 2*ny+1) || k in (1, 2*nz+1)
-                        C = round.(C, 8)
+                        C = round.(C, digits=8)
                         p = get_point(msh.bpoints, C)
                         if p==nothing
                             p = Point(C); push!(msh.points, p)
@@ -696,7 +696,7 @@ end
 function split_block(bl::BlockTruss, msh::Mesh)
     n = size(bl.coords, 1) # number of points
     m = size(bl.conns , 1) # number of truss cells
-    p_arr = Array{Point}(n)
+    p_arr = Array{Point}(undef, n)
     for i=1:n
         C = reshape(bl.coords[i,:], 3)
         p = get_point(msh.bpoints, C)
@@ -718,7 +718,7 @@ end
 function split_block(bl::BlockCoords, msh::Mesh)
     n = size(bl.coords, 1) # number of points
     m = size(bl.conns , 1) # number of cells
-    p_arr = Array{Point}(n)
+    p_arr = Array{Point}(undef, n)
     for i=1:n
         C = bl.coords[i,:]
         p = get_point(msh.bpoints, C)

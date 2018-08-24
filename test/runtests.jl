@@ -1,5 +1,5 @@
 using FemMesh
-using Base.Test
+using Test
 
 FILES = [
     "shape_deriv.jl"
@@ -11,7 +11,7 @@ FILES = [
 
 @testset begin
     for f in FILES
-        print_with_color(:white, "\nRunning file ", f,"...\n")
+        printstyled( "\nRunning file ", f,"...\n", color=:white)
         include(f)
     end
 end

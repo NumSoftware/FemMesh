@@ -18,6 +18,7 @@ copy, move!, array, rotate!, polar, extrude.
 
 """
 module FemMesh
+using Printf, Statistics, LinearAlgebra, SparseArrays
 using JSON, DataStructures
 
 # Mesh module

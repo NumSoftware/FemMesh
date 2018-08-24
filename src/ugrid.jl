@@ -129,7 +129,7 @@ function read_ugrid_vtk_old(filename::String)
     file = open(filename)
 
     # read nodal information
-    alltext = readstring(filename)
+    alltext = read(filename)
     data    = split(alltext)
 
     # read header
@@ -222,11 +222,11 @@ function read_ugrid_vtk(filename::String)
     file = open(filename)
 
     # read nodal information
-    alltext = readstring(filename)
+    alltext = read(filename, String)
     data    = split(alltext)
     close(file)
 
-    local points, cells, cell_types
+    local points, cells, cell_types, npoints, ncells
     point_scalar_data = Dict{String,Array}()
     point_vector_data = Dict{String,Array}()
     cell_scalar_data  = Dict{String,Array}()
@@ -244,7 +244,7 @@ function read_ugrid_vtk(filename::String)
 
         # read points
         if data[idx] == "POINTS"
-            npoints = parse(data[idx+1]) # read number of points
+            npoints = parse(Int64, data[idx+1]) # read number of points
             points  = zeros(npoints,3)
             idx += 2
             for i=1:npoints
@@ -257,19 +257,19 @@ function read_ugrid_vtk(filename::String)
 
         # read cells connectivities
         if data[idx] == "CELLS"
-            ncells = parse(data[idx+1])
-            ncdata = parse(data[idx+2])
+            ncells = parse(Int64, data[idx+1])
+            ncdata = parse(Int64, data[idx+2])
             idx += 2
 
             cells = Array{Int,1}[]
             for i=1:ncells
-                npoints = parse(data[idx+1])
+                npoints = parse(Int64, data[idx+1])
                 idx += 1
                 conn = Int[]
                 for j=1:npoints
                     idx += 1
                     #@show data[idx]
-                    id = parse(data[idx]) + 1
+                    id = parse(Int64, data[idx]) + 1
                     push!(conn, id)
                 end
                 push!(cells, conn)
@@ -282,7 +282,7 @@ function read_ugrid_vtk(filename::String)
             cell_types = Int[]
             for i=1:ncells
                 idx += 1
-                vtk_shape = VTKCellType(parse(data[idx]))
+                vtk_shape = parse(Int64, data[idx])
                 push!(cell_types, vtk_shape)
             end
         end

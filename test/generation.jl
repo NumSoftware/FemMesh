@@ -1,7 +1,7 @@
 using FemMesh
-using Base.Test
+using Test
 
-print_with_color(:cyan, "\nMesh generation on solids\n")
+printstyled("\nMesh generation on solids\n", color=:cyan)
 println("\nMesh using TRI3")
 bl = Block2D( [0 0; 1 1], nx=10, ny=10, shape=TRI3)
 mesh = Mesh(bl)
@@ -69,7 +69,7 @@ mesh = Mesh(bl)
 rm("out.vtk")
 
 
-print_with_color(:cyan, "\nMesh generation on trusses\n")
+printstyled("\nMesh generation on trusses\n", color=:cyan)
 coord = [ 0 0; 9 0; 18 0; 0 9; 9 9; 18 9.]
 conn  = [ 1 2; 1 5; 2 3; 2 6; 2 5; 2 4; 3 6; 3 5; 4 5; 5 6]
 bl   = BlockTruss(coord, conn)
@@ -87,7 +87,7 @@ save(mesh, "out.vtk")
 rm("out.vtk")
 
 
-print_with_color(:cyan, "\nMesh with embedded cells\n")
+printstyled("\nMesh with embedded cells\n", color=:cyan)
 bl = Block3D( [0 0 0; 1 1 1], nx=8, ny=8, nz=8, shape=HEX8)
 bli = BlockInset( [0 0 0; 1 1 1] )
 mesh = Mesh(bl, bli)

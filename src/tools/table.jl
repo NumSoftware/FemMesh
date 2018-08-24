@@ -6,26 +6,27 @@ export DTable, DBook, push!, keys, getindex, save, loadtable, loadbook
 
 
 # DTable object
+const HeaderType = Union{Symbol,String}
 
-type DTable
+mutable struct DTable
     data    ::Array{Array{Float64,1},1}
-    colindex::Dict{Symbol,Int} # Data index
-    fields  ::Array{Symbol,1}
+    colindex::Dict{HeaderType,Int} # Data index
+    fields  ::Array{HeaderType,1}
     function DTable()
         this = new()
         this.data     = [ ]
-        this.colindex = Dict{Symbol,Int}() 
+        this.colindex = Dict() 
         this.fields   = []
         return this
     end
-    function DTable(header::Array{Symbol,1})
+    function DTable(header::Array{HeaderType,1})
         this = new()
         this.data     = [ Float64[] for s in header ]
         this.colindex = Dict( key=>i for (i,key) in enumerate(header) )
         this.fields   = copy(header)
         return this
     end
-    function DTable(header::Array{Symbol,1}, data::Array{Array{Float64,1},1})
+    function DTable(header::Array{HeaderType,1}, data::Array{Array{Float64,1},1})
         this      = new()
         nfields   = length(header)
         ncols     = length(data)
@@ -35,7 +36,7 @@ type DTable
         this.fields   = copy(header)
         return this
     end
-    function DTable(header::Array{Symbol,1}, matrix::Array{Float64,2})
+    function DTable(header::Array{HeaderType,1}, matrix::Array{Float64,2})
         this      = new()
         nfields   = length(header)
         ncols     = size(matrix,2)
@@ -48,7 +49,7 @@ type DTable
 end
 
 
-type DBook
+mutable struct DBook
     tables::Array{DTable, 1}
     function DBook()
         this = new()
@@ -73,7 +74,7 @@ function keys(table::DTable)
     return table.fields
 end
 
-function Base.push!(table::DTable, dict::Associative)
+function Base.push!(table::DTable, dict::AbstractDict)
     if length(table.data)==0
         table.data     = [ Float64[v] for (k,v) in dict ]
         table.colindex = Dict( key=>i for (i,key) in enumerate(keys(dict)) )
@@ -103,11 +104,11 @@ function Base.push!(table::DTable, dict::Associative)
     end
 end
 
-function Base.getindex(table::DTable, key::Symbol)
+function Base.getindex(table::DTable, key::HeaderType)
     return table.data[table.colindex[key]]
 end
 
-function Base.getindex(table::DTable, keys::Array{Symbol,1})
+function Base.getindex(table::DTable, keys::Array{HeaderType,1})
     data = [ table[key] for key in keys ]
     subtable = DTable(keys, data)
     return subtable
@@ -137,18 +138,18 @@ function save(table::DTable, filename::String; verbose::Bool=true)
         # print header
         for i=1:nc
             @printf(f, "%12s", table.fields[i])
-            print(f, i!=nc? "\t" : "\n")
+            print(f, i!=nc ? "\t" : "\n")
         end
 
         # print values
         for i=1:nr
             for j=1:nc
                 @printf(f, "%12.6e", table.data[j][i])
-                print(f, j!=nc? "\t" : "\n")
+                print(f, j!=nc ? "\t" : "\n")
             end
         end
 
-        verbose && print_with_color(:green, "  file $filename written\n")
+        verbose && printstyled("  file $filename written\n", color=:cyan)
     end
 
     if format=="json"
@@ -156,7 +157,7 @@ function save(table::DTable, filename::String; verbose::Bool=true)
         str  = JSON.json(table.colindex, 4)
         print(f, str)
 
-        verbose && print_with_color(:green, "  file $filename written (DTable)\n")
+        verbose && printstyled("  file $filename written (DTable)\n", color=:cyan)
     end
 
     close(f)
@@ -176,7 +177,7 @@ function save(book::DBook, filename::String; verbose::Bool=true)
         str  = JSON.json(dict_arr, 4)
         print(f, str)
 
-        if verbose  print_with_color(:green, "  file $filename written (DBook)\n") end
+        if verbose  printstyled("  file $filename written (DBook)\n", color=:cyan) end
     end
 
     if format=="dat"
@@ -192,20 +193,20 @@ function save(book::DBook, filename::String; verbose::Bool=true)
             # print header
             for i=1:nc
                 @printf(f, "%12s", table.fields[i])
-                print(f, i!=nc? "\t" : "\n")
+                print(f, i!=nc ? "\t" : "\n")
             end
 
             # print values
             for i=1:nr
                 for j=1:nc
                     @printf(f, "%12.6e", table.data[j][i])
-                    print(f, j!=nc? "\t" : "\n")
+                    print(f, j!=nc ? "\t" : "\n")
                 end
             end
             print(f, "\n")
         end
 
-        verbose && print_with_color(:green, "  file $filename written\n")
+        verbose && printstyled("  file $filename written\n", color=:cyan)
     end
     close(f)
     return nothing
@@ -219,7 +220,7 @@ function loadtable(filename::String, delim='\t')
 
     if format=="dat"
         data, headstr = readdlm(filename, delim, header=true, use_mmap=false)
-        fields = Symbol[ Symbol(strip(field)) for field in vec(headstr) ]
+        fields = [ strip(field) for field in vec(headstr) ]
 
         table = DTable(fields , data)
         return table
@@ -243,7 +244,7 @@ function loadbook(filename::String)
                 continue
             end
             if header_expected # add new table
-                fields = [ Symbol(key) for key in split(line) ]
+                fields = [ key for key in split(line) ]
                 push!(book.tables, DTable(fields))
                 header_expected = false
                 continue

@@ -68,20 +68,20 @@ function move!(blocks::Array; dx=0.0, dy=0.0, dz=0.0)
 end
 
 
-function scale!(bl::Block; factor=1.0, base=[0.,0,0])
+function scale!(bl::Block; factor=1.0, base=[0.0,0,0])
     bl.coords = ( base .+ factor*(bl.coords' .- base) )'
     return bl
 end
 
 
-function scale!(blocks::Array{Block,1}; factor=1.0, base=[0.,0,0])
+function scale!(blocks::Array{Block,1}; factor=1.0, base=[0.0,0,0])
     for bl in blocks
         bl.coords = ( base .+ factor*(bl.coords' .- base) )'
     end
     return blocks
 end
 
-function mirror(block::Block; face=[0. 0 0; 0 1 0; 0 0 1])
+function mirror(block::Block; face=[0.0 0 0; 0 1 0; 0 0 1])
     nr, nc = size(face)
     if nc==2
         face = [ face zeros(nr) ]
@@ -119,12 +119,12 @@ function mirror(block::Block; face=[0. 0 0; 0 1 0; 0 0 1])
     return bl
 end
 
-function mirror(blocks::Array{<:Block,1}; face=[0. 0 0; 0 1 0; 0 0 1])
+function mirror(blocks::Array{<:Block,1}; face=[0.0 0 0; 0 1 0; 0 0 1])
     return [ mirror(bl, face=face) for bl in blocks ]
 end
 
 
-function mirror(mesh::Mesh; face=[0. 0 0; 0 1 0; 0 0 1])
+function mirror(mesh::Mesh; face=[0.0 0 0; 0 1 0; 0 0 1])
     nr, nc = size(face)
     if nc==2
         face = [ face zeros(nr) ]
@@ -191,7 +191,7 @@ end
 
 Rotate `block` according to the provided `base` point, `axis` vector and `angle`.
 """
-function rotate!(bl::Block; base=[0.,0,0], axis=[0.,0,1], angle=90.0 )
+function rotate!(bl::Block; base=[0.0,0,0], axis=[0.0,0,1], angle=90.0 )
 
     length(axis)==2 && ( axis=vcat(axis, 0.0) )
     length(base)==2 && ( base=vcat(base, 0.0) )
@@ -207,26 +207,26 @@ function rotate!(bl::Block; base=[0.,0,0], axis=[0.,0,1], angle=90.0 )
 
     # Rotation matrices
     if d != 0.0
-        Rx  = [  1.    0.    0.
-                 0.   c/d  -b/d 
-                 0.   b/d   c/d ]
+        Rx  = [  1.0    0.0    0.0
+                 0.0   c/d  -b/d 
+                 0.0   b/d   c/d ]
 
-        Rxi = [  1.    0.    0.
-                 0.   c/d   b/d 
-                 0.  -b/d   c/d ]
+        Rxi = [  1.0    0.0    0.0
+                 0.0   c/d   b/d 
+                 0.0  -b/d   c/d ]
     end
 
-    Ry  = [   d    0.  -a
-             0.    1.  0.
-              a    0.   d ]
+    Ry  = [   d    0.0  -a
+             0.0    1.0  0.0
+              a    0.0   d ]
            
-    Ryi = [   d    0.   a
-             0.    1.  0.
-             -a    0.   d ]
+    Ryi = [   d    0.0   a
+             0.0    1.0  0.0
+             -a    0.0   d ]
 
-    Rz  = [   l   -m   0.
-              m    l   0.
-             0.   0.   1. ]
+    Rz  = [   l   -m   0.0
+              m    l   0.0
+             0.0   0.0   1.0 ]
 
     # all rotations matrix
     if d != 0.0
@@ -241,7 +241,7 @@ function rotate!(bl::Block; base=[0.,0,0], axis=[0.,0,1], angle=90.0 )
     return bl
 end
 
-function rotate!{T<:Block}(blocks::Array{T,1}; base=[0.,0,0], axis=[0.,0,1], angle=90.0 )
+function rotate!(blocks::Array{T,1}; base=[0.0,0,0], axis=[0.0,0,1], angle=90.0 ) where T <: Block
     for bl in blocks
         rotate!(bl, base=base, axis=axis, angle=angle)
     end
@@ -255,7 +255,7 @@ end
 Creates `n-1` copies of a `block` and places them using polar distribution based on 
 a `base` point, an `axis` vector, a total `angle`.
 """
-function polar{T<:Block}(bl::T; base=[0.,0,0], axis=[0.,0,1], angle=360, n=2 )::Array{T,1}
+function polar(bl::T; base=[0.0,0,0], axis=[0.0,0,1], angle=360, n=2 ) where T <: Block
     blocks::Array{T,1} = [ bl ]
     angle = angle/n
     for i=1:n-1
@@ -266,7 +266,7 @@ function polar{T<:Block}(bl::T; base=[0.,0,0], axis=[0.,0,1], angle=360, n=2 )::
     return blocks
 end
 
-function polar{T<:Block}(blocks::Array{T,1}; base=[0.,0,0], axis=[0.,0,1], angle=360, n=2 )::Array{T,1}
+function polar(blocks::Array{T,1}; base=[0.0,0,0], axis=[0.0,0,1], angle=360, n=2 ) where T <: Block
     rblocks::Array{T,1} = []
 
     for bl in blocks
@@ -294,7 +294,7 @@ end
 
 
 
-function scale!(msh::Mesh; factor=1.0, base=[0.,0,0])
+function scale!(msh::Mesh; factor=1.0, base=[0.0,0,0])
     for pt in mesh.points
         p.x, p.y, p.z = base + ([p.x, p.y, p.z] - base)*factor
     end
@@ -307,7 +307,7 @@ end
 
 Rotates a Mesh object `mesh` according to a `base` point, an `axis` vector and an `angle`.
 """
-function rotate!(mesh::Mesh; base=[0.,0,0], axis=[0.,0,1], angle=90.0 )
+function rotate!(mesh::Mesh; base=[0.0,0,0], axis=[0.0,0,1], angle=90.0 )
 
     length(axis)==2 && ( axis=vcat(axis, 0.0) )
     length(base)==2 && ( base=vcat(base, 0.0) )
@@ -324,25 +324,25 @@ function rotate!(mesh::Mesh; base=[0.,0,0], axis=[0.,0,1], angle=90.0 )
     m = sin(angle*pi/180)
 
     # Rotation matrices
-    Rx  = [  1.    0.    0.
-             0.   c/d  -b/d 
-             0.   b/d   c/d ]
+    Rx  = [  1.0    0.0    0.0
+             0.0   c/d  -b/d 
+             0.0   b/d   c/d ]
 
-    Rxi = [  1.    0.    0.
-             0.   c/d   b/d 
-             0.  -b/d   c/d ]
+    Rxi = [  1.0    0.0    0.0
+             0.0   c/d   b/d 
+             0.0  -b/d   c/d ]
 
-    Ry  = [   d    0.  -a
-             0.    1.  0.
-              a    0.   d ]
+    Ry  = [   d    0.0  -a
+             0.0    1.0  0.0
+              a    0.0   d ]
            
-    Ryi = [   d    0.   a
-             0.    1.  0.
-             -a    0.   d ]
+    Ryi = [   d    0.0   a
+             0.0    1.0  0.0
+             -a    0.0   d ]
 
-    Rz  = [   l   -m   0.
-              m    l   0.
-             0.   0.   1. ]
+    Rz  = [   l   -m   0.0
+              m    l   0.0
+             0.0   0.0   1.0 ]
 
     # all rotations matrix
     R = Rxi*Ryi*Rz*Ry*Rx

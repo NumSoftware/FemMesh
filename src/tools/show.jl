@@ -15,7 +15,7 @@ function print_short(io::IO, obj::Any)
 end
 
 function print_short_array(io::IO, array::AbstractArray)
-    const maxn = 8
+    maxn = 8
     if length(array)>maxn
         str = string(array[1:maxn])[1:end-1]*", ...]"
         if str[1] != '['

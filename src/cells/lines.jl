@@ -28,7 +28,7 @@ const coords_LIN2 = [ -1.0, 1.0 ]
 # shape functions
 function shape_func_LIN2(R::Array{Float64,1})
     r = R[1]
-    N = Array{Float64}(2)
+    N = Array{Float64}(undef,2)
     N[1] = 0.5*(1-r)
     N[2] = 0.5*(1+r)
     return N
@@ -77,7 +77,7 @@ const coords_LIN3 = [ -1.0, 1.0,  0.0]
 # shape functions
 function shape_func_LIN3(R::Array{Float64,1})
     r = R[1]
-    N = Array{Float64}(3)
+    N = Array{Float64}(undef,3)
     N[1] = 0.5*(r*r - r)
     N[2] = 0.5*(r*r + r)
     N[3] = 1.0 - r*r
@@ -87,7 +87,7 @@ end
 # shape derivatives
 function shape_deriv_LIN3(R::Array{Float64,1})
     r = R[1]
-    D = Array{Float64}(1, 3)
+    D = Array{Float64}(undef,1, 3)
     D[1, 1] = r - 0.5
     D[1, 2] = r + 0.5
     D[1, 3] = -2.0*r
@@ -133,22 +133,22 @@ function shape_func_LIN4(R::Array{Float64,1})
     #    1      3     4      2
 
     r = R[1]
-    N = Array{Float64}(4)
-    N[1] = 1./16.*( -9.*r^3 + 9.*r*r +     r - 1.)
-    N[2] = 1./16.*(  9.*r^3 + 9.*r*r -     r - 1.)
-    N[3] = 1./16.*( 27.*r^3 - 9.*r*r - 27.*r + 9.)
-    N[4] = 1./16.*(-27.*r^3 - 9.*r*r + 27.*r + 9.)
+    N = Array{Float64}(undef,4)
+    N[1] = 1.0/16.0*( -9.0*r^3 + 9.0*r*r +     r - 1.0)
+    N[2] = 1.0/16.0*(  9.0*r^3 + 9.0*r*r -     r - 1.0)
+    N[3] = 1.0/16.0*( 27.0*r^3 - 9.0*r*r - 27.0*r + 9.0)
+    N[4] = 1.0/16.0*(-27.0*r^3 - 9.0*r*r + 27.0*r + 9.0)
     return N
 end
 
 # shape derivatives
 function shape_deriv_LIN4(R::Array{Float64,1})
     r = R[1]
-    D = Array{Float64}(1, 4)
-    D[1,1] = 1./16.*( -27.*r*r + 18.*r + 1. )
-    D[1,2] = 1./16.*(  27.*r*r + 18.*r - 1. )
-    D[1,3] = 1./16.*(  81.*r*r - 18.*r - 27.)
-    D[1,4] = 1./16.*( -81.*r*r - 18.*r + 27.)
+    D = Array{Float64}(undef,1, 4)
+    D[1,1] = 1.0/16.0*( -27.0*r*r + 18.0*r + 1.0 )
+    D[1,2] = 1.0/16.0*(  27.0*r*r + 18.0*r - 1.0 )
+    D[1,3] = 1.0/16.0*(  81.0*r*r - 18.0*r - 27.0)
+    D[1,4] = 1.0/16.0*( -81.0*r*r - 18.0*r + 27.0)
     return D
 end
 

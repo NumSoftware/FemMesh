@@ -1,7 +1,7 @@
 using FemMesh
-using Base.Test
+using Test
 
-print_with_color(:cyan, "\nShape extrapolation\n")
+printstyled("\nShape extrapolation\n", color=:cyan)
 
 for shape in ALL_SHAPES
     println("shape : ", shape.name)

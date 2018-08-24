@@ -13,11 +13,11 @@ mutable struct Point
     id   ::Int64
     extra::Int64 # TODO: check where is used
     function Point(x::Real, y::Real, z::Real=0.0, tag::TagType=0)
-        const NDIG = 14
+        NDIG = 14
         # zero is added to avoid negative bit sign for zero signed values
-        x = round(x, NDIG) + 0.0
-        y = round(y, NDIG) + 0.0
-        z = round(z, NDIG) + 0.0
+        x = round(x, digits=NDIG) + 0.0
+        y = round(y, digits=NDIG) + 0.0
+        z = round(z, digits=NDIG) + 0.0
         return new(x, y, z, tag,-1,-1)
     end
     function Point(C::AbstractArray{<:Real}; tag=0)
@@ -57,7 +57,7 @@ end
 
 function get_coords(points::Array{Point,1}, ndim::Int64=3)
     np = length(points)
-    C  = Array{Float64}(np, ndim)
+    C  = Array{Float64}(undef, np, ndim)
     for i=1:np
         C[i,1] = points[i].x
         C[i,2] = points[i].y
@@ -72,7 +72,7 @@ end
 # Cell
 # ====
 
-type Cell
+mutable struct Cell
     shape  ::ShapeType
     points ::Array{Point,1}
     tag    ::TagType
@@ -81,7 +81,7 @@ type Cell
     quality::Float64              # quality index: surf/(reg_surf) 
     embedded::Bool                # flag for embedded cells
     crossed::Bool                 # flag if cell crossed by linear inclusion
-    ocell  ::Union{Cell,Void}     # owner cell if this cell is a face/edge
+    ocell  ::Union{Cell,Nothing}     # owner cell if this cell is a face/edge
     nips   ::Int                  # number of integration points if required
     iptag  ::TagType # tag for integration points if required
     linked_cells::Array{Cell,1}   # neighbor cells in case of joint cell
@@ -108,7 +108,7 @@ Base.hash(c::Cell) = sum(hash(p) for p in c.points)
 
 function get_coords(c::Cell, ndim=3)::Array{Float64,2}
     n = length(c.points)
-    C = Array{Float64, 2}(n, ndim)
+    C = Array{Float64}(undef, n, ndim)
     for (i,p) in enumerate(c.points)
         C[i,1] = p.x
         if ndim>1 C[i,2] = p.y end
@@ -137,7 +137,7 @@ function get_points(cells::Array{Cell,1})::Array{Point,1}
 end
 
 # Updates cell internal data
-function update!(c::Cell)::Void
+function update!(c::Cell)::Nothing
     c.quality = cell_quality(c)
     return nothing
 end
@@ -167,7 +167,7 @@ function Base.getindex(cells::Array{Cell,1}, cond::Expr)
         error("Cell getindex: Invalid filter expression ", cond)
     end
 
-    result = Array{Cell}(0)
+    result = Cell[]
     for cell in cells
         x = [ p.x for p in cell.points ]
         y = [ p.y for p in cell.points ]
@@ -201,13 +201,13 @@ function iptag!(arr::Array{Cell,1}, tag::TagType)
 end
 
 
-type Bins
+mutable struct Bins
     bins::Array{Array{Cell,1},3}
     bbox::Array{Float64,2}
     lbin::Float64
     function Bins(nx=0, ny=0, nz=0, bbox=nothing)
         this = new()
-        this.bins = Array{Array{Cell,1}}(nx, nx, nx)
+        this.bins = Array{Array{Cell,1}}(undef, nx, nx, nx)
         this.bbox = zeros(0,0)
         # this.lbin = ..
         return this
@@ -325,9 +325,9 @@ function build_bins(cells::Array{Cell,1}, bins::Bins)
     nz = floor(Int, Lz/lbin) + 1
 
     # Allocate bins
-    bins.bins = Array{Array{Cell,1}}(nx, ny, nz)
+    bins.bins = Array{Array{Cell,1}}(undef, nx, ny, nz)
     for k=1:nz, j=1:ny, i=1:nx
-        bins.bins[i,j,k] = Array{Cell}(0)
+        bins.bins[i,j,k] = Cell[]
     end
 
     # Fill bins
@@ -363,7 +363,7 @@ function find_cell(X::Array{Float64,1}, cells::Array{Cell,1}, bins::Bins, tol::F
         Cmax = reshape(bins.bbox[2,:],3)
         lbin = bins.lbin
 
-        if any(X.<Cmin-tol) || any(X.>Cmax+tol)
+        if any(X .< Cmin .- tol) || any(X .> Cmax .+ tol)
             error("find_cell: point outside bounding box")
         end
 
@@ -395,7 +395,7 @@ end
 
 # gets all facets of a cell
 function get_faces(cell::Cell)
-    faces  = Array{Cell}(0)
+    faces  = Cell[]
 
     #all_faces_idxs = FACETS_IDXS[cell.shape]
     all_faces_idxs = cell.shape.facet_idxs
@@ -409,7 +409,7 @@ function get_faces(cell::Cell)
     # Iteration for each facet
     for (i, face_idxs) in enumerate(all_faces_idxs)
         points = cell.points[face_idxs]
-        shape  = sameshape? facet_shape : facet_shape[i]
+        shape  = sameshape ? facet_shape : facet_shape[i]
         face   = Cell(shape, points, cell.tag, cell)
         push!(faces, face)
     end
@@ -421,7 +421,7 @@ end
 function get_edges(cell::Cell)
     if cell.shape.ndim==2 return get_faces(cell) end
 
-    edges  = Array{Cell}(0)
+    edges  = Cell[]
     all_edge_idxs = cell.shape.edge_idxs
 
     for edge_idx in all_edge_idxs
@@ -461,7 +461,7 @@ function cell_extent(c::Cell)
 
     # get coordinates matrix
     C = get_coords(c)
-    J = Array{Float64}(nldim, size(C,2))
+    J = Array{Float64}(undef, nldim, size(C,2))
 
     # calc metric
     vol = 0.0
@@ -482,7 +482,7 @@ end
 function regular_surface(metric::Float64, shape::ShapeType)
     if shape in [ TRI3, TRI6, TRI9, TRI10 ] 
         A = metric
-        a = 2.*√( A/√3.)
+        a = 2.0*√( A/√3.0)
         return 3*a
     end
     if shape in [ QUAD4, QUAD8, QUAD9, QUAD12, QUAD16 ] 
@@ -492,23 +492,23 @@ function regular_surface(metric::Float64, shape::ShapeType)
     end
     if shape in [ PYR5 ] 
         V = metric
-        a = ( 3.*√2.*V )^(1./3.)
-        return (1 + √3.)*a^2
+        a = ( 3.0*√2.0*V )^(1.0/3.0)
+        return (1 + √3.0)*a^2
     end
     if shape in [ TET4, TET10 ] 
         V = metric
-        a = ( 6.*√2.*V )^(1./3.)
-        return √3.*a^2
+        a = ( 6.0*√2.0*V )^(1.0/3.0)
+        return √3.0*a^2
     end
     if shape in [ HEX8, HEX20 ] 
         V = metric
-        a = V^(1./3.)
-        return 6.*a^2.
+        a = V^(1.0/3.0)
+        return 6.0*a^2.0
     end
     if shape in [ WED6, WED15 ]
         V = metric
-        a2 = (16./3.*V^2)^(1./3.) 
-        return (3. + √3./2.)*a2
+        a2 = (16.0/3.0*V^2)^(1.0/3.0) 
+        return (3.0 + √3.0/2.0)*a2
     end
     error("No regular surface/perimeter value for shape $(get_name(shape))")
 end
