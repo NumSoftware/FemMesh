@@ -118,13 +118,21 @@ function Base.getindex(book::DBook, index::Int)
     return book.tables[index]
 end
 
-function Base.endof(book::DBook)
+function Base.lastindex(book::DBook)
     return length(book.tables)
 end
 
-Base.start(book::DBook) = 1
-Base.next(book::DBook, idx::Int) = book.tables[idx], idx+1
-Base.done(book::DBook, idx::Int) = idx == length(book.tables)
+#Base.start(book::DBook) = 1
+#Base.next(book::DBook, idx::Int) = book.tables[idx], idx+1
+#Base.done(book::DBook, idx::Int) = idx == length(book.tables)
+function Base.iterate(book::DBook, state=(nothing,1) )
+    table, idx = state
+    if idx<=length(book.tables)
+        return (book.tables[idx], (book.tables[i+1], idx+1))
+    else
+        return nothing
+    end
+end
 
 function save(table::DTable, filename::String; verbose::Bool=true)
     format = split(filename*".", ".")[2]
