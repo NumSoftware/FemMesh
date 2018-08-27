@@ -79,7 +79,7 @@ function print_datatype_fields(io::IO, obj::Any)
             if n>0
                 maxn = 10
                 # add items IDs if available
-                has_id = all( :id in fieldnames(item) for item in array[1:min(maxn,n)] )
+                has_id = all( :id in fieldnames(typeof(item)) for item in array[1:min(maxn,n)] )
                 if has_id
                     ids = [ item.id for item in array ]
                     print(io, ", id fields ")
@@ -93,7 +93,7 @@ function print_datatype_fields(io::IO, obj::Any)
                     #end
                 end
                 # add items names if available
-                has_name = all( :name in fieldnames(item) for item in array[1:min(maxn,n)] )
+                has_name = all( :name in fieldnames(typeof(item)) for item in array[1:min(maxn,n)] )
                 if has_name
                     names = [ item.name for item in array ]
                     print(io, ", name fields ")
@@ -110,7 +110,7 @@ function print_datatype_fields(io::IO, obj::Any)
             end
         elseif ty<:AbstractArray
             array = getfield(obj, field)
-            str   = replace(string(size(array)), ", ", "×")[2:end-1]
+            str   = replace(string(size(array)), ", " => "×")[2:end-1]
             #print(io, str, " ", ty, " object")
             print(io, ty, " ", str)
         else
@@ -129,7 +129,7 @@ function print_datatype_array(io::IO, array::AbstractArray)
     half = div(maxn,2)
     idx = n<=maxn ? [1:n;] : [1:half; n-half+1:n]
     for i in idx
-        str = "\n  "*replace(string(array[i]), "\n","\n  ")
+        str = "\n  "*replace(string(array[i]), "\n" => "\n  ")
         print(io, str)
         if n>maxn && i==half
             print(io, "\n    ⋮")
