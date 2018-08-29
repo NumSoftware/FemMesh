@@ -5,7 +5,7 @@ export show
 function print_short(io::IO, obj::Any)
     ty = typeof(obj) # update type
     print(io, ty, " ")
-    if isbits(ty) || ty in [Symbol, Expr]
+    if isbitstype(ty) || ty in [Symbol, Expr]
         print(io, obj)
     elseif ty<:AbstractString
         print(io, "\"", obj, "\"")
