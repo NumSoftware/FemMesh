@@ -168,7 +168,7 @@ function mplot(mesh::Mesh, filename::String=""; args...)
         pts_arr      = [ [p.x, p.y, p.z] for p in spoints ]
         ugrid.points = [ pts_arr[i][j] for i=1:length(pts_arr), j=1:3]
         ugrid.cells  = [ Int[ id_dict[p.id] for p in c.points ] for c in scells ]
-        ugrid.cell_types = [ c.shape.vtk_type for c in scells ]
+        ugrid.cell_types = [ Int(c.shape.vtk_type) for c in scells ]
     end
     mplot(ugrid, filename; args...)
 end
