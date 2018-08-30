@@ -67,25 +67,17 @@ include("mplot.jl")
 export mplot
 
 
-# show functions for common structures and arrays
-@show_function ShapeType
-@show_array_function ShapeType
-@show_function Point
-@show_array_function Point
-@show_function Cell
-@show_array_function Cell
-@show_function Block
-@show_array_function Block
+# show function for FemMesh types
+for datatype in (:ShapeType, :Point, :Cell, :Block, :Mesh, :UnstructuredGrid )
+    eval( quote
+        function Base.show(io::IO, obj::$datatype)
+            print_field_values(io, obj)
+        end
 
-@show_function Mesh
-@show_function UnstructuredGrid
-
-# precompile hint
-#bl = Block2D( [0 0; 1 1], nx=2, ny=2, shape=TRI3)
-#mesh = Mesh(bl, verbose=false)
-#bl = Block2D( [0 0; 1 1], nx=2, ny=2, shape=QUAD4)
-#mesh = Mesh(bl, verbose=false)
-#bl = Block3D( [0 0 0; 1 1 1], nx=2, ny=2, nz=2, shape=HEX8)
-#mesh = Mesh(bl, verbose=false)
+        function Base.show(io::IO, array::Array{<:$datatype,1})
+            print_array_values(io, array)
+        end
+    end )
+end
 
 end#module
