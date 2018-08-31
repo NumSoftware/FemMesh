@@ -6,11 +6,11 @@ export DTable, DBook, push!, keys, getindex, save, loadtable, loadbook
 
 
 # DTable object
-const HeaderType = Union{Symbol,String}
+const HeaderType = Union{Symbol,AbstractString}
 
 mutable struct DTable
     data    ::Array{Array{Float64,1},1}
-    colindex::Dict{HeaderType,Int} # Data index
+    colindex::Dict{Symbol,Int} # Data index
     fields  ::Array{HeaderType,1}
     function DTable()
         this = new()
@@ -19,14 +19,14 @@ mutable struct DTable
         this.fields   = []
         return this
     end
-    function DTable(header::Array{HeaderType,1})
+    function DTable(header::Array{<:HeaderType,1})
         this = new()
         this.data     = [ Float64[] for s in header ]
         this.colindex = Dict( key=>i for (i,key) in enumerate(header) )
         this.fields   = copy(header)
         return this
     end
-    function DTable(header::Array{HeaderType,1}, data::Array{Array{Float64,1},1})
+    function DTable(header::Array{<:HeaderType,1}, data::Array{Array{Float64,1},1})
         this      = new()
         nfields   = length(header)
         ncols     = length(data)
@@ -36,7 +36,7 @@ mutable struct DTable
         this.fields   = copy(header)
         return this
     end
-    function DTable(header::Array{HeaderType,1}, matrix::Array{Float64,2})
+    function DTable(header::Array{<:HeaderType,1}, matrix::Array{Float64,2})
         this      = new()
         nfields   = length(header)
         ncols     = size(matrix,2)
@@ -108,7 +108,7 @@ function Base.getindex(table::DTable, key::HeaderType)
     return table.data[table.colindex[key]]
 end
 
-function Base.getindex(table::DTable, keys::Array{HeaderType,1})
+function Base.getindex(table::DTable, keys::Array{<:HeaderType,1})
     data = [ table[key] for key in keys ]
     subtable = DTable(keys, data)
     return subtable
@@ -228,7 +228,7 @@ function loadtable(filename::String, delim='\t')
 
     if format=="dat"
         data, headstr = readdlm(filename, delim, header=true, use_mmap=false)
-        fields = [ strip(field) for field in vec(headstr) ]
+        fields = [ Symbol(strip(field)) for field in vec(headstr) ]
 
         table = DTable(fields , data)
         return table
@@ -259,7 +259,7 @@ function loadbook(filename::String)
             end
 
             length(book.tables) == 0 && error("loadbook: Wrong file format. Use loadtable() to read a table")
-            row = parse.(items)
+            row = parse.(Float64, items)
             push!(book.tables[end], row) # udpate newest table
         end
     end
@@ -271,10 +271,13 @@ end
 function Base.show(io::IO, table::DTable)
     nc = length(table.colindex)  # number of fields (columns)
     nr = length(table.data[1])   # number of rows
+
     matrix = [ table.data[j][i] for i=1:nr, j=1:nc ]
     header = reshape(Text.([:row; table.fields]), (1, nc+1))
     print(io, "DTable $(nr)x$nc:\n")
-    Base.showarray(io, [header; collect(1:nr) matrix], false, header=false)
+    #Base.showarray(io, [header; collect(1:nr) matrix], false, header=false)
+    io = IOContext(io, :compact => true)
+    Base.print_matrix(io, [header; collect(1:nr) matrix])
 end
 
 function Base.show(io::IO, book::DBook)

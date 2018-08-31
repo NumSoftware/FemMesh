@@ -369,9 +369,7 @@ function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true,
     if arrows && ndim==2
         max_length = 1.0
         scale = 0.1*L/max_length
-        #@show keys(ugrid.point_vector_data)
         data  = ugrid.point_vector_data[arrowsfield]
-        @show data
         for i=1:npoints
             dx, dy, dz = scale*data[i,:]
             plt[:arrow](X[i], Y[i], X[i]+dx, Y[i]+dy, color="blue")

@@ -18,7 +18,7 @@ copy, move!, array, rotate!, polar, extrude.
 
 """
 module FemMesh
-using Printf, Statistics, LinearAlgebra, SparseArrays
+using Printf, Statistics, LinearAlgebra, SparseArrays, DelimitedFiles
 using JSON, DataStructures
 
 # Mesh module
@@ -66,7 +66,6 @@ export generate_embedded_cells!
 include("mplot.jl") 
 export mplot
 
-
 # show function for FemMesh types
 for datatype in (:ShapeType, :Point, :Cell, :Block, :Mesh, :UnstructuredGrid )
     eval( quote
@@ -74,7 +73,7 @@ for datatype in (:ShapeType, :Point, :Cell, :Block, :Mesh, :UnstructuredGrid )
             print_field_values(io, obj)
         end
 
-        function Base.show(io::IO, array::Array{<:$datatype,1})
+        function Base.show(io::IO, array::Array{<:($datatype),1})
             print_array_values(io, array)
         end
     end )

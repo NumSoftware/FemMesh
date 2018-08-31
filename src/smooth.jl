@@ -587,7 +587,7 @@ function smooth!(mesh::Mesh; verbose=true, alpha::Float64=0.3, target::Float64=0
 
     stats = DTable()
     hists = DTable()
-    push!(stats, OrderedDict("qavg"=>q, "qmin"=>qmin, "qmax"=>qmax, "dev"=>dev))
+    push!(stats, OrderedDict(:qavg=>q, :qmin=>qmin, :qmax=>qmax, :dev=>dev))
 
     hist  = fit(Histogram, Q, 0.0:0.05:1.0, closed=:right).weights
     push!(hists, OrderedDict(Symbol(r) => v for (r,v) in zip(0.0:0.05:0.95,hist)))
@@ -739,7 +739,7 @@ function laplacian_smooth!(mesh::Mesh; alpha::Float64=1.0, maxit::Int64=20, verb
 
     stats = DTable()
     hists = DTable()
-    push!(stats, OrderedDict("qavg"=>q, "qmin"=>qmin, "qmax"=>qmax, "dev"=>dev))
+    push!(stats, OrderedDict(:qavg=>q, :qmin=>qmin, :qmax=>qmax, :dev=>dev))
 
     hist  = fit(Histogram, Q, 0.0:0.05:1.0, closed=:right).weights
     push!(hists, OrderedDict(Symbol(r) => v for (r,v) in zip(0.0:0.05:0.95,hist)))

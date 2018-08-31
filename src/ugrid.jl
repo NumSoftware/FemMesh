@@ -125,98 +125,6 @@ function save_vtk(vtk_data::UnstructuredGrid, filename::String)
     return nothing
 end
 
-function read_ugrid_vtk_old(filename::String)
-    file = open(filename)
-
-    # read nodal information
-    alltext = read(filename)
-    data    = split(alltext)
-
-    # read header
-    idx  = 1
-    while data[idx] != "DATASET"
-        idx += 1
-    end
-    idx += 1
-
-    gridtype = data[idx]
-    gridtype == "UNSTRUCTURED_GRID" || error("load_VTK_unstructured_grid: this reader only support files of VTK UNSTRUCTURED_GRID")
-
-    # read number of points
-    while data[idx] != "POINTS"
-        idx += 1
-    end
-    npoints = parse(data[idx+1])
-    idx += 3
-
-    # read points
-    points = zeros(npoints,3)
-    for i=1:npoints
-        points[i,1] = parse(Float64, data[idx])
-        points[i,2] = parse(Float64, data[idx+1])
-        points[i,3] = parse(Float64, data[idx+2])
-        idx += 3
-    end
-
-    # read number of cells
-    while data[idx] != "CELLS"
-        idx += 1
-    end
-    ncells = parse(data[idx+1])
-    ncdata = parse(data[idx+2])
-    idx += 3
-
-    # read cells connectivities
-    cells = Array{Int,1}[]
-    for i=1:ncells
-        npoints = parse(data[idx])
-        idx += 1
-        conn = Int[]
-        for j=1:npoints
-            id = parse(data[idx]) + 1
-            push!(conn, id)
-            idx  += 1
-        end
-        push!(cells, conn)
-    end
-
-    # read type of cells
-    while data[idx] != "CELL_TYPES"
-        idx += 1
-    end
-    idx += 2
-
-    cell_types = Int[]
-    for i=1:ncells
-        vtk_shape = VTKCellType(parse(data[idx]))
-        push!(cell_types, vtk_shape)
-        idx  += 1
-    end
-
-    # read data
-    # TODO
-    #while data[idx] != "POINT_DATA"
-        #idx += 1
-    #end
-    #idx += 2
-#
-    #while true
-        #data[idx] == "CELL_DATA" && break
-    #end
-#
-    #if data[idx] == "CELL_DATA" 
-        #idx += 2
-    #end
-
-
-
-    # end of reading
-    close(file)
-
-    vtk_data = UnstructuredGrid("VTK unstructured grid", points, cells, cell_types)
-    return vtk_data
-end
-
 
 function read_ugrid_vtk(filename::String)
     file = open(filename)
@@ -263,10 +171,10 @@ function read_ugrid_vtk(filename::String)
 
             cells = Array{Int,1}[]
             for i=1:ncells
-                npoints = parse(Int64, data[idx+1])
+                npts = parse(Int64, data[idx+1])
                 idx += 1
                 conn = Int[]
-                for j=1:npoints
+                for j=1:npts
                     idx += 1
                     #@show data[idx]
                     id = parse(Int64, data[idx]) + 1
@@ -293,9 +201,15 @@ function read_ugrid_vtk(filename::String)
             reading_cell_data  = false
         end
 
+        if data[idx] == "CELL_DATA"
+            idx += 1
+            reading_cell_data  = true
+            reading_point_data = false
+        end
+
         if data[idx] == "VECTORS" && reading_point_data
             label = data[idx+1]
-            @show label
+            #@show npoints
             idx += 2
             vectors = zeros(npoints,3)
             for i=1:npoints
@@ -304,6 +218,7 @@ function read_ugrid_vtk(filename::String)
                 vectors[i,3] = parse(Float64, data[idx+3])
                 idx += 3
             end
+            #@show data[idx+1]
             point_vector_data[label] = vectors
         end
 
@@ -319,18 +234,12 @@ function read_ugrid_vtk(filename::String)
             point_scalar_data[label] = scalars
         end
 
-        if data[idx] == "CELL_DATA"
-            idx += 1
-            reading_cell_data  = true
-            reading_point_data = false
-        end
-
         if data[idx] == "SCALARS" && reading_cell_data
             label = data[idx+1]
             ty = data[idx+2]
             idx += 5
             scalars = zeros(TYPES[ty], npoints)
-            for i=1:npoints
+            for i=1:ncells
                 idx += 1
                 scalars[i] = parse(TYPES[ty], data[idx])
             end

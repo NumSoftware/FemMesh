@@ -155,16 +155,10 @@ function reorder!(mesh::Mesh; sort_degrees=true, reversed=false)
 
         # all other cells
         edge = Cell(cell.shape, cell.points)
-        #@show cell.shape.name
-        #@show [p.id for p in edge.points]
         hs = hash(edge)
         all_edges[hs] = edge
 
     end
-
-    #@show mesh.points[3]
-    #@show mesh.points[5]
-    #@show mesh.points[6]
 
     # Get neighbors ids
     npoints = length(mesh.points)
@@ -184,7 +178,6 @@ function reorder!(mesh::Mesh; sort_degrees=true, reversed=false)
     # removing duplicates and get neighbors
     neighs = Array{Point}[ mesh.points[unique(list)] for list in neighs_ids ]
     #neighs = Array{Point}[ mesh.points[unique(list)] for list in neighs_ids ]
-    #@show neighs_ids
 
     # list of degrees per point
     degrees = Int64[ length(list) for list in neighs]
@@ -477,8 +470,8 @@ function Base.convert(::Type{UnstructuredGrid}, mesh::Mesh)
 
     return UnstructuredGrid(title, points, cells, cell_tys,
                                  point_scalar_data = point_scalar_data,
-                                 point_vector_data = point_vector_data,
-                                 cell_scalar_data  = cell_scalar_data)
+                                 cell_scalar_data  = cell_scalar_data,
+                                 point_vector_data = point_vector_data)
 end
 
 
@@ -716,7 +709,6 @@ function load_mesh_json(filename; format="json")
             conn  = [ i+1 for i in conn]
             id    = id+1
             shapetype = get_shape_from_geo(cell[shape_key])
-            #@show shapetype.name
         end
         points = Point[ mesh.points[i] for i in conn ]
 
@@ -732,7 +724,6 @@ function load_mesh_json(filename; format="json")
             else
                 C.shape = JLINK3
             end
-            #@show " ", shapetype.name
         end
 
         C.id  = id

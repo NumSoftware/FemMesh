@@ -6,6 +6,7 @@ StatsBase
 LinearAlgebra
 SparseArrays
 Test
+DelimitedFiles
 JSON
 DataStructures
 PyCall
