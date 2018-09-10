@@ -20,7 +20,7 @@ mutable struct Point
         #x = round(x, digits=NDIG) + 0.0
         #y = round(y, digits=NDIG) + 0.0
         #z = round(z, digits=NDIG) + 0.0
-        return new(x, y, z, tag,-1,-1)
+        return new(x, y, z, tag,-1)
     end
     function Point(C::AbstractArray{<:Real}; tag=0)
         # zero is added to avoid negative bit sign for zero signed values
