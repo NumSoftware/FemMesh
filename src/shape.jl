@@ -16,10 +16,6 @@ for s in instances(ShapeFamily)
     @eval export $(Symbol(s))
 end 
 
-
-include("shapes/vtk.jl")
-include("shapes/quadrature.jl")
-
 mutable struct ShapeType 
     name       ::String
     family     ::ShapeFamily

@@ -32,6 +32,9 @@ export unfold
 # Generic exports
 export getindex
 
+include("vtk.jl")
+include("quadrature.jl")
+
 include("shape.jl")
 export ShapeType, TagType, ALL_SHAPES, ShapeFamily
 export get_ip_coords, get_shape_from_vtk
