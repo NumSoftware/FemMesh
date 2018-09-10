@@ -41,7 +41,7 @@ const facet_idxs_TRI3 = [ [1, 2], [2, 3], [3, 1] ]
 
 function shape_func_TRI3(R::Array{Float64,1})
     r, s = R[1:2]
-    N = Array{Float64}(3)
+    N = Array{Float64}(undef,3)
     N[1] = 1.0-r-s
     N[2] = r
     N[3] = s
@@ -117,7 +117,7 @@ const facet_idxs_TRI6 = [ [1, 2, 4], [2, 3, 5], [3, 1, 6] ]
 function shape_func_TRI6(R::Array{Float64,1})
     r, s = R
 
-    N = Array{Float64}(6)
+    N = Array{Float64}(undef,6)
     N[1] = 1.0-(r+s)*(3.0-2.0*(r+s))
     N[2] = r*(2.0*r-1.0)
     N[3] = s*(2.0*s-1.0)
@@ -131,9 +131,9 @@ end
 function shape_deriv_TRI6(R::Array{Float64,1})
     r, s = R
 
-    D = Array{Float64}(2, 6)
+    D = Array{Float64}(undef,2, 6)
     D[1,1] = -3.0 + 4.0 * (r + s);       D[2,1] = -3.0 + 4.0*(r + s)
-    D[1,2] =  4.0 * r - 1.;              D[2,2] =  0.0
+    D[1,2] =  4.0 * r - 1.0;              D[2,2] =  0.0
     D[1,3] =  0.0;                       D[2,3] =  4.0 * s - 1.0
     D[1,4] =  4.0 - 8.0 * r - 4.0 * s;   D[2,4] = -4.0 * r
     D[1,5] =  4.0 * s;                   D[2,5] =  4.0 * r
@@ -182,7 +182,7 @@ function shape_func_TRI9(R::Array{Float64,1})
     error("TRI9 shape not fully implemented")
     r, s = R
 
-    N = Array{Float64}(9)
+    N = Array{Float64}(undef,9)
     return N
 end
 
@@ -190,7 +190,7 @@ function shape_deriv_TRI9(R::Array{Float64,1})
     error("TRI9 shape not fully implemented")
     r, s = R
 
-    D = Array{Float64}(2, 9)
+    D = Array{Float64}(undef,2, 9)
     return D
 end
 
@@ -234,7 +234,7 @@ function shape_func_TRI10(R::Array{Float64,1})
     error("TRI10 shape not fully implemented")
     r, s = R
 
-    N = Array{Float64}(10)
+    N = Array{Float64}(undef,10)
     return N
 end
 
@@ -242,7 +242,7 @@ function shape_deriv_TRI10(R::Array{Float64,1})
     error("TRI10 shape not fully implemented")
     r, s = R
 
-    D = Array{Float64}(2, 10)
+    D = Array{Float64}(undef,2, 10)
     return D
 end
 
@@ -300,7 +300,7 @@ const facet_idxs_QUAD4 = [ [1, 2], [2, 3], [3, 4], [4, 1] ]
 
 function shape_func_QUAD4(R::Array{Float64,1})
     r, s = R[1:2]
-    N = Array{Float64}(4)
+    N = Array{Float64}(undef,4)
     N[1] = 0.25*(1.0-r-s+r*s)
     N[2] = 0.25*(1.0+r-s-r*s)
     N[3] = 0.25*(1.0+r+s+r*s)
@@ -310,7 +310,7 @@ end
 
 function shape_deriv_QUAD4(R::Array{Float64,1})
     r, s = R[1:2]
-    D = Array{Float64}(2, 4)
+    D = Array{Float64}(undef,2, 4)
     D[1,1] = 0.25*(-1.0+s);   D[2,1] = 0.25*(-1.0+r)
     D[1,2] = 0.25*(+1.0-s);   D[2,2] = 0.25*(-1.0-r)
     D[1,3] = 0.25*(+1.0+s);   D[2,3] = 0.25*(+1.0+r)
@@ -377,7 +377,7 @@ const facet_idxs_QUAD8 = [ [1, 2, 5], [2, 3, 6], [3, 4, 7], [4, 1, 8] ]
 
 function shape_func_QUAD8(R::Array{Float64,1})
     r, s = R[1:2]
-    N = Array{Float64}(8)
+    N = Array{Float64}(undef,8)
     rp1=1.0+r; rm1=1.0-r;
     sp1=1.0+s; sm1=1.0-s;
     N[1] = 0.25*rm1*sm1*(rm1+sm1-3.0)
@@ -393,7 +393,7 @@ end
 
 function shape_deriv_QUAD8(R::Array{Float64,1})
     r, s = R[1:2]
-    D = Array{Float64}(2, 8)
+    D = Array{Float64}(undef,2, 8)
     rp1=1.0+r; rm1=1.0-r
     sp1=1.0+s; sm1=1.0-s
 
@@ -476,7 +476,7 @@ const facet_idxs_QUAD9 = [ [1, 2, 5], [2, 3, 6], [3, 4, 7], [4, 1, 8] ]
 
 function shape_func_QUAD9(R::Array{Float64,1})
     r, s = R[1:2]
-    N = Array{Float64}(9)
+    N = Array{Float64}(undef,9)
     rp1=r+1.0; rm1=r-1.0
     sp1=s+1.0; sm1=s-1.0
 
@@ -494,7 +494,7 @@ end
 
 function shape_deriv_QUAD9(R::Array{Float64,1})
     r, s = R[1:2]
-    D = Array{Float64}(2,9)
+    D = Array{Float64}(undef,2,9)
     rp1=r+1.0; rm1=r-1.0
     sp1=s+1.0; sm1=s-1.0
 
@@ -584,61 +584,61 @@ const facet_idxs_QUAD12 = [ [1, 2, 5, 9], [2, 3, 6, 10], [3, 4, 7, 11], [4, 1, 8
 
 function shape_func_QUAD12(R::Array{Float64,1})
     r, s = R[1:2]
-    N = Array{Float64}(12)
+    N = Array{Float64}(undef,12)
 
-    RM = 1. - r
-    RP = 1. + r
-    SM = 1. - s
-    SP = 1. + s
-    N[1]  = RM*SM*( 9.*(r*r + s*s) - 10.)/32.
-    N[2]  = RP*SM*( 9.*(r*r + s*s) - 10.)/32.
-    N[3]  = RP*SP*( 9.*(r*r + s*s) - 10.)/32.
-    N[4]  = RM*SP*( 9.*(r*r + s*s) - 10.)/32.
-    N[5]  = 9.*(1. - r*r)*(1. - 3.*r)*SM/32.
-    N[6]  = 9.*(1. - s*s)*(1. - 3.*s)*RP/32.
-    N[7]  = 9.*(1. - r*r)*(1. + 3.*r)*SP/32.
-    N[8]  = 9.*(1. - s*s)*(1. + 3.*s)*RM/32.
-    N[9]  = 9.*(1. - r*r)*(1. + 3.*r)*SM/32.
-    N[10] = 9.*(1. - s*s)*(1. + 3.*s)*RP/32.
-    N[11] = 9.*(1. - r*r)*(1. - 3.*r)*SP/32.
-    N[12] = 9.*(1. - s*s)*(1. - 3.*s)*RM/32.
+    RM = 1.0 - r
+    RP = 1.0 + r
+    SM = 1.0 - s
+    SP = 1.0 + s
+    N[1]  = RM*SM*( 9.0*(r*r + s*s) - 10.0)/32.0
+    N[2]  = RP*SM*( 9.0*(r*r + s*s) - 10.0)/32.0
+    N[3]  = RP*SP*( 9.0*(r*r + s*s) - 10.0)/32.0
+    N[4]  = RM*SP*( 9.0*(r*r + s*s) - 10.0)/32.0
+    N[5]  = 9.0*(1.0 - r*r)*(1.0 - 3.0*r)*SM/32.0
+    N[6]  = 9.0*(1.0 - s*s)*(1.0 - 3.0*s)*RP/32.0
+    N[7]  = 9.0*(1.0 - r*r)*(1.0 + 3.0*r)*SP/32.0
+    N[8]  = 9.0*(1.0 - s*s)*(1.0 + 3.0*s)*RM/32.0
+    N[9]  = 9.0*(1.0 - r*r)*(1.0 + 3.0*r)*SM/32.0
+    N[10] = 9.0*(1.0 - s*s)*(1.0 + 3.0*s)*RP/32.0
+    N[11] = 9.0*(1.0 - r*r)*(1.0 - 3.0*r)*SP/32.0
+    N[12] = 9.0*(1.0 - s*s)*(1.0 - 3.0*s)*RM/32.0
 
     return N
 end
 
 function shape_deriv_QUAD12(R::Array{Float64,1})
     r, s = R[1:2]
-    D = Array{Float64}(2, 12)
+    D = Array{Float64}(undef,2, 12)
 
-    RP = 1. + r
-    RM = 1. - r
-    SP = 1. + s
-    SM = 1. - s
+    RP = 1.0 + r
+    RM = 1.0 - r
+    SP = 1.0 + s
+    SM = 1.0 - s
 
-    D[1,1]  =  SM*(9.*(2.*r - 3.*r*r - s*s) + 10.)/32.
-    D[1,2]  =  SM*(9.*(2.*r + 3.*r*r + s*s) - 10.)/32.
-    D[1,3]  =  SP*(9.*(2.*r + 3.*r*r + s*s) - 10.)/32.
-    D[1,4]  =  SP*(9.*(2.*r - 3.*r*r - s*s) + 10.)/32.
-    D[1,5]  =  9.*SM*(9.*r*r - 2.*r - 3.)/32.
-    D[1,6]  =  9.*(1. - s*s)*(1. - 3.*s)/32.
-    D[1,7]  =  9.*SP*(-9.*r*r - 2.*r + 3.)/32.
-    D[1,8]  = -9.*(1. - s*s)*(1. + 3.*s)/32.
-    D[1,9]  =  9.*SM*(-9.*r*r - 2.*r + 3.)/32.
-    D[1,10] =  9.*(1. - s*s)*(1. + 3.*s)/32.
-    D[1,11] =  9.*SP*(9.*r*r - 2.*r - 3.)/32.
-    D[1,12] = -9.*(1. - s*s)*(1. - 3.*s)/32.
-    D[2,1]  =  RM*(9.*(2.*s - 3.*s*s - r*r) + 10.)/32.
-    D[2,2]  =  RP*(9.*(2.*s - 3.*s*s - r*r) + 10.)/32.
-    D[2,3]  =  RP*(9.*(2.*s + 3.*s*s + r*r) - 10.)/32.
-    D[2,4]  =  RM*(9.*(2.*s + 3.*s*s + r*r) - 10.)/32.
-    D[2,5]  = -9.*(1. - r*r)*(1. - 3.*r)/32.
-    D[2,6]  =  9.*RP*(9.*s*s - 2.*s - 3.)/32.
-    D[2,7]  =  9.*(1. - r*r)*(1. + 3.*r)/32.
-    D[2,8]  =  9.*RM*(-9.*s*s - 2.*s + 3.)/32.
-    D[2,9]  = -9.*(1. - r*r)*(1. + 3.*r)/32.
-    D[2,10] =  9.*RP*(-9.*s*s - 2.*s + 3.)/32.
-    D[2,11] =  9.*(1. - r*r)*(1. - 3.*r)/32.
-    D[2,12] =  9.*RM*(9.*s*s - 2.*s - 3.)/32.
+    D[1,1]  =  SM*(9.0*(2.0*r - 3.0*r*r - s*s) + 10.0)/32.0
+    D[1,2]  =  SM*(9.0*(2.0*r + 3.0*r*r + s*s) - 10.0)/32.0
+    D[1,3]  =  SP*(9.0*(2.0*r + 3.0*r*r + s*s) - 10.0)/32.0
+    D[1,4]  =  SP*(9.0*(2.0*r - 3.0*r*r - s*s) + 10.0)/32.0
+    D[1,5]  =  9.0*SM*(9.0*r*r - 2.0*r - 3.0)/32.0
+    D[1,6]  =  9.0*(1.0 - s*s)*(1.0 - 3.0*s)/32.0
+    D[1,7]  =  9.0*SP*(-9.0*r*r - 2.0*r + 3.0)/32.0
+    D[1,8]  = -9.0*(1.0 - s*s)*(1.0 + 3.0*s)/32.0
+    D[1,9]  =  9.0*SM*(-9.0*r*r - 2.0*r + 3.0)/32.0
+    D[1,10] =  9.0*(1.0 - s*s)*(1.0 + 3.0*s)/32.0
+    D[1,11] =  9.0*SP*(9.0*r*r - 2.0*r - 3.0)/32.0
+    D[1,12] = -9.0*(1.0 - s*s)*(1.0 - 3.0*s)/32.0
+    D[2,1]  =  RM*(9.0*(2.0*s - 3.0*s*s - r*r) + 10.0)/32.0
+    D[2,2]  =  RP*(9.0*(2.0*s - 3.0*s*s - r*r) + 10.0)/32.0
+    D[2,3]  =  RP*(9.0*(2.0*s + 3.0*s*s + r*r) - 10.0)/32.0
+    D[2,4]  =  RM*(9.0*(2.0*s + 3.0*s*s + r*r) - 10.0)/32.0
+    D[2,5]  = -9.0*(1.0 - r*r)*(1.0 - 3.0*r)/32.0
+    D[2,6]  =  9.0*RP*(9.0*s*s - 2.0*s - 3.0)/32.0
+    D[2,7]  =  9.0*(1.0 - r*r)*(1.0 + 3.0*r)/32.0
+    D[2,8]  =  9.0*RM*(-9.0*s*s - 2.0*s + 3.0)/32.0
+    D[2,9]  = -9.0*(1.0 - r*r)*(1.0 + 3.0*r)/32.0
+    D[2,10] =  9.0*RP*(-9.0*s*s - 2.0*s + 3.0)/32.0
+    D[2,11] =  9.0*(1.0 - r*r)*(1.0 - 3.0*r)/32.0
+    D[2,12] =  9.0*RM*(9.0*s*s - 2.0*s - 3.0)/32.0
 
     return D
 end
@@ -680,7 +680,7 @@ const facet_idxs_QUAD16 = [ [1, 2, 5, 9], [2, 3, 6, 10], [3, 4, 7, 11], [4, 1, 8
 function shape_func_QUAD16(R::Array{Float64,1})
     error("TRI9 shape not fully implemented")
     r, s = R[1:2]
-    N = Array{Float64}(16)
+    N = Array{Float64}(undef,16)
 
     return N
 end
@@ -688,7 +688,7 @@ end
 function shape_deriv_QUAD16(R::Array{Float64,1})
     error("TRI9 shape not fully implemented")
     r, s = R[1:2]
-    D = Array{Float64}(2, 16)
+    D = Array{Float64}(undef,2, 16)
 
     return D
 end

@@ -18,13 +18,15 @@ copy, move!, array, rotate!, polar, extrude.
 
 """
 module FemMesh
-using JSON
+using Printf, Statistics, LinearAlgebra, SparseArrays, DelimitedFiles
+using JSON, DataStructures
 
 # Mesh module
 include("tools/linalg.jl")
 include("tools/expr.jl")
 include("tools/show.jl")
 include("tools/iteration.jl")
+include("tools/table.jl")
 export unfold
 
 # Generic exports
@@ -37,7 +39,7 @@ export inverse_map, extrapolator
 
 include("entities.jl")
 export Point, Cell, hash, get_x, get_y, get_z
-export get_coords, get_point, get_points, get_faces, cell_extent, cell_quality
+export getcoords, get_point, get_points, get_faces, cell_extent, cell_quality
 export tag!, iptag!, update!
 
 include("ugrid.jl")
@@ -64,26 +66,17 @@ export generate_embedded_cells!
 include("mplot.jl") 
 export mplot
 
+# show function for FemMesh types
+for datatype in (:ShapeType, :Point, :Cell, :Block, :Mesh, :UnstructuredGrid )
+    eval( quote
+        function Base.show(io::IO, obj::$datatype)
+            print_field_values(io, obj)
+        end
 
-# show functions for common structures and arrays
-@show_function ShapeType
-@show_array_function ShapeType
-@show_function Point
-@show_array_function Point
-@show_function Cell
-@show_array_function Cell
-@show_function Block
-@show_array_function Block
-
-@show_function Mesh
-@show_function UnstructuredGrid
-
-# precompile hint
-#bl = Block2D( [0 0; 1 1], nx=2, ny=2, shape=TRI3)
-#mesh = Mesh(bl, verbose=false)
-#bl = Block2D( [0 0; 1 1], nx=2, ny=2, shape=QUAD4)
-#mesh = Mesh(bl, verbose=false)
-#bl = Block3D( [0 0 0; 1 1 1], nx=2, ny=2, nz=2, shape=HEX8)
-#mesh = Mesh(bl, verbose=false)
+        function Base.show(io::IO, array::Array{<:($datatype),1})
+            print_array_values(io, array)
+        end
+    end )
+end
 
 end#module

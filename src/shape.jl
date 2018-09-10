@@ -17,13 +17,16 @@ for s in instances(ShapeFamily)
 end 
 
 
+include("cells/vtk.jl")
+include("cells/quadrature.jl")
+
 mutable struct ShapeType 
     name       ::String
     family     ::ShapeFamily
     ndim       ::Int
     npoints    ::Int
     basic_shape::ShapeType
-    vtk_type   ::Int
+    vtk_type   ::VTKCellType
     facet_idxs ::Array
     edge_idxs  ::Array
     facet_shape::Union{ShapeType, Tuple}
@@ -36,8 +39,6 @@ mutable struct ShapeType
     end
 end
 
-include("cells/quadrature.jl")
-include("cells/vtk.jl")
 include("cells/lines.jl")
 include("cells/solids2d.jl")
 include("cells/solids3d.jl")
@@ -65,23 +66,24 @@ end
 
 # Available shape types
 const VTK2SHAPE = Dict{VTKCellType,ShapeType}(
-    VTK_POLY_VERTEX                      => POLYV,
-    VTK_LINE                             => LIN2,
-    VTK_TRIANGLE                         => TRI3,
-    VTK_QUAD                             => QUAD4,
-    VTK_PYRAMID                          => PYR5,
-    VTK_TETRA                            => TET4,
-    VTK_HEXAHEDRON                       => HEX8,
-    VTK_WEDGE                            => WED6,
-    VTK_QUADRATIC_EDGE                   => LIN3,
-    VTK_QUADRATIC_TRIANGLE               => TRI6,
-    VTK_QUADRATIC_QUAD                   => QUAD8,
-    VTK_QUADRATIC_TETRA                  => TET10,
-    VTK_QUADRATIC_HEXAHEDRON             => HEX20,
-    VTK_QUADRATIC_WEDGE                  => WED15,
-    VTK_BIQUADRATIC_QUAD                 => QUAD9
+    VTK_POLY_VERTEX          => POLYV,
+    VTK_LINE                 => LIN2,
+    VTK_TRIANGLE             => TRI3,
+    VTK_QUAD                 => QUAD4,
+    VTK_PYRAMID              => PYR5,
+    VTK_TETRA                => TET4,
+    VTK_HEXAHEDRON           => HEX8,
+    VTK_WEDGE                => WED6,
+    VTK_QUADRATIC_EDGE       => LIN3,
+    VTK_QUADRATIC_TRIANGLE   => TRI6,
+    VTK_QUADRATIC_QUAD       => QUAD8,
+    VTK_QUADRATIC_TETRA      => TET10,
+    VTK_QUADRATIC_HEXAHEDRON => HEX20,
+    VTK_QUADRATIC_WEDGE      => WED15,
+    VTK_BIQUADRATIC_QUAD     => QUAD9
 )
 
+# All bulk cell shapes
 const ALL_SHAPES = [
     LIN2
     LIN3
@@ -102,29 +104,61 @@ const ALL_SHAPES = [
 ]
 
 
-function get_shape_from_vtk(vtk_type::VTKCellType, npoints::Int64, ndim::Int64)::ShapeType
+function get_shape_from_vtk(vtk_type::VTKCellType, npoints::Int64, ndim::Int64, layers::Int64=0)::ShapeType
+    # vtk_type: VTK cell code
+    # npoints : total number of cell points
+    # ndim    : analysis dimension
+    # layers  : number of layers for joint elements
 
-    if vtk_type!=VTK_POLY_VERTEX return VTK2SHAPE[vtk_type] end
+    vtk_type!=VTK_POLY_VERTEX && return VTK2SHAPE[vtk_type]
 
+    # Check if it is a joint cell with layers
+    if layers in (2,3)
+        # dictionary (ndim,nfpoints) => basic_shape
+        shapedict = Dict( (2,2)=>:LIN2, (2,3)=>:LIN3, (2,4)=>:LIN4, (3,3)=>:TRI3, (3,4)=>:QUAD4, (3,6)=>:TRI6, (3,8)=>:QUAD8 )
+        nfpoints = div(npoints,layers)
+        if haskey(shapedict, (ndim, nfpoints))
+            numstr = layers==3 ? "3" : ""
+            shape = Symbol("J$(numstr)$(shapedict[(ndim, nfpoints)])")
+            return eval(shape)
+        end
+
+        #=
+        if npoints==4 
+            ndim==2 && layers==2 && return JLIN2
+        elseif npoints==6   
+            ndim==2 && layers==2 && return JLIN3
+            ndim==3 && layers==2 && return JTRI3
+            ndim==2 && layers==3 && return J3LIN2
+        elseif npoints==8
+            ndim==2 && layers==2 && return JLIN4 
+            ndim==3 && layers==2 && return JQUAD4
+        elseif npoints==9   
+            ndim==2 && layers==3 && return J3LIN3
+            ndim==3 && layers==3 && return J3TRI3
+        elseif npoints==12  
+            ndim==3 && layers==2 && return JTRI6 
+            ndim==2 && layers==3 && return J3LIN4
+            ndim==3 && layers==3 && return J3QUAD4 
+        elseif npoints==16
+            ndim==3 && layers==2 && return JQUAD8 
+        elseif npoints==18
+            ndim==3 && layers==3 && return J3TRI6
+        elseif npoints==24  
+            ndim==3 && layers==3 && return J3QUAD8
+        end
+        =#
+    end
+
+    # Check for other cells
     if     npoints==2   return JLINK2
     elseif npoints==3   return JLINK3
-    elseif npoints==4   return JLIN2
-    elseif npoints==6   
-        if ndim==2 return JLIN3 end
-        if ndim==3 return JTRI3 end
-    elseif npoints==8
-        if ndim==2 return JLIN4  end
-        if ndim==3 return JQUAD4 end
     elseif npoints==9   return TRI9
     elseif npoints==10  return TRI10
     elseif npoints==12  
         #if ndim==2 return QUAD12 end
-        if ndim==3 return JTRI6  end
     elseif npoints==16
         if ndim==2 return QUAD16 end
-        if ndim==3 return JQUAD8 end
-    #elseif npoints==18  return JTRI9
-    #elseif npoints==20  return JTRI10
     end
 
     error("get_shape_from_vtk: Unknown shape for vtk_type $vtk_type and npoints $npoints with ndim $ndim")
@@ -136,7 +170,7 @@ function get_shape_from_geo(geo, npoints=0)
     types = [ LIN2, LIN3, -1, TRI3, TRI6, -1, QUAD4, QUAD8, QUAD9, PYR5, TET4, TET10, HEX8, HEX20, -2, LIN4, TRI10, QUAD12, QUAD16]
     shapetype = types[geo+1]
     if shapetype==-2 #joint
-        shapetype = npoints==2? JLINK2: JLINK3
+        shapetype = npoints==2 ?  JLINK2 : JLINK3
     end
 
     return shapetype
@@ -209,12 +243,12 @@ function is_inside(shape::ShapeType, C::Array{Float64,2}, X::Array{Float64,1}, T
 
     # Testing with bounding box
     ndim = size(C,1)
-    Cmin = vec(minimum(C,1))
-    Cmax = vec(maximum(C,1))
+    Cmin = vec(minimum(C,dims=1))
+    Cmax = vec(maximum(C,dims=1))
     maxl = maximum(Cmax-Cmin)
     ttol = 0.1*maxl # 10% is important for curved elements
 
-    if any(X .< Cmin-ttol) || any(X .> Cmax+ttol)
+    if any(X .< Cmin .- ttol) || any(X .> Cmax .+ ttol)
         return false
     end
 
@@ -250,7 +284,7 @@ function extrapolator(shape::ShapeType, nips::Int)
     ndim    = shape.ndim # not related with the analysis ndim
 
     #filling N matrix with shape functions of all ips
-    N = Array{Float64}(nips, npoints)
+    N = Array{Float64}(undef, nips, npoints)
     for i=1:nips
         N[i,:] = shape.func(vec(IP[i,:]))
     end
@@ -265,7 +299,7 @@ function extrapolator(shape::ShapeType, nips::Int)
     end
 
     # Case for nips<npoints
-    I = eye(nips)
+    #I = eye(nips)
 
     # εip matrix: Local ip coordinates of integration points
     εip = [ IP[:,1:ndim] ones(nips) ]

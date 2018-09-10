@@ -26,6 +26,9 @@ function fix_comparison_scalar(expr::Expr)
         symb = expr.args[1]
         a = expr.args[2]
         b = expr.args[3]
+        if typeof(a)==String || typeof(b)==String
+            return expr
+        end
         if symb == :(==)
             return :(abs($a-$b) < $tol)
         end
@@ -68,8 +71,11 @@ function fix_comparison_arrays(expr::Expr)
         symb = expr.args[1]
         a = expr.args[2]
         b = expr.args[3]
+        if typeof(a)==String || typeof(b)==String
+            return expr
+        end
         if symb == :(==)
-            return :(maximum(abs.($a-$b)) < $tol)
+            return :(maximum(abs.($a.-$b)) < $tol)
         end
         if symb == :(>=)
             return :(minimum($a) > maximum($b) - $tol)

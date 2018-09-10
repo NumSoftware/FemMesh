@@ -9,7 +9,7 @@
 constructs an unitialized mesh object to be used in finite element analyses.
 It contains geometric fields as: points, cells, faces, edges, ndim, quality, etc.
 """
-type Mesh
+mutable struct Mesh
     ndim   ::Int
     points ::Array{Point,1}
     cells  ::Array{Cell,1}
@@ -20,9 +20,9 @@ type Mesh
     quality::Float64
     qmin   ::Float64 
     # Data
-    #point_scalar_data::Dict{String,Array}
-    #point_vector_data::Dict{String,Array}
-    #cell_scalar_data ::Dict{String,Array}
+    point_scalar_data::Dict{String,Array}
+    cell_scalar_data ::Dict{String,Array}
+    point_vector_data::Dict{String,Array}
 
     function Mesh()
         this = new()
@@ -35,6 +35,10 @@ type Mesh
         this.bins   = Bins()
         this.quality = 0.0
         this.qmin    = 0.0
+
+        this.point_scalar_data = Dict()
+        this.cell_scalar_data  = Dict()
+        this.point_vector_data = Dict()
         return this
     end
 end
@@ -110,7 +114,7 @@ function get_patches(mesh::Mesh)::Array{Array{Cell,1},1}
 end
 
 # Reverse Cuthill–McKee algorithm (RCM) 
-function reorder!(mesh::Mesh; sort_degrees=true, reversed=false)::Void
+function reorder!(mesh::Mesh; sort_degrees=true, reversed=false)
 
     # Get all mesh edges
     all_edges = Dict{UInt64, Cell}()
@@ -134,7 +138,7 @@ function reorder!(mesh::Mesh; sort_degrees=true, reversed=false)::Void
 
         # joint1D cells (semi-embedded approach)
         if cell.shape in (JLINK2, JLINK3)
-            edge = Cell(LIN2, [ cell.points[1], cell.points[end-1] ])
+            edge = Cell(POLYV, [ cell.points[1], cell.points[end-1] ])
             hs = hash(edge)
             all_edges[hs] = edge
             continue
@@ -156,23 +160,24 @@ function reorder!(mesh::Mesh; sort_degrees=true, reversed=false)::Void
 
     end
 
-    # Get points neighbors
+    # Get neighbors ids
     npoints = length(mesh.points)
-    neighs  = Array{Point}[ [] for i in 1:npoints  ]
+    neighs_ids = Array{Int64}[ [] for i in 1:npoints ]
 
     for edge in values(all_edges)
         points = edge.points
         np = length(points)
         for i=1:np-1
             for j=i+1:np
-                push!(neighs[points[i].id], points[j])
-                push!(neighs[points[j].id], points[i])
+                push!(neighs_ids[points[i].id], points[j].id)
+                push!(neighs_ids[points[j].id], points[i].id)
             end
         end
     end
 
-    # removing duplicates
-    neighs  = Array{Point}[ unique(list) for list in neighs  ]
+    # removing duplicates and get neighbors
+    neighs = Array{Point}[ mesh.points[unique(list)] for list in neighs_ids ]
+    #neighs = Array{Point}[ mesh.points[unique(list)] for list in neighs_ids ]
 
     # list of degrees per point
     degrees = Int64[ length(list) for list in neighs]
@@ -180,36 +185,39 @@ function reorder!(mesh::Mesh; sort_degrees=true, reversed=false)::Void
 
     if mindeg == 0
         # Case of overlapping elements where edges have at least one point with the same coordinates
-        warn("reorder!: Reordering nodes failed! Check for overlapping cells.")
+        @warn "reorder!: Reordering nodes failed! Check for overlapping cells or non used points."
         return
     end
 
-    N = [ mesh.points[idx] ] # new list of cells
-    R = [ mesh.points[idx] ] # first levelset
-
-    R0 = [ ] # to be the last levelset
+    N = [ mesh.points[idx] ] # new list of points
+    L = Dict{Int64,Point}()  # last levelset. Use ids as keys instead of hash to avoid collisions of points with same coordinates
+    L[idx] = mesh.points[idx]
+    LL = Dict{Int64,Point}()  # levelset before the last one
 
     while length(N) < npoints
         # Generating current levelset A
-        A = Set{Point}([ ])
+        A = Dict{Int64,Point}() 
 
-        for p in R
+        for p in values(L)
             for q in neighs[p.id]
-                if q in R0 || q in R continue end
-                push!(A, q)
+                (haskey(L, q.id) || haskey(LL, q.id)) && continue
+                A[q.id] = q
             end
         end
+        if length(A)==0
+            @error "reorder!: Reordering nodes failed! Possible error with cell connectivities."
+            return
+        end
         
-        # Convert set A into an array RA
-        RA = collect(A)
+        # Convert A into an array RA
+        RA = collect(values(A))
         if sort_degrees
             D  = [ degrees[point.id] for point in RA ]
             RA = RA[sortperm(D)]
         end
 
         append!(N, RA)
-        R0 = R
-        R  = A
+        LL, L = L, A
     end
 
     # Reverse list of new nodes
@@ -230,7 +238,7 @@ end
 
 
 # Updates numbering, faces and edges in a Mesh object
-function update!(mesh::Mesh; verbose::Bool=false, genfacets::Bool=true, genedges::Bool=true)::Void
+function update!(mesh::Mesh; verbose::Bool=false, genfacets::Bool=true, genedges::Bool=true)
 
     # Get ndim
     ndim = 2
@@ -270,10 +278,65 @@ function update!(mesh::Mesh; verbose::Bool=false, genfacets::Bool=true, genedges
 end
 
 # Mesh quality
-function quality!(mesh::Mesh)::Void
+function quality!(mesh::Mesh)
     Q = Float64[ cell_quality(c) for c in mesh.cells]
     mesh.quality = sum(Q)/length(mesh.cells)
     mesh.qmin    = minimum(Q)
+    return nothing
+end
+
+# Adds m2 to m1
+function join_mesh!(m1::Mesh, m2::Mesh)
+    #m = Mesh()
+
+    # copy m1 to m
+    #m.points = copy(m1.points)
+    #m.cells  = copy(m1.cells)
+    #m.bpoints = copy(m1.bpoints)
+
+    pid = length(m1.points)
+    cid = length(m1.cells)
+
+    #@show length(m1.points)
+    #@show length(m2.points)
+
+    #for (h,p) in m1.bpoints
+        #@show (p.id, p.x, p.y, p.z)
+    #end
+
+    # Add new points from m2
+    for p in m2.points
+        hs = hash(p)
+        if !haskey(m1.bpoints, hs)
+            #@show (p.x, p.y, p.z)
+            pid += 1
+            p.id = pid
+            push!(m1.points, p)
+        end
+    end
+
+    #@show length(m1.points)
+
+    # Fix m2 cells connectivities for points at m1 border
+    for c in m2.cells
+        for (i,p) in enumerate(c.points)
+            hs = hash(p)
+            if haskey(m1.bpoints, hs)
+                pp = m1.bpoints[hs]
+                c.points[i] = pp
+            else
+                # update bpoints dict
+                if haskey(m2.bpoints, hs)
+                    m1.bpoints[hs] = p
+                end
+            end
+        end
+
+        cid += 1
+        c.id = cid
+        push!(m1.cells, c)
+    end
+
     return nothing
 end
 
@@ -299,34 +362,39 @@ Generates a mesh based on an array of geometry blocks
 """
 function Mesh(items::Union{Block, Mesh, Array}...; verbose::Bool=true, genfacets::Bool=true, genedges::Bool=true, reorder=true)
 
-    # New mesh object
-    mesh = Mesh()
-
     # Flatten items list
     fitems = flatten(items)
 
     # Get list of blocks and update mesh objects
     blocks = []
+    meshes = []
     for item in fitems
         if isa(item, Block)
             push!(blocks, item)
         elseif isa(item, Mesh)
-            append!(mesh.points, item.points)
-            append!(mesh.cells, item.cells)
-            mesh.bpoints = merge(mesh.bpoints, item.bpoints)
+            push!(meshes, copy(item))
         else
             error("Mesh: item of type $(typeof(item)) cannot be used as Block or Mesh")
         end
     end
 
+    nmeshes = length(meshes)
     nblocks = length(blocks)
     if verbose
-        print_with_color(:cyan, "Mesh generation:\n", bold=true)
-        #println("  analyzing $nblocks block(s)") 
+        printstyled("Mesh generation:\n", bold=true, color=:cyan)
+        nmeshes>0 && @printf "  %5d meshes\n" nmeshes
+        @printf "  %5d blocks\n" nblocks
+    end
+
+    # New mesh object
+    mesh = Mesh()
+
+    # Join meshes
+    for m in meshes
+        join_mesh!(mesh, m)
     end
 
     # Split blocks: generates points and cells
-    @printf "  %5d blocks\n" nblocks
     for (i,b) in enumerate(blocks)
         b.id = i
         split_block(b, mesh)
@@ -381,8 +449,7 @@ function Mesh(cells::Array{Cell,1})
     return mesh
 end
 
-import Base.convert
-function convert(::Type{UnstructuredGrid}, mesh::Mesh)
+function Base.convert(::Type{UnstructuredGrid}, mesh::Mesh)
     npoints = length(mesh.points)
     ncells  = length(mesh.cells)
 
@@ -394,13 +461,13 @@ function convert(::Type{UnstructuredGrid}, mesh::Mesh)
         points[i, 3] = P.z
     end
     cells   = [ [point.id for point in C.points] for C in mesh.cells ] # TODO: make it not dependent of point.id
-    cell_tys= [ C.shape.vtk_type for C in mesh.cells ]
+    cell_tys= [ Int64(C.shape.vtk_type) for C in mesh.cells ]
     
     # point id
     point_ids = [ P.id for P in mesh.points ]
 
     # cell data
-    cell_scalar_data = Dict()
+    cell_scalar_data = copy(mesh.cell_scalar_data)
     # cell id
     cell_scalar_data["cell-id"] = [ C.id for C in mesh.cells ]
     # cell quality
@@ -411,13 +478,17 @@ function convert(::Type{UnstructuredGrid}, mesh::Mesh)
         cell_scalar_data["crossed"] = Int.(cell_crs)
     end
 
+    point_scalar_data = copy(mesh.point_scalar_data)
+    point_scalar_data["point-id"] = point_ids
+    point_vector_data = copy(mesh.point_vector_data)
+
     # title
     title = "FemMesh output"
 
     return UnstructuredGrid(title, points, cells, cell_tys,
-                                 point_scalar_data = Dict("point-id"=>point_ids),
-                                 cell_scalar_data  = cell_scalar_data)
-
+                                 point_scalar_data = point_scalar_data,
+                                 cell_scalar_data  = cell_scalar_data,
+                                 point_vector_data = point_vector_data)
 end
 
 
@@ -434,11 +505,11 @@ function save(mesh::Mesh, filename::String; verbose::Bool=true)
     has_embedded = any( C -> C.embedded, mesh.cells )
     if has_embedded
         # the function read_mesh_vtk cannot setup jet embedded cells
-        warn("save: the flag for embedded cells will be lost after saving mesh to file $filename")
+        @warn "save: the flag for embedded cells will be lost after saving mesh to file $filename"
     end
 
     save_vtk(vtk_data, filename)
-    verbose && print_with_color(:green, "  file $filename written (Mesh)\n")
+    verbose && printstyled( "  file $filename written (Mesh)\n", color=:cyan)
 end
 
 
@@ -480,6 +551,11 @@ function read_mesh_vtk(filename::String, verbose::Bool=false)
         push!(mesh.cells, cell)
     end
 
+    # Setting data
+    mesh.point_scalar_data = vtk_data.point_scalar_data
+    mesh.point_vector_data = vtk_data.point_vector_data
+    mesh.cell_scalar_data  = vtk_data.cell_scalar_data
+
     # Fix shape for polyvertex cells
     if has_polyvertex
         # mount dictionary of cells
@@ -495,6 +571,7 @@ function read_mesh_vtk(filename::String, verbose::Bool=false)
                 n = length(cell.points)
                 # look for joints1D and fix shape
                 if n>=5
+                    # check if cell is related to a JLINK2
                     hss = hash( [ cell.points[i] for i=1:n-2] )
                     if haskey(cdict, hss) 
                         cell.shape = JLINK2
@@ -506,6 +583,7 @@ function read_mesh_vtk(filename::String, verbose::Bool=false)
                         continue
                     end
 
+                    # check if cell is related to a JLINK3
                     hss = hash( [ cell.points[i] for i=1:n-3] )
                     if haskey(cdict, hss) 
                         cell.shape = JLINK3
@@ -520,35 +598,38 @@ function read_mesh_vtk(filename::String, verbose::Bool=false)
 
                 # look for conventional joints and fix shape
                 if n%2==0 && n>=4
-                    delta = 0.0
+                    isjoint = true
                     for i=1:div(n,2)
                         p1 = cell.points[i]
                         p2 = cell.points[div(n,2)+i]
-                        delta += abs(p1.x - p2.x) + abs(p1.y - p2.y) + abs(p1.z - p2.z)
+                        if hash(p1) != hash(p2) 
+                            isjoint = false
+                            break
+                        end
                     end
-                    if delta<1e-10
-                        cell.shape = get_shape_from_vtk(VTK_POLY_VERTEX, n, ndim)
+                    if isjoint
+                        cell.shape = get_shape_from_vtk(VTK_POLY_VERTEX, n, ndim, 2)
                         continue
                     end
                 end
 
-                # look for joint elements (with 2 or 3 layers)
-                # TODO
-                #=
+                # look for joint elements with 3 layers and fix shape
                 if n%3==0 && n>=6
-                    string = div(n,3)
+                    stride= div(n,3)
                     delta = 0.0
                     for i=1:stride
                         p1 = cell.points[i]
                         p2 = cell.points[stride+i]
-                        delta += abs(p1.x - p2.x) + abs(p1.y - p2.y) + abs(p1.z - p2.z)
+                        if hash(p1) != hash(p2) 
+                            isjoint = false
+                            break
+                        end
                     end
-                    if delta<1e-10
-                        cell.shape = get_shape_from_vtk(VTK_POLY_VERTEX, 2*stride, ndim, pointlayers=3)
+                    if isjoint
+                        cell.shape = get_shape_from_vtk(VTK_POLY_VERTEX, n, ndim, 3)
                         continue
                     end
                 end
-                =#
 
                 # remaining polyvertex cells
                 cell.shape = get_shape_from_vtk(VTK_POLY_VERTEX, n, ndim)
@@ -645,7 +726,6 @@ function load_mesh_json(filename; format="json")
             conn  = [ i+1 for i in conn]
             id    = id+1
             shapetype = get_shape_from_geo(cell[shape_key])
-            #@show shapetype.name
         end
         points = Point[ mesh.points[i] for i in conn ]
 
@@ -661,7 +741,6 @@ function load_mesh_json(filename; format="json")
             else
                 C.shape = JLINK3
             end
-            #@show " ", shapetype.name
         end
 
         C.id  = id
@@ -710,7 +789,7 @@ end
 """
 function Mesh(filename::String; verbose::Bool=true, reorder::Bool=false)::Mesh
     if verbose
-        print_with_color(:cyan, "Mesh loading:\n", bold=true)
+        printstyled("Mesh loading:\n", bold=true, color=:cyan)
     end
 
     basename, ext = splitext(filename)
@@ -743,7 +822,7 @@ function Mesh(filename::String; verbose::Bool=true, reorder::Bool=false)::Mesh
     return mesh
 end
 
-# Read a meshe from TetGen output files
+# Read a mesh from TetGen output files
 export tetreader
 function tetreader(filekey::String)
     # reading .node file
@@ -754,7 +833,7 @@ function tetreader(filekey::String)
 
     for i=1:npoints
         pdata = parse.(split(data[i+1]))
-        tag   = hasmarker==1? pdata[end] : ""
+        tag   = hasmarker==1 ? pdata[end] : ""
         point = Point(pdata[2], pdata[3], pdata[4], tag)
         point.id = i
         points[i] = point
@@ -769,7 +848,7 @@ function tetreader(filekey::String)
 
     for i=1:ncells
         cdata = parse.(split(data[i+1]))
-        tag   = hasatt==1? cdata[end] : 0
+        tag   = hasatt==1 ? cdata[end] : 0
         cellpoints = points[cdata[2:ntetpts+1]]
         cell = Cell(celltype, cellpoints, tag)
         cell.id = i
@@ -786,7 +865,7 @@ function tetreader(filekey::String)
 
     for i=1:nfaces
         fdata = parse.(split(data[i+1]))
-        tag   = hasmarker==1? fdata[end] : 0
+        tag   = hasmarker==1 ? fdata[end] : 0
         facepts = points[fdata[2:nfacepts+1]]
         nfacepts==6 && (facepts = facepts[[1,2,3,6,4,5]])
         faces[i] = Cell(celltype, facepts, tag)
@@ -802,7 +881,7 @@ function tetreader(filekey::String)
 
     for i=1:nedges
         edata = parse.(split(data[i+1]))
-        tag   = hasmarker==1? edata[end] : 0
+        tag   = hasmarker==1 ? edata[end] : 0
         edgepts = points[edata[2:nedgepts+1]]
         edges[i] = Cell(celltype, edgepts, tag)
     end

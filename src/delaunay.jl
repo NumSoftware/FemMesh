@@ -6,7 +6,7 @@ import Base.repr
 import Base.show
 
 # Point class for triangulation
-type TPoint
+mutable struct TPoint
     x::Float64
     y::Float64
     id::Int64
@@ -18,9 +18,9 @@ type TPoint
 end
 
 # Cell class for triangulation
-type TCell
+mutable struct TCell
     points::Array{TPoint,1}
-    adjacs::Array{Union{TCell,Void},1}
+    adjacs::Array{Union{TCell,Nothing},1}
 
     function TCell(p0, p1, p2, t1=nothing, t2=nothing, t3=nothing)
         this = new()
@@ -41,7 +41,7 @@ end
 
 # Function to increase the index of a triangle vertex
 function inc(v::Int64, n::Int64)
-    return v+n>3? (v+n)%3 : v+n
+    return v+n>3 ? (v+n)%3 : v+n
 end
 
 # Recursive algorithm to find a triangle cell
@@ -126,7 +126,7 @@ function triangulate(coords::Array{Float64,2}; getedges=false)
     maxx, maxy = maximum(coords,1)
 
     # auxiliar length to mount the super triangle
-    Δ = 10.*max(maxx-minx, maxy-miny, 1.0)
+    Δ = 10.0*max(maxx-minx, maxy-miny, 1.0)
 
     # points of super triangle
     pp0 = TPoint(minx-Δ  , miny-Δ)
@@ -213,7 +213,7 @@ function triangulate(coords::Array{Float64,2}; getedges=false)
     end
 
     # points coordinates matrix
-    Co = Array{Float64}(length(points), 2)
+    Co = Array{Float64}(undef, length(points), 2)
     for (i,point) in enumerate(points)
         Co[i, 1] = point.x
         Co[i, 2] = point.y
@@ -249,8 +249,8 @@ end
 
 
 if true
-    #V = [ 1. 2; 2 1; 1 3 ; 2 4; 3 2; 4 3 ]
-    #V = [ 0. 0; 1 0; 0 1 ]
+    #V = [ 1.0 2; 2 1; 1 3 ; 2 4; 3 2; 4 3 ]
+    #V = [ 0.0 0; 1 0; 0 1 ]
     V = [ rand() for i=1:100, j=1:2]
     E = triangulate(V, getedges=true)
 

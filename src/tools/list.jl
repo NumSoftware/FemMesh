@@ -2,7 +2,7 @@ import Base.show, Base.getindex, Base.push!, Base.delete!, Base.start, Base.next
 
 abstract type AbstractNode end
 
-type Node{T} 
+type Node{T} where T
     data::T
     next::Node{T}
     prev::Node{T}

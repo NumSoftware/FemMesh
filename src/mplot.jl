@@ -20,21 +20,21 @@ function plot_data_for_cell2d(points::Array{Array{Float64,1},1}, ctype::Int)
         verts = [ p1, cp, p2 ]
         codes = [ MOVETO, CURVE3, CURVE3]
     elseif shape in (TRI3, QUAD4)
-        n = shape==TRI3? 3 : 4
+        n = shape==TRI3 ? 3 : 4
         codes = [ MOVETO ]
         verts = [ points[1] ]
         for i=1:n
-            p2 = i<n? points[i+1] : points[1]
+            p2 = i<n ? points[i+1] : points[1]
             push!(verts, p2)
             push!(codes, LINETO)
         end
     elseif shape in (TRI6, QUAD8, QUAD9)
-        n = shape==TRI6? 3 : 4
+        n = shape==TRI6 ? 3 : 4
         codes = [ MOVETO ]
         verts = [ points[1] ]
         for i=1:n
             p1 = points[i]
-            p2 = i<n? points[i+1] : points[1]
+            p2 = i<n ? points[i+1] : points[1]
             p3 = points[i+n]
             cp = 2*p3 - 0.5*p1 - 0.5*p2
             append!(verts, [cp, p2])
@@ -46,7 +46,7 @@ function plot_data_for_cell2d(points::Array{Array{Float64,1},1}, ctype::Int)
         verts = [ points[1] ]
         for i=1:n
             p1 = points[i]
-            p2 = i<n? points[i+1] : points[1]
+            p2 = i<n ? points[i+1] : points[1]
             p3 = points[2*i+3]
             p4 = points[2*i+4]
             cp2 = 1/6*(-5*p1+18*p2-9*p3+2*p4)
@@ -134,7 +134,7 @@ function mplot(items::Union{Block, Array}...; args...)
     coords  = [ pts_arr[i][j] for i=1:length(pts_arr), j=1:3]
     conns   = [ [ p.id for p in c.points ] for c in cells ]
     stypes  = [ c.shape.vtk_type for c in cells ]
-    colors  = Dict("family" => [ ty==LIN2? 0.0 : 1.0 for ty in stypes])
+    colors  = Dict("family" => [ ty==LIN2 ? 0.0 : 1.0 for ty in stypes])
 
     ugrid = UnstructuredGrid("Blocks", coords, conns, stypes, cell_scalar_data=colors)
     mplot(ugrid; alpha=0.4, args...)
@@ -168,7 +168,7 @@ function mplot(mesh::Mesh, filename::String=""; args...)
         pts_arr      = [ [p.x, p.y, p.z] for p in spoints ]
         ugrid.points = [ pts_arr[i][j] for i=1:length(pts_arr), j=1:3]
         ugrid.cells  = [ Int[ id_dict[p.id] for p in c.points ] for c in scells ]
-        ugrid.cell_types = [ c.shape.vtk_type for c in scells ]
+        ugrid.cell_types = [ Int(c.shape.vtk_type) for c in scells ]
     end
     mplot(ugrid, filename; args...)
 end
@@ -177,14 +177,25 @@ end
 using PyCall # required
 
 function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true, 
-               pointmarkers=false, pointlabels=false, celllabels=false, elev=30, azim=45,
-               fieldlims=nothing, cmap=nothing, field=nothing, alpha=1.0, warpscale=0.0)
+               pointmarkers=false, pointlabels=false, arrowsfield=nothing, arrowscale=0.0,
+               celllabels=false, fieldlims=nothing, cmap=nothing, field=nothing,
+               alpha=1.0, warpscale=0.0, highlightcell=0, elev=30.0, azim=45.0, dist=10.0)
 
     @eval import PyPlot:plt, matplotlib, figure, art3D, Axes3D
 
-    plt[:rc]("font", family="serif", size=10)
 
-    ndim = all(p->p==0.0, ugrid.points[:,3]) ? 2: 3
+    plt[:close]("all")
+
+    plt[:rc]("font", family="serif", size=7)
+    plt[:rc]("lines", lw=0.5)
+    plt[:rc]("legend", fontsize=7)
+    #if ndim==2
+        plt[:rc]("figure", figsize=(4, 3))
+    #else
+        #plt[:rc]("figure", figsize=(5, 3))
+    #end
+
+    ndim = all(p->p==0.0, ugrid.points[:,3]) ? 2 : 3
     ncells = length(ugrid.cells)
     npoints = size(ugrid.points,1)
 
@@ -303,12 +314,13 @@ function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true,
 
         #cltn = art3D[:Poly3DCollection](all_verts, cmap=cmap, facecolor="aliceblue", edgecolor="black", lw=2)
         cltn = @eval art3D[:Poly3DCollection]($all_verts, cmap=$cmap, facecolor="aliceblue", edgecolor="black",
-                                              lw=1., alpha=$alpha)
+                                              lw=0.5, alpha=$alpha)
 
         if has_field
             cltn[:set_array](fvals)
             cltn[:set_clim](fieldlims)
-            plt[:colorbar](cltn, label=field, shrink=0.7)
+            cbar = plt[:colorbar](cltn, label=field, shrink=0.9)
+            cbar[:ax][:tick_params](labelsize=7)
         end
         @eval $ax[:add_collection3d]($cltn)
 
@@ -317,7 +329,7 @@ function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true,
         for i=1:ncells
             ctype = ugrid.cell_types[i]
             ctype in (3,21,5,22,9,23,28) || continue
-            lw = ugrid.cell_types[i] in (3,21)? 1 : 0.5
+            lw = ugrid.cell_types[i] in (3,21) ? 1.0 : 0.5
             
             con = ugrid.cells[i]
             points = [ XYZ[i,1:2] for i in con ]
@@ -326,13 +338,20 @@ function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true,
             patch = matplotlib[:patches][:PathPatch](path, lw=lw)
             push!(all_patches, patch)
 
+            if highlightcell==i
+                patch = matplotlib[:patches][:PathPatch](path, facecolor="cadetblue", lw=lw, edgecolor="black")
+                ax[:add_patch](patch)
+            end
+
         end
         cltn = matplotlib[:collections][:PatchCollection](all_patches, cmap=cmap, edgecolor="black", 
-                                                          facecolor="aliceblue", lw=1)
+                                                          facecolor="aliceblue")
         if has_field
             cltn[:set_array](fvals)
             cltn[:set_clim](fieldlims)
-            plt[:colorbar](cltn, label=field, shrink=0.7)
+            cbar = plt[:colorbar](cltn, label=field, shrink=0.9)
+            cbar[:ax][:tick_params](labelsize=7)
+            cbar[:outline][:set_linewidth](0.5)
         end
         ax[:add_collection](cltn)
     end
@@ -343,6 +362,17 @@ function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true,
             ax[:scatter](X, Y, Z, color="k", marker="o")
         else
             plt[:plot](X, Y, color="black", marker="o", markersize=4, lw=0)
+        end
+    end
+
+    # Draw arrows
+    if arrowsfield!=nothing && ndim==2
+        data = ugrid.point_vector_data[arrowsfield]
+        color = "blue"
+        if arrowscale==0
+            plt[:quiver](X, Y, data[:,1], data[:,2], color=color)
+        else
+            plt[:quiver](X, Y, data[:,1], data[:,2], color=color, scale=1.0/arrowscale)
         end
     end
 
@@ -367,20 +397,24 @@ function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true,
             coo = ugrid.points[ ugrid.cells[i], : ]
             x = mean(coo[:,1])
             y = mean(coo[:,2])
-            ax[:text](x, y, i, va="top", ha="left", color="blue", backgroundcolor="none")
+            ax[:text](x, y, i, va="top", ha="left", color="blue", backgroundcolor="none", size=8)
         end
     end
 
-    ndim==3 && ax[:view_init](elev=elev, azim=azim)
+    if ndim==3 
+        ax[:view_init](elev=elev, azim=azim)
+        ax[:dist] = dist
+    end
 
     if filename==""
         plt[:show]()
     else
-        plt[:savefig](filename, bbox_inches="tight", pad_inches=0.25, format="pdf")
+        plt[:savefig](filename, bbox_inches="tight", pad_inches=0.00, format="pdf")
     end
 
     # close the figure
-    isinteractive() || plt[:close]("all")
+    plt[:isinteractive]() || plt[:close]("all")
+    #isinteractive() || plt[:close]("all")
     #plt[:close]("all")
     return nothing
 end

@@ -9,7 +9,8 @@ function extrude(block::Block2D; axis=[0,0,1], len::Number=1.0, n::Int=1)::Block
 
     V = axis/norm(axis)
     δ = len/n
-    coords = block.coords
+    #coords = block.coords
+    coords = getcoords(block.points)
 
     # check numbering order
     v1 = vec(coords[1,:])
@@ -49,9 +50,9 @@ function extrude(block::Block2D; axis=[0,0,1], len::Number=1.0, n::Int=1)::Block
         #shape = HEX20
     #end
 
-    shape = block.shape==QUAD8? HEX20 : HEX8
+    shape = block.cellshape==QUAD8 ? HEX20 : HEX8
 
-    return Block3D( newcoords, nx=block.nx, ny=block.ny, nz=n, shape=shape)
+    return Block3D( newcoords, nx=block.nx, ny=block.ny, nz=n, cellshape=shape)
 
 end
 
@@ -74,7 +75,7 @@ Extrudes a 2D `mesh` generating a 3D mesh based on a direction `axis`, a lenght 
 Only meshes with cell shapes TRI3, TRI6, QUAD4 and QUAD8 are allowed.
 """
 function extrude(mesh::Mesh; len::Number=1.0, n::Int=1, verbose::Bool=true)
-    verbose && print_with_color(:cyan, "Mesh extrude:\n", bold=true)
+    verbose && printstyled("Mesh extrude:\n", bold=true, color=:cyan)
     Δz = len/n
 
     # Generate new cells
@@ -139,8 +140,8 @@ end
 
 
 
-function extrude2(mesh::Mesh; axis=[0.,0.,1.], len::Number=1.0, n::Int=1, verbose::Bool=true, genedges::Bool=false)
-    verbose && print_with_color(:cyan, "Mesh extrude:\n", bold=true)
+function extrude2(mesh::Mesh; axis=[0.0,0.0,1.], len::Number=1.0, n::Int=1, verbose::Bool=true, genedges::Bool=false)
+    verbose && printstyled("Mesh extrude:\n", bold=true, color=:cyan)
 
     V = axis/norm(axis)
     δ = len/n
@@ -282,8 +283,8 @@ function extrude2(mesh::Mesh; axis=[0.,0.,1.], len::Number=1.0, n::Int=1, verbos
 end
 
 
-function extrude1(mesh::Mesh; axis=[0.,0.,1.], len::Number=1.0, n::Int=1, verbose::Bool=true, genedges::Bool=false)
-    verbose && print_with_color(:cyan, "Mesh extrude:\n", bold=true)
+function extrude1(mesh::Mesh; axis=[0.0,0.0,1.], len::Number=1.0, n::Int=1, verbose::Bool=true, genedges::Bool=false)
+    verbose && printstyled("Mesh extrude:\n", bold=true, color=:cyan)
 
     length(inicells)>0 || error("Extrude: Cannot extrude mesh with no cells.")
 

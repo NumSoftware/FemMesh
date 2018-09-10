@@ -32,7 +32,7 @@ const edge_idxs_TET4 =
 function shape_func_TET4(R::Array{Float64,1})
     r, s, t = R
 
-    N = Array{Float64}(4)
+    N = Array{Float64}(undef,4)
     N[1] = 1.0-r-s-t
     N[2] = r
     N[3] = s
@@ -43,7 +43,7 @@ end
 function shape_deriv_TET4(R::Array{Float64,1})
     r, s, t = R
 
-    D = Array{Float64}(3, 4)
+    D = Array{Float64}(undef,3, 4)
     D[1,1] = -1.0;   D[2,1]= -1.0;   D[3,1]= -1.0
     D[1,2] =  1.0;   D[2,2]=  0.0;   D[3,2]=  0.0
     D[1,3] =  0.0;   D[2,3]=  1.0;   D[3,3]=  0.0
@@ -134,7 +134,7 @@ const edge_idxs_TET10 = [ [1, 2, 5], [2, 3, 6], [3, 1, 7], [1, 4, 8], [2, 4, 9],
 function shape_func_TET10(R::Array{Float64,1})
     r, s, t = R
 
-    N = Array{Float64}(10)
+    N = Array{Float64}(undef,10)
 
     u = 1.0 - r - s - t
 
@@ -158,7 +158,7 @@ end
 function shape_deriv_TET10(R::Array{Float64,1})
     r, s, t = R
 
-    D = Array{Float64}(3, 10)
+    D = Array{Float64}(undef,3, 10)
 
     # r-derivatives: dN0/dr to dN9/dr
     D[1,1]  =  4.0*(r + s + t) - 3.0
@@ -243,9 +243,9 @@ const edge_idxs_PYR5 =
 
 function shape_func_PYR5(R::Array{Float64,1})
     r, s, t = R
-    w = t==1.0? 0.0:1/(1-t) 
+    w = t==1.0 ? 0.0 : 1/(1-t) 
 
-    N = Array{Float64}(5)
+    N = Array{Float64}(undef,5)
     N[1] = 0.25*(1-r-s-t+r*s*w)
     N[2] = 0.25*(1+r-s-t-r*s*w)
     N[3] = 0.25*(1+r+s-t+r*s*w)
@@ -256,10 +256,10 @@ end
 
 function shape_deriv_PYR5(R::Array{Float64,1})
     r, s, t = R
-    w = t==1.0? 0.0:1/(1-t) 
+    w = t==1.0 ? 0.0 : 1/(1-t) 
 
 
-    D = Array{Float64}(3, 5)
+    D = Array{Float64}(undef,3, 5)
     D[1,1] = 0.25*(-1+s*w)  ;   D[2,1]= 0.25*(-1+r*w)  ;   D[3,1]= 0.25*(-1+r*s*w^2) 
     D[1,2] = 0.25*(1-s*w)   ;   D[2,2]= 0.25*(-1-r*w)  ;   D[3,2]= 0.25*(-1-r*s*w^2) 
     D[1,3] = 0.25*(1+s*w)   ;   D[2,3]= 0.25*(1+r*w)   ;   D[3,3]= 0.25*(-1+r*s*w^2)  
@@ -332,7 +332,7 @@ const edge_idxs_HEX8 = [ [1, 2], [2, 3], [3, 4], [4, 1], [5, 6], [6, 7], [7, 8],
 
 function shape_func_HEX8(R::Array{Float64,1})
     r, s, t = R[1:3]
-    N = Array{Float64}(8)
+    N = Array{Float64}(undef,8)
     N[1] = 0.125*(1.0-r-s+r*s-t+s*t+r*t-r*s*t)
     N[2] = 0.125*(1.0+r-s-r*s-t+s*t-r*t+r*s*t)
     N[3] = 0.125*(1.0+r+s+r*s-t-s*t-r*t-r*s*t)
@@ -349,7 +349,7 @@ function shape_deriv_HEX8(R::Array{Float64,1})
     st = s*t
     rt = r*t
     rs = r*s
-    D = Array{Float64}(3, 8)
+    D = Array{Float64}(undef,3, 8)
     D[1,1] = -1.0+s+t-st;   D[2,1]=-1.0+r+t-rt;   D[3,1]=-1.0+r+s-rs
     D[1,2] = +1.0-s-t+st;   D[2,2]=-1.0-r+t+rt;   D[3,2]=-1.0-r+s+rs
     D[1,3] = +1.0+s-t-st;   D[2,3]=+1.0+r-t-rt;   D[3,3]=-1.0-r-s-rs
@@ -448,7 +448,7 @@ function shape_func_HEX20(R::Array{Float64,1})
     sp1=1.0+s; sm1=1.0-s
     tp1=1.0+t; tm1=1.0-t
 
-    N = Array{Float64}(20)
+    N = Array{Float64}(undef,20)
     N[ 1] = 0.125*rm1*sm1*tm1*(-r-s-t-2.0)
     N[ 2] = 0.125*rp1*sm1*tm1*( r-s-t-2.0)
     N[ 3] = 0.125*rp1*sp1*tm1*( r+s-t-2.0)
@@ -479,7 +479,7 @@ function shape_deriv_HEX20(R::Array{Float64,1})
     sp1=1.0+s; sm1=1.0-s
     tp1=1.0+t; tm1=1.0-t
 
-    D = Array{Float64}(3, 20)
+    D = Array{Float64}(undef,3, 20)
     # Derivatives with respect to r
     D[1, 1] = -0.125*sm1*tm1*(-r-s-t-2)-0.125*rm1*sm1*tm1
     D[1, 2] =  0.125*sm1*tm1*( r-s-t-2)+0.125*rp1*sm1*tm1
@@ -592,7 +592,7 @@ const edge_idxs_WED6 = [ [1, 2], [2, 3], [3, 1], [4, 5], [5, 6], [6, 4], [1, 4],
 
 function shape_func_WED6(R::Array{Float64,1})
     r, s, t = R[1:3]
-    N = Array{Float64}(6)
+    N = Array{Float64}(undef,6)
     N[1] = 0.5*(1.0-r-s-t+r*t+s*t)
     N[2] = 0.5*(r-r*t)
     N[3] = 0.5*(s-s*t)
@@ -604,7 +604,7 @@ end
 
 function shape_deriv_WED6(R::Array{Float64,1})
     r, s, t = R
-    D = Array{Float64}(3, 6)
+    D = Array{Float64}(undef,3, 6)
     D[1,1] = 0.5*(-1.0+t);  D[2,1] = 0.5*(-1.0+t);  D[3,1] = 0.5*(-1.0+r+s)
     D[1,2] = 0.5*(1.0-t) ;  D[2,2] = 0.0         ;  D[3,2] = 0.5*(-r)
     D[1,3] = 0.0         ;  D[2,3] = 0.5*(1.0-t) ;  D[3,3] = 0.5*(-s)
@@ -669,7 +669,7 @@ const edge_idxs_WED15 = [ [1, 2, 7], [2, 3, 8], [3, 1, 9], [4, 5, 10], [5, 6, 11
 
 function shape_func_WED15(R::Array{Float64,1})
     r, s, t = R[1:3]
-    N = Array{Float64}(15)
+    N = Array{Float64}(undef,15)
     N[1]  = 0.5*(-2.0*(r^2.0)*t-4.0*r*s*t-r*(t^2+0)-2.0*(s^2.0)*t-s*(t^2.0)+2.0*(r^2.0)+4.0*r*s+3.0*r*t+2.0*(s^2.0)+3.0*s*t+(t^2.0)-2.0*r-2.0*s-t) 
     N[2]  = 0.5*(-2.0*(r^2.0)*t+r*(t^2.0)+2.0*(r^2.0)+r*t-2*r)
     N[3]  = 0.5*(-2.0*(s^2.0)*t+s*(t^2.0)+2.0*(s^2.0)+s*t-2.0*s)
@@ -690,7 +690,7 @@ end
 
 function shape_deriv_WED15(R::Array{Float64,1})
     r, s, t = R
-    D = Array{Float64}(3, 15)
+    D = Array{Float64}(undef,3, 15)
     # Derivatives with respect to r
     D[1, 1] = 0.5*(-4.0*r*t-4.0*s*t-(t^2.0)+4.0*r+4.0*s+3.0*t-2.0)
     D[1, 2] = 0.5*(-4.0*r*t+(t^2.0)+4.0*r+t-2)
