@@ -25,9 +25,9 @@ mutable struct Point
     function Point(C::AbstractArray{<:Real}; tag=0)
         # zero is added to avoid negative bit sign for zero signed values
         if length(C)==2
-            return new(C[1]+0.0, C[2]+0.0, 0.0, tag, -1, -1)
+            return new(C[1]+0.0, C[2]+0.0, 0.0, tag, -1)
         else
-            return new(C[1]+0.0, C[2]+0.0, C[3]+0.0, tag, -1, -1)
+            return new(C[1]+0.0, C[2]+0.0, C[3]+0.0, tag, -1)
         end
     end
 end
