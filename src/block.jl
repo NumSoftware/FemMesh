@@ -106,6 +106,40 @@ mutable struct Block3D <: Block
     end
 end
 
+#=
+mutable struct BlockArc <: Block
+    coords::Array{Float64,2}
+    r1::Float64
+    th::Float64
+    n1::Int64
+    n2::Int64
+    shape::ShapeType
+    tag::TagType
+    id::Int64
+
+    function BlockArc(coords::Array{<:Real}; r1=1.0, th=45, nr=3, n=2, shape=QUAD4, tag=0, id=-1)
+        size(coords,1) == 2 || error("Invalid coordinates matrix for BlockArc")
+        shape.ndim==2 || error("BlockArc: shape must be a 2d shape")
+        #r2 = norm(coords[2,:]-coords[1,:])
+        this = new(coords, r1, th, nr, n, shape, tag, id)
+        return this
+    end
+
+    function BlockArc(center::Array{<:Real}=[0.0,0.0]; r1=1.0, r2=2.0, th1=45, th2=90, nr=3, n=2, shape=QUAD4, tag=0, id=-1)
+        size(coords,1) == 1 || error("Invalid coordinates matrix for BlockArc")
+        shape.ndim==2 || error("BlockArc: shape must be a 2d shape")
+        th1r = deg2rad(th1)
+        V = [cos(th1r),sin(th1r)]
+        th2r = deg2rad(th2)
+        X1 = center + r1*V
+        X2 = center + r2*V
+        coords = [X1'; X2']
+        this = new(coords, r1, th, nr, n, shape, tag, id)
+        return this
+    end
+end
+=#
+
 mutable struct BlockCylinder <: Block
     coords::Array{Float64,2} # two end points
     r::Float64

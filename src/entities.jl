@@ -4,7 +4,9 @@ abstract type Block end
 
 # Point
 # =====
-
+"""
+A geometry type that represents a coordinate point.
+"""
 mutable struct Point
     x    ::Float64
     y    ::Float64
@@ -15,9 +17,12 @@ mutable struct Point
     function Point(x::Real, y::Real, z::Real=0.0, tag::TagType=0)
         NDIG = 14
         # zero is added to avoid negative bit sign for zero signed values
-        x = round(x, digits=NDIG) + 0.0
-        y = round(y, digits=NDIG) + 0.0
-        z = round(z, digits=NDIG) + 0.0
+        x += 0.0
+        y += 0.0
+        z += 0.0
+        #x = round(x, digits=NDIG) + 0.0
+        #y = round(y, digits=NDIG) + 0.0
+        #z = round(z, digits=NDIG) + 0.0
         return new(x, y, z, tag,-1,-1)
     end
     function Point(C::AbstractArray{<:Real}; tag=0)
@@ -38,9 +43,13 @@ get_x(point::Point) = point.x
 get_y(point::Point) = point.y
 get_z(point::Point) = point.z
 
-#Base.hash(p::Point) = round(UInt, 1000000 + p.x*1001 + p.y*10000001 + p.z*100000000001)
+#Base.hash(p::Point) = floor(UInt, abs(1000000 + p.x*1001 + p.y*10000001 + p.z*100000000001))
 #Base.hash(p::Point) = hash( (p.x==0.0?0.0:p.x, p.y==0.0?0.0:p.y, p.z==0.0?0.0:p.z) ) # comparisons used to avoid signed zero
-Base.hash(p::Point) = hash( (p.x, p.y, p.z) ) 
+#Base.hash(p::Point) = hash( (p.x==0.0?0.0:p.x, p.y==0.0?0.0:p.y, p.z==0.0?0.0:p.z) ) # comparisons used to avoid signed zero
+
+Base.hash(p::Point) = hash( (round(p.x, digits=8), round(p.y, digits=8), round(p.z, digits=8)) ) 
+#Base.hash(p::Point) = hash( (p.x, p.y, p.z))
+
 Base.hash(points::Array{Point,1}) = sum(hash(p) for p in points)
 
 Base.:(==)(p1::Point, p2::Point) = hash(p1)==hash(p2)
@@ -72,6 +81,9 @@ end
 # Cell
 # ====
 
+"""
+A geometry type that represent a definite line, area or volume.
+"""
 mutable struct Cell
     shape  ::ShapeType
     points ::Array{Point,1}
@@ -200,21 +212,6 @@ function iptag!(arr::Array{Cell,1}, tag::TagType)
     end
 end
 
-
-mutable struct Bins
-    bins::Array{Array{Cell,1},3}
-    bbox::Array{Float64,2}
-    lbin::Float64
-    function Bins(nx=0, ny=0, nz=0, bbox=nothing)
-        this = new()
-        this.bins = Array{Array{Cell,1}}(undef, nx, nx, nx)
-        this.bbox = zeros(0,0)
-        # this.lbin = ..
-        return this
-    end
-end
-
-
 # Gets the coordinates of a bounding box for an array of points
 function bounding_box(points::Array{Point,1})
     minx = miny = minz =  Inf
@@ -241,30 +238,110 @@ function bounding_box(cells::Array{Cell,1})
     return bounding_box(points)
 end
 
-    #=
-    # Get all points
-    #pointsd = Dict{UInt64, Point}()
-    #for cell in cells
-        #for point in cell.points
-            #pointsd[hash(point)] = point
-        #end
-    #end
-    #points = values(pointsd)
 
-    # Get bounding box
-    minx = miny = minz =  Inf
-    maxx = maxy = maxz = -Inf
-    for point in points
-        if point.x<minx; minx = point.x end
-        if point.y<miny; miny = point.y end
-        if point.z<minz; minz = point.z end
-        if point.x>maxx; maxx = point.x end
-        if point.y>maxy; maxy = point.y end
-        if point.z>maxz; maxz = point.z end
+mutable struct SpacePartition{T}
+    bins::Array{Array{T,1},3} # list of bins
+    bbox::Array{Float64,2}    # bounding box
+    lbin::Float64             # length of a bin
+
+    function SpacePartition{T}() where T
+        this = new{T}()
+        this.bins = Array{Array{T,1}}(undef, 0, 0, 0)
+        this.bbox = zeros(0,0)
+        this.lbin = 0.0
+        return this
     end
-    return [ minx miny minz; maxx maxy maxz ]
+
 end
-=#
+
+
+function SpacePartition{Point}(n::Int64, bbox::Array{Float64,2})
+    # n: number of points hint
+
+    par = SpacePartition{Point}()
+    par.bbox = bbox
+
+    Lx, Ly, Lz = bbox[2,:] - bbox[1,:]
+    ndim = 0
+    V    = 1.0
+    for L in (Lx, Ly, Lz)
+        L == 0 && continue
+        V *= L
+        ndim += 1
+    end
+
+    mpoints = 5
+    lbin = (V/n*mpoints)^(1/ndim) # estimated bin length
+    par.lbin = lbin
+
+    nx = floor(Int, Lx/lbin) + 1
+    ny = floor(Int, Ly/lbin) + 1
+    nz = floor(Int, Lz/lbin) + 1
+
+    par.bins = Array{Array{Point,1}}(undef, nx, ny, nz)
+
+    return par
+end
+
+
+function Base.push!(par::SpacePartition{Point}, point::Point)
+    @assert(par.lbin>0)
+
+    lbin = par.lbin
+    x, y, z, = point.x, point.y, point.z
+    ix = floor(Int, (x - minx)/lbin) + 1
+    iy = floor(Int, (y - miny)/lbin) + 1
+    iz = floor(Int, (z - minz)/lbin) + 1
+    push!(par.bins[ix, iy, iz], point)
+end
+
+
+function Base.get(par::SpacePartition{Point}, point::Point, default=nothing)
+    @assert(par.lbin>0)
+
+    lbin = par.lbin
+    x, y, z, = point.x, point.y, point.z
+    ix = floor(Int, (x - minx)/lbin) + 1
+    iy = floor(Int, (y - miny)/lbin) + 1
+    iz = floor(Int, (z - minz)/lbin) + 1
+
+    for p in par.bins[ix, iy, iz]
+        point == p && return p
+    end
+
+    return nothing
+end
+
+
+function build_partition!(points::Array{Point,1})
+    # Get all points
+    npoints = length(points)
+    bbox = bounding_box(points)
+
+    par = SpacePartition{Point}(npoints, bbox)
+
+    # Fill bins
+    for point in points
+        push!(par, point)
+    end
+
+end
+
+
+
+mutable struct Bins
+    bins::Array{Array{Cell,1},3}
+    bbox::Array{Float64,2}
+    lbin::Float64
+    function Bins(nx=0, ny=0, nz=0, bbox=nothing)
+        this = new()
+        this.bins = Array{Array{Cell,1}}(undef, nx, nx, nx)
+        this.bbox = zeros(0,0)
+        # this.lbin = ..
+        return this
+    end
+end
+
 
 function get_bin_cells(bins::Bins, p::Point) # returns an array of cells: TODO: untested function
     minx, miny, minz = bins.bbox[1,:]
@@ -478,11 +555,11 @@ function cell_extent(c::Cell)
     return vol
 end
 
-# Returns the desirable surface/perimeter given the volume/area of a cell
+# Returns the surface/perimeter of a regular element given the volume/area of a cell
 function regular_surface(metric::Float64, shape::ShapeType)
     if shape in [ TRI3, TRI6, TRI9, TRI10 ] 
         A = metric
-        a = 2.0*√( A/√3.0)
+        a = 2.0*√(A/√3.0)
         return 3*a
     end
     if shape in [ QUAD4, QUAD8, QUAD9, QUAD12, QUAD16 ] 
@@ -513,6 +590,42 @@ function regular_surface(metric::Float64, shape::ShapeType)
     error("No regular surface/perimeter value for shape $(get_name(shape))")
 end
 
+# Returns the area/volume of a regular element given the perimeter/surface
+function regular_vol(metric::Float64, shape::ShapeType)
+    if shape in [ TRI3, TRI6, TRI9, TRI10 ] 
+        p = metric
+        a = p/3
+        return a^2/4*√3.0    
+    end
+    if shape in [ QUAD4, QUAD8, QUAD9, QUAD12, QUAD16 ] 
+        p = metric
+        a = p/4
+        return a^2
+    end
+    #if shape in [ PYR5 ] 
+        #V = metric
+        #a = ( 3.0*√2.0*V )^(1.0/3.0)
+        #return (1 + √3.0)*a^2
+    #end
+    if shape in [ TET4, TET10 ] 
+        s = metric
+        A = s/4
+        a = 2.0*√(A/√3.0)
+        return a^3/(6*√2.0)
+    end
+    if shape in [ HEX8, HEX20 ] 
+        s = metric
+        A = s/6
+        a = √A
+        return a^3
+    end
+    #if shape in [ WED6, WED15 ]
+        #s = metric
+        #return (3.0 + √3.0/2.0)*a2
+    #end
+    error("No regular area/volume value for shape $(get_name(shape))")
+end
+
 
 #= Returns the cell aspect ratio
 function cell_aspect_ratio(c::Cell)
@@ -533,6 +646,26 @@ function cell_aspect_ratio(c::Cell)
     return rsurf/surf
 end =#
 
+
+
+# Returns the cell quality ratio as vol/reg_vol
+function cell_quality_2(c::Cell)::Float64
+    # get faces
+    faces = get_faces(c)
+    length(faces)==0 && return 1.0
+
+    # cell surface
+    surf = sum( cell_extent(f) for f in faces )
+
+    # quality calculation
+    vol = cell_extent(c) # volume or area
+    rvol = regular_vol(surf, c.shape)
+    c.quality = min(vol/rvol, 1.0) # << updates cell property!!!
+    return c.quality
+end
+
+
+
 # Returns the cell quality ratio as reg_surf/surf
 function cell_quality(c::Cell)::Float64
     # get faces
@@ -551,8 +684,12 @@ function cell_quality(c::Cell)::Float64
     metric = cell_extent(c) # volume or area
     rsurf  = regular_surface(metric, c.shape)
 
-    c.quality = rsurf/surf # << updates cell property!!!
-    return min(c.quality, 1.0)
+    q = rsurf/surf # << updates cell property!!!
+    if q>1
+        q = 2 - q
+    end
+    c.quality = q
+    return q
 end
 
 function cell_aspect_ratio(c::Cell)::Float64

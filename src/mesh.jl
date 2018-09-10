@@ -287,26 +287,43 @@ end
 
 # Adds m2 to m1
 function join_mesh!(m1::Mesh, m2::Mesh)
+    m = Mesh()
+
+    # copy m1 to m
+    m.points = copy(m1.points)
+    m.cells  = copy(m1.cells)
+    m.bpoints = copy(m1.bpoints)
+
     pid = length(m1.points)
     cid = length(m1.cells)
+
+    @show length(m1.points)
+    @show length(m2.points)
+
+    for (h,p) in m1.bpoints
+        @show (p.id, p.x, p.y, p.z)
+    end
 
     # Add new points from m2
     for p in m2.points
         hs = hash(p)
         if !haskey(m1.bpoints, hs)
+            @show (p.x, p.y, p.z)
             pid += 1
             p.id = pid
             push!(m1.points, p)
         end
     end
 
+    @show length(m1.points)
+
     # Fix m2 cells connectivities for points at m1 border
     for c in m2.cells
         for (i,p) in enumerate(c.points)
             hs = hash(p)
             if haskey(m1.bpoints, hs)
-                p = m1.bpoints[hs]
-                c.points[i] = p
+                pp = m1.bpoints[hs]
+                c.points[i] = pp
             else
                 # update bpoints dict
                 if haskey(m2.bpoints, hs)

@@ -177,9 +177,9 @@ end
 using PyCall # required
 
 function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true, 
-               pointmarkers=false, pointlabels=false, arrows=false, arrowsfield=nothing, celllabels=false, 
-               fieldlims=nothing, cmap=nothing, field=nothing, alpha=1.0, warpscale=0.0, highlightcell=0,
-               elev=30.0, azim=45.0, dist=10.0)
+               pointmarkers=false, pointlabels=false, arrowsfield=nothing, arrowscale=0.0,
+               celllabels=false, fieldlims=nothing, cmap=nothing, field=nothing,
+               alpha=1.0, warpscale=0.0, highlightcell=0, elev=30.0, azim=45.0, dist=10.0)
 
     @eval import PyPlot:plt, matplotlib, figure, art3D, Axes3D
 
@@ -366,13 +366,13 @@ function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true,
     end
 
     # Draw arrows
-    if arrows && ndim==2
-        max_length = 1.0
-        scale = 0.1*L/max_length
-        data  = ugrid.point_vector_data[arrowsfield]
-        for i=1:npoints
-            dx, dy, dz = scale*data[i,:]
-            plt[:arrow](X[i], Y[i], X[i]+dx, Y[i]+dy, color="blue")
+    if arrowsfield!=nothing && ndim==2
+        data = ugrid.point_vector_data[arrowsfield]
+        color = "blue"
+        if arrowscale==0
+            plt[:quiver](X, Y, data[:,1], data[:,2], color=color)
+        else
+            plt[:quiver](X, Y, data[:,1], data[:,2], color=color, scale=1.0/arrowscale)
         end
     end
 

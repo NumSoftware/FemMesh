@@ -332,22 +332,33 @@ function faces_normal(faces::Array{Cell,1}, facetol)
     
     #normals = Set{Array{Float64,1}}()
     normals = Array{Float64,1}[]
+    #@show length(faces)
 
     for f in faces
-        C = get_coords(f, ndim) .+ facetol
+
+        C = get_coords(f, ndim)
+
+        # move the coordinates to avoid singular case
+        # when the regression line/planes crosses the origin
+        if ndim==2
+            C .+= [pi pi^1.1]
+        else
+            C .+= [pi pi^1.1 pi^1.2]
+        end
+
         I = ones(size(C,1))
         N = pinv(C)*I # best fit normal
 
-        #@show norm(C*N - I)
-        if norm(C*N - I) < facetol
-            N = N/norm(N)
+        #if norm(C*N - I) < facetol
+            #N = N/norm(N)
+            normalize!(N)
             #check if the normal already exists
             if all( [ norm(N-NN)>facetol for NN in normals ]) 
                 push!(normals, N)
             end
-        else
-            return Array{Float64,1}[]
-        end
+        #else
+            #return Array{Float64,1}[]
+        #end
     end
 
     return normals 
@@ -408,6 +419,8 @@ function mountA(mesh::Mesh, fixed::Bool, conds, facetol)
         node.normals = faces_normal(node.faces, facetol)
         nnorm        = length(node.normals)
         #@show nnorm
+        #@show node.normals
+        #node.point.id == 12 && error()
         if nnorm==1 || nnorm==2
             n += nnorm
         else
@@ -512,6 +525,7 @@ function force_bc(mesh::Mesh, E::Float64, nu::Float64, α::Float64, fast::Bool)
 
         T = cell_orientation(c)
         factor = V^(1.0/ndim)
+
         BC = basic_coords(c.shape)*factor
 
         # initial alignment
@@ -531,10 +545,15 @@ function force_bc(mesh::Mesh, E::Float64, nu::Float64, α::Float64, fast::Bool)
         #@show U
         #@show mesh.qmin
 
-        if fast || mesh.qmin>0.95
+        #if fast || mesh.qmin>0.95 # > 0.95 <= it messes all
+        if fast 
             F = K*U
         else
-            F = K*U*(1-c.quality)/(1-mesh.qmin)
+            if mesh.qmin==1.0
+                F = zeros(length(U))
+            else
+                F = K*U*(1-c.quality)/(1-mesh.qmin)
+            end
         end
 
         #@show F
@@ -551,8 +570,10 @@ function force_bc(mesh::Mesh, E::Float64, nu::Float64, α::Float64, fast::Bool)
     return Fbc
 end
 
-function smooth!(mesh::Mesh; verbose=true, alpha::Float64=0.3, target::Float64=0.97, fixed::Bool=false, maxit::Int64=30, mintol::Float64=1e-3,
-    tol::Float64=1e-4, facetol=1e-3, savesteps::Bool=false, savedata::Bool=false, filekey::String="smooth", conds=nothing, fast=false)
+function smooth!(mesh::Mesh; verbose=true, alpha::Float64=0.3, target::Float64=0.97, 
+                 fixed::Bool=false, maxit::Int64=30, mintol::Float64=1e-3, tol::Float64=1e-4, 
+                 facetol=1e-4, savesteps::Bool=false, savedata::Bool=false, filekey::String="smooth",
+                 conds=nothing, fast=false)
 
     # tol   : tolerance in change of mesh quality for succesive iterations
     # mintol: tolerance in change of worst cell quality in a mesh for succesive iterations
@@ -567,15 +588,12 @@ function smooth!(mesh::Mesh; verbose=true, alpha::Float64=0.3, target::Float64=0
     end
 
     # Elastic constants
-    #nu = 0.1
     E  = 1.0
     nu = 0.0
 
     ndim = mesh.ndim
     npoints = length(mesh.points)
     #quality!(mesh)
-    mesh.point_vector_data["forces"] = zeros(length(mesh.points), 3)
-    savesteps && save(mesh, "$filekey-0.vtk", verbose=false)
 
 
     # Stats
@@ -592,12 +610,17 @@ function smooth!(mesh::Mesh; verbose=true, alpha::Float64=0.3, target::Float64=0
     hist  = fit(Histogram, Q, 0.0:0.05:1.0, closed=:right).weights
     push!(hists, OrderedDict(Symbol(r) => v for (r,v) in zip(0.0:0.05:0.95,hist)))
 
-    verbose && @printf("  it: %2d  q-range: %5.3f…%5.3f  qavg: %5.3f  dev: %7.5f", 0, qmin, qmax, q, dev)
-    verbose && println("  hist: ", fit(Histogram, Q, 0.5:0.05:1.0, closed=:right).weights)
+    verbose && @printf("%4s  %5s  %5s  %5s  %7s %10s\n", "it", "qmin", "qmax", "qavg", "sdev", "histogram")
+    verbose && @printf("%4d  %5.3f  %5.3f  %5.3f  %7.5f", 0, qmin, qmax, q, dev)
+    verbose && println("  ", fit(Histogram, Q, 0.4:0.05:1.0, closed=:right).weights)
+    #verbose && @printf("  it: %2d  q-range: %5.3f…%5.3f  qavg: %5.3f  dev: %7.5f", 0, qmin, qmax, q, dev)
+    #verbose && println("  hist: ", fit(Histogram, Q, 0.5:0.05:1.0, closed=:right).weights)
 
     # Lagrange multipliers matrix
     A   = mountA(mesh, fixed, conds, facetol) 
     nbc = size(A,1)
+
+    nits = 0
 
     for i=1:maxit
 
@@ -609,6 +632,9 @@ function smooth!(mesh::Mesh; verbose=true, alpha::Float64=0.3, target::Float64=0
         else
             mesh.point_vector_data["forces"] = reshape(F, ndim, npoints)'
         end
+
+        # Save last step file with current forces
+        savesteps && save(mesh, "$filekey-$(i-1).vtk", verbose=false)
 
         # Augmented forces vector
         F   = vcat( F, zeros(nbc) )
@@ -656,15 +682,22 @@ function smooth!(mesh::Mesh; verbose=true, alpha::Float64=0.3, target::Float64=0
         hist = fit(Histogram, Q, 0.0:0.05:1.0, closed=:right).weights
         push!(hists, OrderedDict(Symbol(r) => v for (r,v) in zip(0.0:0.05:0.95,hist)))
 
-        verbose && @printf("  it: %2d  q-range: %5.3f…%5.3f  qavg: %5.3f  dev: %7.5f", i, qmin, qmax, q, dev)
-        verbose && println("  hist: ", fit(Histogram, Q, 0.5:0.05:1.0, closed=:right).weights)
+        verbose && @printf("%4d  %5.3f  %5.3f  %5.3f  %7.5f", i, qmin, qmax, q, dev)
+        verbose && println("  ", fit(Histogram, Q, 0.4:0.05:1.0, closed=:right).weights)
+        #verbose && @printf("  it: %2d  q-range: %5.3f…%5.3f  qavg: %5.3f  dev: %7.5f", i, qmin, qmax, q, dev)
+        #verbose && println("  hist: ", fit(Histogram, Q, 0.5:0.05:1.0, closed=:right).weights)
 
         #Δqmin<0.0 && break
 
-        if Δq<tol && Δqmin<mintol && i>2
+        if Δq<tol && Δqmin<mintol && i>1
             break
         end
+
+        nits = i
     end
+    # Set forces to zero for the last step
+    mesh.point_vector_data["forces"] = zeros(length(mesh.points), 3)
+    savesteps && save(mesh, "$filekey-$nits.vtk", verbose=false)
 
     savedata && save(stats, "$filekey-stats.dat")
     savedata && save(hists, "$filekey-hists.dat")

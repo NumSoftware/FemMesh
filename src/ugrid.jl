@@ -238,7 +238,7 @@ function read_ugrid_vtk(filename::String)
             label = data[idx+1]
             ty = data[idx+2]
             idx += 5
-            scalars = zeros(TYPES[ty], npoints)
+            scalars = zeros(TYPES[ty], ncells)
             for i=1:ncells
                 idx += 1
                 scalars[i] = parse(TYPES[ty], data[idx])

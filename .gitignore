@@ -2,4 +2,4 @@
 *.dat
 *.datt
 *.bk.jl
-theory/
+docs/build/
