@@ -17,8 +17,8 @@ for s in instances(ShapeFamily)
 end 
 
 
-include("cells/vtk.jl")
-include("cells/quadrature.jl")
+include("shapes/vtk.jl")
+include("shapes/quadrature.jl")
 
 mutable struct ShapeType 
     name       ::String
@@ -39,10 +39,10 @@ mutable struct ShapeType
     end
 end
 
-include("cells/lines.jl")
-include("cells/solids2d.jl")
-include("cells/solids3d.jl")
-include("cells/joints.jl")
+include("shapes/lines.jl")
+include("shapes/solids2d.jl")
+include("shapes/solids3d.jl")
+include("shapes/joints.jl")
 
 # Shape for unknown polyvertex
 function MakePOLIV()

@@ -1,7 +1,7 @@
 # This file is part of FemMesh package. See copyright license in https://github.com/NumSoftware/FemMesh
 
 
-Base.copy(p::Point) = Point(p.x, p.y, p.z, p.tag)
+#Base.copy(p::Point) = Point(p.x, p.y, p.z, p.tag)
 Base.copy(c::Cell)  = Cell(c.shape, c.points, c.tag, c.ocell)
 
 """
@@ -373,11 +373,8 @@ end
 # =========
 
 function roll_axes!(bl::Block)
-    ndim = size(bl.coords,2)
-    if ndim==2
-        bl.coords = bl.coords[:,[2,1]]
-    else
-        bl.coords = bl.coords[:,[3,1,2]]
+    for p in bl.points
+        p.x, p.y, p.z = p.z, p.x, p.y
     end
     return nothing
 end

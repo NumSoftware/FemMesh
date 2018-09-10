@@ -3,22 +3,24 @@
 export BlockInset
 
 """
-`BlockInset(coords, [curvetype=0,] [shape=LIN3,] [closed=false,] [tag="",] [toln=1e-4,] [tolc=1e-9,] [lam=1.0,])`
+`BlockInset(coords, [curvetype=0,] [cellshape=LIN3,] [closed=false,] [tag="",] [toln=1e-4,] [tolc=1e-9,] [lam=1.0,])`
 
 Generates an inset block object from a matrix of coordinates `coords`. `curvetype` is an integer value
-that represents the inset shape and can be:
+that represents the inset curve and can be:
 
 0:polyline, 2:lagrangian, 3:cubic Bezier.
 
-`shape` represents the shape for 1D elements used in the final mesh. Possible values are LIN2 and LIN3.
+`cellshape` represents the shape for 1D elements used in the final mesh. Possible values are LIN2 and LIN3.
 `closed=true` can be used if a closed inset curve is required.
 """
 mutable struct BlockInset <: Block
-    coords   ::Array{Float64,2}
+    #coords   ::Array{Float64,2}
+    points::Array{Point,1}
     curvetype::Union{Int,AbstractString} # 0:polyline, 1:closed polyline, 2: lagrangian, 3:cubic Bezier with inner points
     closed   ::Bool
     embedded ::Bool
     shape    ::ShapeType
+    cellshape::ShapeType
     tag      ::TagType
     jointtag ::TagType
     ε        ::Float64 # bisection tolerance
@@ -30,7 +32,7 @@ mutable struct BlockInset <: Block
     _endpoint  ::Union{Point, Nothing}
     _startpoint::Union{Point, Nothing}
 
-    function BlockInset(coords; curvetype=0, closed=false, embedded=false, shape=LIN3, tag="", jointtag="", tol=1e-9, toln=1e-4, tolc=1e-9, lam=1.0, id=-1) 
+    function BlockInset(coords::Array{<:Real,2}; curvetype=0, closed=false, embedded=false, cellshape=LIN3, tag="", jointtag="", tol=1e-9, toln=1e-4, tolc=1e-9, lam=1.0, id=-1) 
         # TODO: add option: merge_points
         # TODO: add case: endpoints outside mesh
         if typeof(curvetype)<:Integer
@@ -42,12 +44,10 @@ mutable struct BlockInset <: Block
             if ctype==-1; error("Wrong curve type") end
         end
         
-        if size(coords,2)==2
-            nrows  = size(coords,1)
-            coords = hcat(coords, zeros(nrows))
-        end
+        nrows  = size(coords,1)
+        points = [ Point(coords[i,:]) for i=1:nrows ]
 
-        this = new(coords, ctype, closed, embedded, shape, tag, jointtag, tol, toln, tolc, lam, id)
+        this = new(points, ctype, closed, embedded, LIN2, cellshape, tag, jointtag, tol, toln, tolc, lam, id)
         this.icount = 0
         this.ε  = tol
         this.εn = toln
@@ -59,8 +59,9 @@ mutable struct BlockInset <: Block
     end
 end
 
-Base.copy(bl::BlockInset) = BlockInset(copy(bl.coords), curvetype=bl.curvetype, closed=bl.closed, embedded=bl.embedded, shape=bl.shape,
-                                  tag=bl.tag, jointtag=bl.jointtag)
+Base.copy(bl::BlockInset) = BlockInset(getcoords(bl.points), curvetype=bl.curvetype, closed=bl.closed, 
+                                       embedded=bl.embedded, cellshape=bl.cellshape, tag=bl.tag,
+                                       jointtag=bl.jointtag)
 
 function cubicBezier(s::Float64, PorQ::Array{Float64,2}, isQ::Bool=false)
     # check
@@ -134,14 +135,15 @@ end
 
 
 function split_block(bl::BlockInset, msh::Mesh)
-    n, ndim = size(bl.coords)
+    coords = getcoords(bl.points)
+    n, ndim = size(coords)
 
     if n<2; error("At list two points are required in BlockInset") end
     # 0:polyline, 1:closed polyline, 2: lagrangian, 3:cubic Bezier, 4:Bezier with control points
 
     # Lagrangian or Bezier with inner points
     if bl.curvetype in (2,3)
-        split_curve(bl.coords, bl, false, msh)
+        split_curve(coords, bl, false, msh)
         return
     end
 
@@ -150,12 +152,12 @@ function split_block(bl::BlockInset, msh::Mesh)
 
     bl._endpoint = nothing
     for i=1:n-1
-        coords = bl.coords[i:i+1,:]
-        split_curve(coords, bl, false, msh)
+        coordsi = coords[i:i+1,:]
+        split_curve(coordsi, bl, false, msh)
     end
     if bl.closed
-        coords = [ bl.coords[n:n,:] ; bl.coords[1:1,:] ]
-        split_curve(coords, bl, true, msh)
+        coordsi = [ coords[n:n,:] ; coords[1:1,:] ]
+        split_curve(coordsi, bl, true, msh)
     end
 end
 
@@ -178,7 +180,7 @@ function split_curve(coords::Array{Float64,2}, bl::BlockInset, closed::Bool, msh
     itcount=0 ##
 
     # Constants
-    shape   = bl.shape
+    shape   = bl.cellshape
     npoints = shape==LIN2 ? 2 : 3
     jntshape = shape==LIN2 ? JLINK2 : JLINK3
     curvetype = bl.curvetype

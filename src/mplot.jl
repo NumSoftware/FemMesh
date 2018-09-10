@@ -87,57 +87,38 @@ function mplot(items::Union{Block, Array}...; args...)
 
     # Using Point and Cell types
     points = Array{Point,1}()
-    cells  = Array{Cell,1}()
+    cells  = Array{AbstractCell,1}()
 
     for bl in blocks
-        npts = size(bl.coords,1)
-        pts = [ Point(bl.coords[i,:]) for i=1:npts ]
-        append!(points, pts)
-        bl_type = typeof(bl)
-        ndim = 0
+        append!(points, bl.points)
 
-        if bl_type==BlockInset
-            shapetype = LIN2
-        elseif npts==4 && bl_type==Block2D
-            shapetype = QUAD4
-            ndim = 2
-        elseif npts==8 && bl_type==Block2D
-            ndim = 2
-            shapetype = QUAD8
-        elseif npts==8 && bl_type==Block3D
-            ndim = 3
-            shapetype = HEX8
-        elseif npts==20 && bl_type==Block3D
-            ndim = 3
-            shapetype = HEX20
-        end
-
-        if ndim==2
-            cell = Cell(shapetype, pts)
-            push!(cells, cell)
-            append!(points, pts)
-        else
-            if shapetype == LIN2
-                lines = [ Cell(shapetype, [pts[i-1], pts[i]]) for i=2:npts ]
-                append!(cells, lines)
+        if bl.shape.family==SOLID_SHAPE
+            if bl.shape.ndim==2
+                push!(cells, bl)
             else
-                cell  = Cell(shapetype, pts)
-                faces = get_faces(cell)
+                faces = get_faces(bl)
                 append!(cells, faces)
             end
+        elseif bl.shape.family==LINE_SHAPE
+            lines = [ Cell(LIN2, bl.points[i-1:i]) for i=2:length(bl.points)]
+            append!(cells, lines)
+        else
+            continue
         end
+
     end
 
-    # points, cells and types
+    # points, conns and types
+    #points  = [ p for bl in blocks for p in bl.points]
     for (i,p) in enumerate(points); p.id = i end
     pts_arr = [ [p.x, p.y, p.z] for p in points ]
     coords  = [ pts_arr[i][j] for i=1:length(pts_arr), j=1:3]
-    conns   = [ [ p.id for p in c.points ] for c in cells ]
-    stypes  = [ c.shape.vtk_type for c in cells ]
-    colors  = Dict("family" => [ ty==LIN2 ? 0.0 : 1.0 for ty in stypes])
+    conns   = [ [ p.id for p in c.points ] for c in cells]
+    stypes  = [ Int(c.shape.vtk_type) for c in cells]
+    #colors  = Dict("family" => [ ty==LIN2 ? 0.0 : 1.0 for ty in stypes])
 
-    ugrid = UnstructuredGrid("Blocks", coords, conns, stypes, cell_scalar_data=colors)
-    mplot(ugrid; alpha=0.4, args...)
+    ugrid = UnstructuredGrid("Blocks", coords, conns, stypes)
+    mplot(ugrid; args...)
 end
 
 
@@ -189,11 +170,7 @@ function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true,
     plt[:rc]("font", family="serif", size=7)
     plt[:rc]("lines", lw=0.5)
     plt[:rc]("legend", fontsize=7)
-    #if ndim==2
-        plt[:rc]("figure", figsize=(4, 3))
-    #else
-        #plt[:rc]("figure", figsize=(5, 3))
-    #end
+    plt[:rc]("figure", figsize=(4, 3))
 
     ndim = all(p->p==0.0, ugrid.points[:,3]) ? 2 : 3
     ncells = length(ugrid.cells)
@@ -305,6 +282,7 @@ function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true,
         all_verts  = []
         for i=1:ncells 
             ctype = ugrid.cell_types[i]
+            ctype in (10,12,13,14,24,25) && @warn "mplot: cannot directly plot 3d cell" vtk_type=ctype
             ctype in (5,22,9,23,28) || continue
             con = ugrid.cells[i]
             points = [ XYZ[i,1:3] for i in con ]
@@ -413,9 +391,13 @@ function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true,
     end
 
     # close the figure
-    plt[:isinteractive]() || plt[:close]("all")
-    #isinteractive() || plt[:close]("all")
-    #plt[:close]("all")
+    #@show plt[:isinteractive]()
+    #@show isinteractive()
+    #@show isdefined(Main, :IJulia) && Main.IJulia.inited
+
+    #plt[:isinteractive]() || plt[:close]("all")
+    isinteractive() || plt[:close]("all")
+
     return nothing
 end
 

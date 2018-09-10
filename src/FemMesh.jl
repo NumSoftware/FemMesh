@@ -37,10 +37,12 @@ export ShapeType, TagType, ALL_SHAPES, ShapeFamily
 export get_ip_coords, get_shape_from_vtk
 export inverse_map, extrapolator
 
-include("entities.jl")
+include("point.jl")
 export Point, Cell, hash, get_x, get_y, get_z
+include("cell.jl")
 export getcoords, get_point, get_points, get_faces, cell_extent, cell_quality
 export tag!, iptag!, update!
+include("partition.jl")
 
 include("ugrid.jl")
 export UnstructuredGrid, save_vtk, read_ugrid_vtk
