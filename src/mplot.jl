@@ -127,7 +127,7 @@ function mplot(mesh::Mesh, filename::String=""; args...)
     if mesh.ndim==3
         # get surface cells and update ugrid
         scells = get_surface(mesh.cells)
-        spoints = get_points(scells)
+        spoints = [ p for c in scells for p in c.points ]
         pt_ids = [ p.id for p in spoints ]
         oc_ids = [ c.ocell.id for c in scells ]
 
@@ -158,8 +158,8 @@ end
 using PyCall # required
 
 function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true, 
-               pointmarkers=false, pointlabels=false, arrowsfield=nothing, arrowscale=0.0,
-               celllabels=false, fieldlims=nothing, cmap=nothing, field=nothing,
+               pointmarkers=false, pointlabels=false, vectorfield=nothing, arrowscale=0.0,
+               celllabels=false, fieldlims=nothing, cmap=nothing, colorbarscale=0.9, field=nothing,
                alpha=1.0, warpscale=0.0, highlightcell=0, elev=30.0, azim=45.0, dist=10.0)
 
     @eval import PyPlot:plt, matplotlib, figure, art3D, Axes3D
@@ -170,6 +170,7 @@ function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true,
     plt[:rc]("font", family="serif", size=7)
     plt[:rc]("lines", lw=0.5)
     plt[:rc]("legend", fontsize=7)
+    #plt[:rc]("figure", figsize=(4.5, 3))
     plt[:rc]("figure", figsize=(4, 3))
 
     ndim = all(p->p==0.0, ugrid.points[:,3]) ? 2 : 3
@@ -297,7 +298,8 @@ function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true,
         if has_field
             cltn[:set_array](fvals)
             cltn[:set_clim](fieldlims)
-            cbar = plt[:colorbar](cltn, label=field, shrink=0.9)
+            #cbar = plt[:colorbar](cltn, label=field, shrink=0.9)
+            cbar = plt[:colorbar](cltn, label=field, shrink=colorbarscale, aspect=20*colorbarscale)
             cbar[:ax][:tick_params](labelsize=7)
         end
         @eval $ax[:add_collection3d]($cltn)
@@ -327,7 +329,8 @@ function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true,
         if has_field
             cltn[:set_array](fvals)
             cltn[:set_clim](fieldlims)
-            cbar = plt[:colorbar](cltn, label=field, shrink=0.9)
+            #cbar = plt[:colorbar](cltn, label=field, shrink=0.9)
+            cbar = plt[:colorbar](cltn, label=field, shrink=colorbarscale, aspect=20*colorbarscale)
             cbar[:ax][:tick_params](labelsize=7)
             cbar[:outline][:set_linewidth](0.5)
         end
@@ -337,15 +340,15 @@ function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true,
     # Draw points
     if pointmarkers
         if ndim==3
-            ax[:scatter](X, Y, Z, color="k", marker="o")
+            ax[:scatter](X, Y, Z, color="k", marker="o", s=1)
         else
-            plt[:plot](X, Y, color="black", marker="o", markersize=4, lw=0)
+            plt[:plot](X, Y, color="black", marker="o", markersize=3, lw=0)
         end
     end
 
     # Draw arrows
-    if arrowsfield!=nothing && ndim==2
-        data = ugrid.point_vector_data[arrowsfield]
+    if vectorfield!=nothing && ndim==2
+        data = ugrid.point_vector_data[vectorfield]
         color = "blue"
         if arrowscale==0
             plt[:quiver](X, Y, data[:,1], data[:,2], color=color)

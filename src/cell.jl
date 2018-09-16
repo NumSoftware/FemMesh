@@ -378,7 +378,8 @@ function cell_quality(c::Cell)::Float64
     metric = cell_extent(c) # volume or area
     rsurf  = regular_surface(metric, c.shape)
 
-    q = rsurf/surf # << updates cell property!!!
+    k = 2
+    q = (rsurf/surf)^k # << updates cell property!!!
     if q>1
         q = 2 - q
     end

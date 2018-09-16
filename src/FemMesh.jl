@@ -18,7 +18,7 @@ copy, move!, array, rotate!, polar, extrude.
 
 """
 module FemMesh
-using Printf, Statistics, LinearAlgebra, SparseArrays, DelimitedFiles
+using Printf, StatsBase, Statistics, LinearAlgebra, SparseArrays, DelimitedFiles
 using JSON, DataStructures
 
 # Mesh module
@@ -57,7 +57,7 @@ include("block.jl")
 export Block2D, Block3D, BlockTruss, BlockCoords, BlockCylinder
 
 include("operators.jl")
-export move!, array, copy, mirror, rotate!, polar, roll_axes!
+export move!, array, copy, mirror, rotate!, polar, rollaxes!
 
 include("extrude.jl") 
 export extrude

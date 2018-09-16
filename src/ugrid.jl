@@ -176,7 +176,6 @@ function read_ugrid_vtk(filename::String)
                 conn = Int[]
                 for j=1:npts
                     idx += 1
-                    #@show data[idx]
                     id = parse(Int64, data[idx]) + 1
                     push!(conn, id)
                 end
@@ -209,7 +208,6 @@ function read_ugrid_vtk(filename::String)
 
         if data[idx] == "VECTORS" && reading_point_data
             label = data[idx+1]
-            #@show npoints
             idx += 2
             vectors = zeros(npoints,3)
             for i=1:npoints
@@ -218,7 +216,6 @@ function read_ugrid_vtk(filename::String)
                 vectors[i,3] = parse(Float64, data[idx+3])
                 idx += 3
             end
-            #@show data[idx+1]
             point_vector_data[label] = vectors
         end
 

@@ -187,7 +187,6 @@ function generate_joints_candidate!(mesh::Mesh, expr::Expr, tag::TagType="") # T
 
     in_idxs  = [ face.id for face in faces ]
     out_idxs = setdiff(1:length(face_pairs), in_idxs) 
-    #@show out_idxs
 
     # Generating new points
     for fp in face_pairs[in_idxs]

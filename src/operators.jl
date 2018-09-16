@@ -72,7 +72,7 @@ function move!(blocks::Array; dx=0.0, dy=0.0, dz=0.0)
 end
 
 
-function scale!(bl::Block; factor=1.0, base=[0.,0,0])
+function scale!(bl::Block; factor=1.0, base=[0.,0,0], axis=nothing)
     coords = getcoords(bl)
     coords = ( base .+ factor*(coords' .- base) )'
 
@@ -107,12 +107,13 @@ function mirror(block::Block; face=[0.0 0 0; 0 1 0; 0 0 1])
     normal = normal/norm(normal)
 
     bl = copy(block)
+    coords = getcoords(bl.points)
 
-    distances    = (bl.coords .- p1')*normal       # d = n^.(xi - xp)
-    bl.coords = bl.coords .- 2*distances.*normal'  # xi = xi - 2*d*n^
+    distances    = (coords .- p1')*normal       # d = n^.(xi - xp)
+    coords = coords .- 2*distances.*normal'  # xi = xi - 2*d*n^
 
     # fix coordinates in bl to keep anti-clockwise numbering
-    npts = size(bl.coords)[1]
+    npts = size(coords)[1]
     ndim = typeof(bl)==Block2D ? 2 : 3
 
     if npts==8 && ndim==2
@@ -124,7 +125,8 @@ function mirror(block::Block; face=[0.0 0 0; 0 1 0; 0 0 1])
     else
         idxs = [ npts:-1:1; ]  # reverse
     end
-    bl.coords = bl.coords[idxs,:]
+    coords = coords[idxs,:]
+    bl.points = [ Point(coords[i,1], coords[i,2], coords[i,3]) for i=1:size(coords,1) ]
 
     return bl
 end
@@ -372,16 +374,16 @@ end
 # Roll Axes
 # =========
 
-function roll_axes!(bl::Block)
+function rollaxes!(bl::Block)
     for p in bl.points
         p.x, p.y, p.z = p.z, p.x, p.y
     end
     return nothing
 end
 
-roll_axes!(bls::Array{<:Block,1}) = (roll_axes!.(bls); nothing)
+rollaxes!(bls::Array{<:Block,1}) = (rollaxes!.(bls); nothing)
 
-function roll_axes!(mesh::Mesh)
+function rollaxes!(mesh::Mesh)
     if mesh.ndim==2
         for p in mesh.points
             p.x, p.y = p.y, p.x

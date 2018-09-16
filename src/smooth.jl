@@ -2,7 +2,6 @@
 
 # This file contains the code for smoothing meshes
 
-using StatsBase
 export smooth!, laplacian_smooth!
 
 # Returns a matrix with the cell coordinates
@@ -205,7 +204,10 @@ function matrixK(cell::Cell, ndim::Int64, E::Float64, nu::Float64)
         @gemm J = dNdR*C
         @gemm dNdX = inv(J)*dNdR
         detJ = det(J)
-        detJ < 0.0 && error("Negative jacobian determinant in cell $(cell.id)")
+        if detJ < 0.0 
+            @error "Negative jacobian determinant in cell" cell=cell.id ip=i coords=C
+            error()
+        end
         matrixB(ndim, dNdX, detJ, B)
 
         # compute K
@@ -332,7 +334,6 @@ function faces_normal(faces::Array{Cell,1}, facetol)
     
     #normals = Set{Array{Float64,1}}()
     normals = Array{Float64,1}[]
-    #@show length(faces)
 
     for f in faces
 
@@ -390,7 +391,6 @@ function mountA(mesh::Mesh, fixed::Bool, conds, facetol)
         end
     end
     border_nodes = [ values(nodesd)... ]
-    #@show sort([ n.point.id for n in border_nodes ])
 
 
     local fconds=Function[]
@@ -415,12 +415,8 @@ function mountA(mesh::Mesh, fixed::Bool, conds, facetol)
             end
         end
 
-        #@show node.point.id
         node.normals = faces_normal(node.faces, facetol)
         nnorm        = length(node.normals)
-        #@show nnorm
-        #@show node.normals
-        #node.point.id == 12 && error()
         if nnorm==1 || nnorm==2
             n += nnorm
         else
@@ -448,8 +444,6 @@ function mountA(mesh::Mesh, fixed::Bool, conds, facetol)
             basecol = (node.point.id-1)*ndim
             normals = node.normals
             nnorm   = length(normals)
-            #@show normals
-            #@show nnorm
 
             if nnorm==1 || nnorm==2  # all faces in up to 2 planes
                 for i=1:nnorm
@@ -510,7 +504,7 @@ end
 
 
 # Mount a vector with nodal forces
-function force_bc(mesh::Mesh, E::Float64, nu::Float64, α::Float64, fast::Bool)
+function force_bc(mesh::Mesh, E::Float64, nu::Float64, α::Float64, extended::Bool)
     n    = length(mesh.points)
     ndim = mesh.ndim
     Fbc  = zeros(n*ndim)
@@ -521,15 +515,17 @@ function force_bc(mesh::Mesh, E::Float64, nu::Float64, α::Float64, fast::Bool)
         C0 = cellcoords(c)
         V  = cell_extent(c) # area or volume
 
-        fast || (V = α*V)
+        #extended || (V = α*V)
 
-        T = cell_orientation(c)
-        factor = V^(1.0/ndim)
+        R0 = cell_orientation(c)
+        s = V^(1.0/ndim) # scale factor
 
-        BC = basic_coords(c.shape)*factor
+        extended && (s *= α)
+
+        BC = basic_coords(c.shape)*s
 
         # initial alignment
-        C = BC*T'
+        C = BC*R0'
 
         # align C with cell orientation
         R, d = rigid_transform(C, C0)
@@ -541,22 +537,15 @@ function force_bc(mesh::Mesh, E::Float64, nu::Float64, α::Float64, fast::Bool)
 
         K = matrixK(c, ndim, E, nu)
 
-        #@show K
-        #@show U
-        #@show mesh.qmin
-
-        #if fast || mesh.qmin>0.95 # > 0.95 <= it messes all
-        if fast 
-            F = K*U
-        else
-            if mesh.qmin==1.0
-                F = zeros(length(U))
+        if extended
+            if mesh.qmin<1.0
+                F = K*U*((1-c.quality)/(1-mesh.qmin))
             else
-                F = K*U*(1-c.quality)/(1-mesh.qmin)
+                F = zeros(length(U))
             end
+        else
+            F = K*U
         end
-
-        #@show F
 
         # add forces to Fbc
         for (i,point) in enumerate(c.points)
@@ -570,10 +559,10 @@ function force_bc(mesh::Mesh, E::Float64, nu::Float64, α::Float64, fast::Bool)
     return Fbc
 end
 
-function smooth!(mesh::Mesh; verbose=true, alpha::Float64=0.3, target::Float64=0.97, 
+function smooth!(mesh::Mesh; verbose=true, alpha::Float64=1.0, target::Float64=0.97, 
                  fixed::Bool=false, maxit::Int64=30, mintol::Float64=1e-3, tol::Float64=1e-4, 
                  facetol=1e-4, savesteps::Bool=false, savedata::Bool=false, filekey::String="smooth",
-                 conds=nothing, fast=false)
+                 conds=nothing, extended=false)
 
     # tol   : tolerance in change of mesh quality for succesive iterations
     # mintol: tolerance in change of worst cell quality in a mesh for succesive iterations
@@ -612,7 +601,7 @@ function smooth!(mesh::Mesh; verbose=true, alpha::Float64=0.3, target::Float64=0
 
     verbose && @printf("%4s  %5s  %5s  %5s  %7s %10s\n", "it", "qmin", "qmax", "qavg", "sdev", "histogram")
     verbose && @printf("%4d  %5.3f  %5.3f  %5.3f  %7.5f", 0, qmin, qmax, q, dev)
-    verbose && println("  ", fit(Histogram, Q, 0.4:0.05:1.0, closed=:right).weights)
+    verbose && println("  ", fit(Histogram, Q, 0.2:0.05:1.0, closed=:right).weights)
     #verbose && @printf("  it: %2d  q-range: %5.3f…%5.3f  qavg: %5.3f  dev: %7.5f", 0, qmin, qmax, q, dev)
     #verbose && println("  hist: ", fit(Histogram, Q, 0.5:0.05:1.0, closed=:right).weights)
 
@@ -624,8 +613,15 @@ function smooth!(mesh::Mesh; verbose=true, alpha::Float64=0.3, target::Float64=0
 
     for i=1:maxit
 
+        #if i>=4; extended=true end
+        #if i==1 
+            #extended=true 
+        #else
+            #extended=false
+        #end
+
         # Forces vector needed for smoothing
-        F   = force_bc(mesh, E, nu, alpha, fast)
+        F   = force_bc(mesh, E, nu, alpha, extended)
 
         if ndim==2
             mesh.point_vector_data["forces"] = [ reshape(F, ndim, npoints)' zeros(npoints)]
@@ -678,12 +674,11 @@ function smooth!(mesh::Mesh; verbose=true, alpha::Float64=0.3, target::Float64=0
 
         push!(stats, OrderedDict(:qavg=>q, :qmin=>qmin, :qmax=>qmax, :dev=>dev))
 
-        #@show Q
         hist = fit(Histogram, Q, 0.0:0.05:1.0, closed=:right).weights
         push!(hists, OrderedDict(Symbol(r) => v for (r,v) in zip(0.0:0.05:0.95,hist)))
 
         verbose && @printf("%4d  %5.3f  %5.3f  %5.3f  %7.5f", i, qmin, qmax, q, dev)
-        verbose && println("  ", fit(Histogram, Q, 0.4:0.05:1.0, closed=:right).weights)
+        verbose && println("  ", fit(Histogram, Q, 0.2:0.05:1.0, closed=:right).weights)
         #verbose && @printf("  it: %2d  q-range: %5.3f…%5.3f  qavg: %5.3f  dev: %7.5f", i, qmin, qmax, q, dev)
         #verbose && println("  hist: ", fit(Histogram, Q, 0.5:0.05:1.0, closed=:right).weights)
 
@@ -709,9 +704,11 @@ end
 precompile(smooth!, (Mesh,) )
 
 function laplacian_smooth!(mesh::Mesh; alpha::Float64=1.0, maxit::Int64=20, verbose::Bool=true, mintol::Float64=1e-3,
-    tol::Float64=1e-4, facetol::Float64=1e-5, savesteps::Bool=false, savedata::Bool=false, filekey::String="smooth", fast=true)
+    tol::Float64=1e-4, facetol::Float64=1e-5, savesteps::Bool=false, savedata::Bool=false, filekey::String="smooth", extended=true)
 
     verbose && printstyled("Mesh Laplacian smoothing:\n", bold=true, color=:cyan)
+
+    #!extended && (alpha=1.0)
 
     ndim = mesh.ndim
 

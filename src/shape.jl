@@ -118,32 +118,6 @@ function get_shape_from_vtk(vtk_type::VTKCellType, npoints::Int64, ndim::Int64, 
             shape = Symbol("J$(numstr)$(shapedict[(ndim, nfpoints)])")
             return eval(shape)
         end
-
-        #=
-        if npoints==4 
-            ndim==2 && layers==2 && return JLIN2
-        elseif npoints==6   
-            ndim==2 && layers==2 && return JLIN3
-            ndim==3 && layers==2 && return JTRI3
-            ndim==2 && layers==3 && return J3LIN2
-        elseif npoints==8
-            ndim==2 && layers==2 && return JLIN4 
-            ndim==3 && layers==2 && return JQUAD4
-        elseif npoints==9   
-            ndim==2 && layers==3 && return J3LIN3
-            ndim==3 && layers==3 && return J3TRI3
-        elseif npoints==12  
-            ndim==3 && layers==2 && return JTRI6 
-            ndim==2 && layers==3 && return J3LIN4
-            ndim==3 && layers==3 && return J3QUAD4 
-        elseif npoints==16
-            ndim==3 && layers==2 && return JQUAD8 
-        elseif npoints==18
-            ndim==3 && layers==3 && return J3TRI6
-        elseif npoints==24  
-            ndim==3 && layers==3 && return J3QUAD8
-        end
-        =#
     end
 
     # Check for other cells
