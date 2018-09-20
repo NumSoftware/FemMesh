@@ -488,7 +488,6 @@ function rigid_transform(source::Array{Float64,2}, target::Array{Float64,2})
 
     # Rotation matrix
     R = V*U'
-    #R = U*V'
 
     # special reflection case
     if det(R) < 0.0
@@ -496,9 +495,9 @@ function rigid_transform(source::Array{Float64,2}, target::Array{Float64,2})
        R[:2] *= -1
     end
 
-    D = cB - cA*R'
+    T = cB - cA*R'
 
-    return R, D
+    return R, T
 
 end
 
