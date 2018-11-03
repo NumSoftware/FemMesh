@@ -466,29 +466,33 @@ function mountA(mesh::Mesh, fixed::Bool, conds, facetol)
     return A
 end
 
-function rigid_transform(source::Array{Float64,2}, target::Array{Float64,2})
-    A, B = copy(source), copy(target)
+function rigid_transform(Cr::Array{Float64,2}, Ce::Array{Float64,2})
+    # Cr : Reference coordinates (source)
+    # Ce : Cell coordinates (target)
+    #A, B = copy(source), copy(target)
     #@test size(A) == size(B)
 
-    n = size(A,1)
-    ndim = size(A,2)
+    n = size(Cr,1)
+    ndim = size(Cr,2)
 
     # Centralizing both sets of points
-    cA = mean(A, dims=1)
-    cB = mean(B, dims=1)
-    for i = 1:n
-        for j = 1:ndim
-            A[i,j] -= cA[1,j]
-            B[i,j] -= cB[1,j]
-        end
-    end
+    cCr = mean(Cr, dims=1)
+    cCe = mean(Ce, dims=1)
+    #for i = 1:n
+        #for j = 1:ndim
+            #Cr[i,j] -= cCr[1,j]
+            #Ce[i,j] -= cCe[1,j]
+        #end
+    #end
+    D = Cr .- cCr 
+    Dp = Ce .- cCe 
 
     # Singular value decomposition
-    U, S, V = svd(A'*B)
+    #U, S, V = svd(Cr'*Ce)
+    U, S, V = svd(D'*Dp)
 
     # Rotation matrix
     R = V*U'
-    #R = U*V'
 
     # special reflection case
     if det(R) < 0.0
@@ -496,9 +500,9 @@ function rigid_transform(source::Array{Float64,2}, target::Array{Float64,2})
        R[:2] *= -1
     end
 
-    D = cB - cA*R'
+    T = cCe - cCr*R'
 
-    return R, D
+    return R, T
 
 end
 
@@ -525,7 +529,8 @@ function force_bc(mesh::Mesh, E::Float64, nu::Float64, α::Float64, extended::Bo
         BC = basic_coords(c.shape)*s
 
         # initial alignment
-        C = BC*R0'
+        #C = BC*R0'
+        C = BC
 
         # align C with cell orientation
         R, d = rigid_transform(C, C0)
@@ -591,6 +596,7 @@ function smooth!(mesh::Mesh; verbose=true, alpha::Float64=1.0, target::Float64=0
     qmin = minimum(Q)
     qmax = maximum(Q)
     dev  = stdm(Q, q) 
+    q1, q2, q3 = quantile(Q, [0.25, 0.5, 0.75])
 
     stats = DTable()
     hists = DTable()
@@ -599,26 +605,21 @@ function smooth!(mesh::Mesh; verbose=true, alpha::Float64=1.0, target::Float64=0
     hist  = fit(Histogram, Q, 0.0:0.05:1.0, closed=:right).weights
     push!(hists, OrderedDict(Symbol(r) => v for (r,v) in zip(0.0:0.05:0.95,hist)))
 
-    verbose && @printf("%4s  %5s  %5s  %5s  %7s %10s\n", "it", "qmin", "qmax", "qavg", "sdev", "histogram")
-    verbose && @printf("%4d  %5.3f  %5.3f  %5.3f  %7.5f", 0, qmin, qmax, q, dev)
-    verbose && println("  ", fit(Histogram, Q, 0.2:0.05:1.0, closed=:right).weights)
-    #verbose && @printf("  it: %2d  q-range: %5.3f…%5.3f  qavg: %5.3f  dev: %7.5f", 0, qmin, qmax, q, dev)
-    #verbose && println("  hist: ", fit(Histogram, Q, 0.5:0.05:1.0, closed=:right).weights)
+    verbose && @printf("%4s  %5s  %5s  %5s  %5s  %5s  %5s  %7s  %9s  %10s\n", "it", "qmin", "q1", "q2", "q3", "qmax", "qavg", "sdev", "time", "histogram (0.3, 1.0]")
+    verbose && @printf("%4d  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %7.5f  %9s", 0, qmin, q1, q2, q3, qmax, q, dev, "-")
+    verbose && println("  ", fit(Histogram, Q, 0.3:0.05:1.0, closed=:right).weights)
 
     # Lagrange multipliers matrix
     A   = mountA(mesh, fixed, conds, facetol) 
     nbc = size(A,1)
 
     nits = 0
+    t0 = time()
 
     for i=1:maxit
 
-        #if i>=4; extended=true end
-        #if i==1 
-            #extended=true 
-        #else
-            #extended=false
-        #end
+        #if i>2; extended=true end
+        sw = StopWatch()
 
         # Forces vector needed for smoothing
         F   = force_bc(mesh, E, nu, alpha, extended)
@@ -671,14 +672,16 @@ function smooth!(mesh::Mesh; verbose=true, alpha::Float64=1.0, target::Float64=0
         qmin = mesh.qmin
         qmax = maximum(Q)
         dev  = stdm(Q, q)
+        q1, q2, q3 = quantile(Q, [0.25, 0.5, 0.75])
 
         push!(stats, OrderedDict(:qavg=>q, :qmin=>qmin, :qmax=>qmax, :dev=>dev))
 
         hist = fit(Histogram, Q, 0.0:0.05:1.0, closed=:right).weights
         push!(hists, OrderedDict(Symbol(r) => v for (r,v) in zip(0.0:0.05:0.95,hist)))
 
-        verbose && @printf("%4d  %5.3f  %5.3f  %5.3f  %7.5f", i, qmin, qmax, q, dev)
-        verbose && println("  ", fit(Histogram, Q, 0.2:0.05:1.0, closed=:right).weights)
+        verbose && @printf("%4d  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %7.5f  %9s", 0, qmin, q1, q2, q3, qmax, q, dev, hms(sw, format=:ms))
+        #verbose && @printf("%4d  %5.3f  %5.3f  %5.3f  %7.5f  %9s", i, qmin, qmax, q, dev, hms(sw, format=:ms))
+        verbose && println("  ", fit(Histogram, Q, 0.3:0.05:1.0, closed=:right).weights)
         #verbose && @printf("  it: %2d  q-range: %5.3f…%5.3f  qavg: %5.3f  dev: %7.5f", i, qmin, qmax, q, dev)
         #verbose && println("  hist: ", fit(Histogram, Q, 0.5:0.05:1.0, closed=:right).weights)
 
