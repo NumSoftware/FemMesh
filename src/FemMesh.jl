@@ -27,6 +27,7 @@ include("tools/expr.jl")
 include("tools/show.jl")
 include("tools/iteration.jl")
 include("tools/table.jl")
+include("tools/stopwatch.jl")
 export unfold
 
 # Generic exports
