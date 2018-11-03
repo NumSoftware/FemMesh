@@ -160,7 +160,8 @@ using PyCall # required
 function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true, 
                pointmarkers=false, pointlabels=false, vectorfield=nothing, arrowscale=0.0,
                celllabels=false, fieldlims=nothing, cmap=nothing, colorbarscale=0.9, field=nothing,
-               alpha=1.0, warpscale=0.0, highlightcell=0, elev=30.0, azim=45.0, dist=10.0)
+               alpha=1.0, warpscale=0.0, highlightcell=0, elev=30.0, azim=45.0, dist=10.0,
+               figsize=(4,2.5), leaveopen=false)
 
     @eval import PyPlot:plt, matplotlib, figure, art3D, Axes3D
 
@@ -171,7 +172,7 @@ function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true,
     plt[:rc]("lines", lw=0.5)
     plt[:rc]("legend", fontsize=7)
     #plt[:rc]("figure", figsize=(4.5, 3))
-    plt[:rc]("figure", figsize=(4, 3))
+    plt[:rc]("figure", figsize=figsize)
 
     ndim = all(p->p==0.0, ugrid.points[:,3]) ? 2 : 3
     ncells = length(ugrid.cells)
@@ -309,28 +310,28 @@ function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true,
         for i=1:ncells
             ctype = ugrid.cell_types[i]
             ctype in (3,21,5,22,9,23,28) || continue
-            lw = ugrid.cell_types[i] in (3,21) ? 1.0 : 0.5
+            #lw = ugrid.cell_types[i] in (3,21) ? 1.0 : 0.5
             
             con = ugrid.cells[i]
             points = [ XYZ[i,1:2] for i in con ]
             verts, codes = plot_data_for_cell2d(points, ctype)
             path  = matplotlib[:path][:Path](verts, codes)
-            patch = matplotlib[:patches][:PathPatch](path, lw=lw)
+            patch = matplotlib[:patches][:PathPatch](path)
             push!(all_patches, patch)
 
             if highlightcell==i
-                patch = matplotlib[:patches][:PathPatch](path, facecolor="cadetblue", lw=lw, edgecolor="black")
+                patch = matplotlib[:patches][:PathPatch](path, facecolor="cadetblue", edgecolor="black")
                 ax[:add_patch](patch)
             end
 
         end
         cltn = matplotlib[:collections][:PatchCollection](all_patches, cmap=cmap, edgecolor="black", 
-                                                          facecolor="aliceblue")
+                                                          facecolor="aliceblue", lw=0.5)
         if has_field
             cltn[:set_array](fvals)
             cltn[:set_clim](fieldlims)
             #cbar = plt[:colorbar](cltn, label=field, shrink=0.9)
-            cbar = plt[:colorbar](cltn, label=field, shrink=colorbarscale, aspect=20*colorbarscale)
+            cbar = plt[:colorbar](cltn, label=field, shrink=colorbarscale, aspect=0.8*20*colorbarscale)
             cbar[:ax][:tick_params](labelsize=7)
             cbar[:outline][:set_linewidth](0.5)
         end
@@ -396,50 +397,17 @@ function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true,
     # close the figure
     #@show plt[:isinteractive]()
     #@show isinteractive()
-    #@show isdefined(Main, :IJulia) && Main.IJulia.inited
 
     #plt[:isinteractive]() || plt[:close]("all")
-    isinteractive() || plt[:close]("all")
+    #isinteractive() || plt[:close]("all")
 
-    return nothing
+    # Do not close if in IJulia
+    if isdefined(Main, :IJulia) && Main.IJulia.inited
+        return
+    end
+    if !leaveopen
+        plt[:close]("all")
+    end
+
+    return
 end
-
-
-#coord = [ 0 0; 9 0; 18 0; 0 9; 9 9; 18 9.]
-#conn  = [ 1 2; 1 5; 2 3; 2 6; 2 5; 2 4; 3 6; 3 5; 4 5; 5 6]
-#blk  = BlockTruss(coord, conn)
-#msh = Mesh(blk, reorder=false)
-
-#blk = Block2D([0 0; 8 4], nx=8, ny=4)
-#blb = BlockInset([0.5 0.5; 3 1; 3.5 2.5; 7.5 3.5 ], curvetype=3)
-#msh = Mesh(blk, blb)
-#split!(msh)
-
-#blk = Block2D( [ 0.0 0.0 ; 1.0 0.0 ; 0.707 0.707; 0.0 1.0 ; 0.5 0.0 ; 0.923 0.382; 0.382 0.923 ; 0.0 0.5 ], shape=TRI6, nx=6, ny=6)
-#msh = Mesh(blk)
-#smooth!(msh, maxit=4)
-
-#blk = Block2D( [ 0.0 0.0 ; 1.0 0.0 ; 0.707 0.707; 0.0 1.0 ; 0.5 0.0 ; 0.923 0.382; 0.382 0.923 ; 0.0 0.5 ], shape=TET4, nx=6, ny=6)
-#blk = extrude(blk, len=0.5, n=3)
-#blk.shape = TET4
-#blk = rotate(blk, base=[0,0,0], axis=[1,0,0], angle=90)
-#msh = Mesh(blk, reorder=false)
-#smooth!(msh, maxit=8)
-
-#blk = Block3D( [0 0 0 ; 1 1 1], nx=3, ny=3, shape=TET10)
-#msh = Mesh(blk)
-#save(msh, "msh.vtk")
-#smooth!(msh)
-
-#draw(msh, axis=false, pointlabels=true, quality=true)
-#draw(msh, points=true, pointlabels=true, quality=true)
-
-#blk = Block2D( [ 0.0 0.0 ; 1.0 0.0 ; 0.707 0.707; 0.0 1.0 ; 0.5 0.0 ; 0.923 0.382; 0.382 0.923 ; 0.0 0.5 ], shape=TRI6, 
-              #nx=6, ny=6)
-#blk = Block3D( [0 0 0 ; 1 1 1], nx=6, ny=6, nz=6, shape=TET10)
-
-#msh = Mesh(blk)
-#mplot(convert(VTK_unstructured_grid,msh), axis=false, cellfield="quality")
-#mplot(msh, axis=false, field="point-id", pointmarkers=true, pointlabels=true, celllabels=true)
-#mplot(msh, axis=false, cellfield="quality")
-#mplot(msh, axis=false, cellfield="quality")
