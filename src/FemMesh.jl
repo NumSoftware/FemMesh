@@ -72,6 +72,9 @@ export generate_embedded_cells!
 include("mplot.jl") 
 export mplot
 
+include("cplot.jl") 
+export cplot
+
 # show function for FemMesh types
 for datatype in (:ShapeType, :Point, :Cell, :Block, :Mesh, :UnstructuredGrid )
     eval( quote
