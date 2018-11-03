@@ -160,6 +160,7 @@ using PyCall # required
 function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true, 
                pointmarkers=false, pointlabels=false, vectorfield=nothing, arrowscale=0.0,
                celllabels=false, fieldlims=nothing, cmap=nothing, colorbarscale=0.9, field=nothing,
+               colorbarlabel="", lw=0.5, 
                alpha=1.0, warpscale=0.0, highlightcell=0, elev=30.0, azim=45.0, dist=10.0,
                figsize=(4,2.5), leaveopen=false)
 
@@ -254,6 +255,7 @@ function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true,
 
     has_field = field != nothing
     if has_field
+        colorbarlabel = colorbarlabel=="" ? field : colorbarlabel
         field = string(field)
         found = haskey(ugrid.cell_scalar_data, field)
         if found
@@ -294,14 +296,15 @@ function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true,
 
         #cltn = art3D[:Poly3DCollection](all_verts, cmap=cmap, facecolor="aliceblue", edgecolor="black", lw=2)
         cltn = @eval art3D[:Poly3DCollection]($all_verts, cmap=$cmap, facecolor="aliceblue", edgecolor="black",
-                                              lw=0.5, alpha=$alpha)
+                                              lw=lw, alpha=$alpha)
 
         if has_field
             cltn[:set_array](fvals)
             cltn[:set_clim](fieldlims)
             #cbar = plt[:colorbar](cltn, label=field, shrink=0.9)
-            cbar = plt[:colorbar](cltn, label=field, shrink=colorbarscale, aspect=20*colorbarscale)
+            cbar = plt[:colorbar](cltn, label=colorbarlabel, shrink=colorbarscale, aspect=20*colorbarscale)
             cbar[:ax][:tick_params](labelsize=7)
+            cbar[:outline][:set_linewidth](0.4)
         end
         @eval $ax[:add_collection3d]($cltn)
 
@@ -325,15 +328,15 @@ function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true,
             end
 
         end
-        cltn = matplotlib[:collections][:PatchCollection](all_patches, cmap=cmap, edgecolor="black", 
-                                                          facecolor="aliceblue", lw=0.5)
+        cltn = matplotlib[:collections][:PatchCollection](all_patches, cmap=cmap, edgecolor=(0.3,0.3,0.3, 0.4), 
+                                                          facecolor="aliceblue", lw=lw)
         if has_field
             cltn[:set_array](fvals)
             cltn[:set_clim](fieldlims)
             #cbar = plt[:colorbar](cltn, label=field, shrink=0.9)
-            cbar = plt[:colorbar](cltn, label=field, shrink=colorbarscale, aspect=0.8*20*colorbarscale)
+            cbar = plt[:colorbar](cltn, label=colorbarlabel, shrink=colorbarscale, aspect=0.8*20*colorbarscale)
             cbar[:ax][:tick_params](labelsize=7)
-            cbar[:outline][:set_linewidth](0.5)
+            cbar[:outline][:set_linewidth](0.4)
         end
         ax[:add_collection](cltn)
     end
