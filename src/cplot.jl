@@ -1,10 +1,11 @@
 using PyCall
 function cplot(X, Y, filename=""; xlabel="\$x\$", ylabel="\$y\$", lw=0.7, ms=2, marker=nothing, color="", legend=[], legendloc="best",
-               xbins=6, ybins=6, grid=false, figsize=(3,2), legendexpand=false)
+               xbins=6, ybins=6, grid=false, figsize=(3,2), legendexpand=false, ncol=0)
 
     @eval import PyPlot:plt, matplotlib, figure
 
-    labels = Dict( 
+    # Fix labels
+    texlabels = Dict( 
                   "sxx"=>raw"$\sigma_{xx}$",
                   "syy"=>raw"$\sigma_{yy}$",
                   "szz"=>raw"$\sigma_{zz}$",
@@ -17,15 +18,30 @@ function cplot(X, Y, filename=""; xlabel="\$x\$", ylabel="\$y\$", lw=0.7, ms=2, 
                   "exy"=>raw"$\varepsilon_{xy}$",
                   "eyz"=>raw"$\varepsilon_{yz}$",
                   "exz"=>raw"$\varepsilon_{xz}$",
+                  "sigma" =>raw"$\sigma$",
+                  "tau"   =>raw"$\tau$",
+                  "lambda"=>raw"$\lambda$",
                  )
-    xlabel = get(labels, xlabel, xlabel)
-    ylabel = get(labels, ylabel, ylabel)
+
+    labels = [ xlabel, ylabel ]
+    for (i,label) in enumerate(labels)
+        if haskey(texlabels, label)
+            label = get(texlabels, label, label)
+        else
+            !occursin(r"^\$.+\$$", label) && ( label = replace(label, r"(\w+)_(\w+)" =>  s"$\1_{\2}$") )
+            if occursin(r"^\$.+\$$", label)
+                label = replace(label, r"\b(sigma|tau|lambda)(\b|_)" => s"\\\1\2")
+            end
+        end
+        labels[i] = label
+    end
+    xlabel, ylabel = labels
 
     # Configure plot
     plt[:close]("all")
 
-    plt[:rc]("mathtext", fontset="cm")
     plt[:rc]("font", family="STIXGeneral", size=7)
+    plt[:rc]("mathtext", fontset="cm")
     plt[:rc]("lines", scale_dashes=true)
 
     if filename!=""
@@ -39,13 +55,19 @@ function cplot(X, Y, filename=""; xlabel="\$x\$", ylabel="\$y\$", lw=0.7, ms=2, 
         plt[:rc]("legend", fontsize=7)
     end
 
-    # Check the size of Y
-    n = length(X)
-    @assert n==size(Y,1)
-    if size(Y,2)==1
-        Y = reshape(n,1)
-    end
-    m = size(Y,2)
+    # Convert amtrices to array of vectors
+    size(X,2)>1 && ( X = [ X[:,j] for j=1:size(X,2) ] )
+    size(Y,2)>1 && ( Y = [ Y[:,j] for j=1:size(Y,2) ] )
+
+    # Convert vectors to array of one vector
+    eltype(X)<:Real && (X = [X] )
+    eltype(Y)<:Real && (Y = [Y] )
+    mx = length(X)
+    my = length(Y)
+    mx == 1 && ( X = repeat(X, my) )
+    my == 1 && ( Y = repeat(Y, mx) )
+    @assert length(X)==length(Y) "cplot: X and Y should have the same size"
+    m = max(mx, my)
 
     # Fix markers
     if typeof(marker)==String || marker==nothing
@@ -79,10 +101,10 @@ function cplot(X, Y, filename=""; xlabel="\$x\$", ylabel="\$y\$", lw=0.7, ms=2, 
 
     # Plot curves
     for i=1:m
-        plt[:plot](X, Y[:,i], marker=marker[i], ms=ms[i], color=color[i], lw=lw, label=legend[i])
+        plt[:plot](X[i], Y[i], marker=marker[i], ms=ms[i], color=color[i], lw=lw, label=legend[i])
     end
 
-    plt[:grid](grid, ls="dotted", lw=0.3)
+    grid && plt[:grid]( ls="dotted", lw=0.3)
     ax = plt[:axes]()
     plt[:locator_params](axis="x", nbins=xbins)
     plt[:locator_params](axis="y", nbins=ybins)
@@ -94,13 +116,14 @@ function cplot(X, Y, filename=""; xlabel="\$x\$", ylabel="\$y\$", lw=0.7, ms=2, 
     # plot legend
     if haslegend
         mode = legendexpand ? "expand" : nothing
+        ncol = ncol==0 ? m : ncol
 
         if legendloc=="top"
-            leg = plt[:legend](loc="lower left", bbox_to_anchor=(-0.02, 1.01, 1.04, 0.2), edgecolor="k", ncol=m, mode=mode)
+            leg = plt[:legend](loc="lower left", bbox_to_anchor=(-0.02, 1.01, 1.04, 0.2), edgecolor="k", ncol=ncol, mode=mode)
         elseif legendloc=="right"
             leg = plt[:legend](loc="upper left", bbox_to_anchor=(1.01, 1), edgecolor="k")
         elseif legendloc=="bottom"
-            leg = plt[:legend](loc="upper left", bbox_to_anchor=(-0.02, -0.02, 1.04, -0.2), edgecolor="k", ncol=m, mode=mode)
+            leg = plt[:legend](loc="upper left", bbox_to_anchor=(-0.02, -0.02, 1.04, -0.2), edgecolor="k", ncol=ncol, mode=mode)
         else
             leg = plt[:legend](loc=legendloc, edgecolor="k")
         end
