@@ -304,7 +304,8 @@ function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true,
             #cbar = plt[:colorbar](cltn, label=field, shrink=0.9)
             cbar = plt[:colorbar](cltn, label=colorbarlabel, shrink=colorbarscale, aspect=20*colorbarscale)
             cbar[:ax][:tick_params](labelsize=7)
-            cbar[:outline][:set_linewidth](0.4)
+            cbar[:outline][:set_linewidth](0.0)
+            cbar[:locator] = matplotlib[:ticker][:MaxNLocator](nbins=5)
         end
         @eval $ax[:add_collection3d]($cltn)
 
@@ -334,9 +335,11 @@ function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true,
             cltn[:set_array](fvals)
             cltn[:set_clim](fieldlims)
             #cbar = plt[:colorbar](cltn, label=field, shrink=0.9)
-            cbar = plt[:colorbar](cltn, label=colorbarlabel, shrink=colorbarscale, aspect=0.8*20*colorbarscale)
+            cbar = plt[:colorbar](cltn, label=colorbarlabel, shrink=colorbarscale, aspect=0.9*20*colorbarscale)
             cbar[:ax][:tick_params](labelsize=7)
-            cbar[:outline][:set_linewidth](0.4)
+            cbar[:outline][:set_linewidth](0.0)
+            cbar[:locator] = matplotlib[:ticker][:MaxNLocator](nbins=5)
+            #ax[:locator_params](cbar)
         end
         ax[:add_collection](cltn)
     end
