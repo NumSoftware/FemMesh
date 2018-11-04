@@ -157,10 +157,10 @@ end
 
 using PyCall # required
 
-function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true, 
+function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true, lw=0.5,
                pointmarkers=false, pointlabels=false, vectorfield=nothing, arrowscale=0.0,
-               celllabels=false, fieldlims=nothing, cmap=nothing, colorbarscale=0.9, field=nothing,
-               colorbarlabel="", lw=0.5, 
+               celllabels=false, field=nothing, fieldscale=1.0, fieldlims=nothing, cmap=nothing, 
+               colorbarscale=0.9, colorbarlabel="",
                alpha=1.0, warpscale=0.0, highlightcell=0, elev=30.0, azim=45.0, dist=10.0,
                figsize=(4,2.5), leaveopen=false)
 
@@ -266,6 +266,7 @@ function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true,
             data  = ugrid.point_scalar_data[field]
             fvals = [ mean(data[ugrid.cells[i]]) for i=1:ncells ]
         end
+        fvals *= fieldscale
         fieldlims==nothing && (fieldlims = extrema(fvals))
     end
 
@@ -306,6 +307,7 @@ function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true,
             cbar[:ax][:tick_params](labelsize=7)
             cbar[:outline][:set_linewidth](0.0)
             cbar[:locator] = matplotlib[:ticker][:MaxNLocator](nbins=8)
+            cbar[:update_ticks]()
         end
         @eval $ax[:add_collection3d]($cltn)
 
@@ -334,12 +336,11 @@ function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true,
         if has_field
             cltn[:set_array](fvals)
             cltn[:set_clim](fieldlims)
-            #cbar = plt[:colorbar](cltn, label=field, shrink=0.9)
             cbar = plt[:colorbar](cltn, label=colorbarlabel, shrink=colorbarscale, aspect=0.9*20*colorbarscale)
             cbar[:ax][:tick_params](labelsize=7)
             cbar[:outline][:set_linewidth](0.0)
             cbar[:locator] = matplotlib[:ticker][:MaxNLocator](nbins=8)
-            #ax[:locator_params](cbar)
+            cbar[:update_ticks]()
         end
         ax[:add_collection](cltn)
     end
