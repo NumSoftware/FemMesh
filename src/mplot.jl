@@ -303,7 +303,7 @@ function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true, lw=0.5,
             cltn[:set_array](fvals)
             cltn[:set_clim](fieldlims)
             #cbar = plt[:colorbar](cltn, label=field, shrink=0.9)
-            cbar = plt[:colorbar](cltn, label=colorbarlabel, shrink=colorbarscale, aspect=20*colorbarscale)
+            cbar = plt[:colorbar](cltn, label=colorbarlabel, shrink=colorbarscale, aspect=20*colorbarscale, format="%.1f")
             cbar[:ax][:tick_params](labelsize=7)
             cbar[:outline][:set_linewidth](0.0)
             cbar[:locator] = matplotlib[:ticker][:MaxNLocator](nbins=8)
@@ -336,7 +336,7 @@ function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true, lw=0.5,
         if has_field
             cltn[:set_array](fvals)
             cltn[:set_clim](fieldlims)
-            cbar = plt[:colorbar](cltn, label=colorbarlabel, shrink=colorbarscale, aspect=0.9*20*colorbarscale)
+            cbar = plt[:colorbar](cltn, label=colorbarlabel, shrink=colorbarscale, aspect=0.9*20*colorbarscale, format="%.1f")
             cbar[:ax][:tick_params](labelsize=7)
             cbar[:outline][:set_linewidth](0.0)
             cbar[:locator] = matplotlib[:ticker][:MaxNLocator](nbins=8)
