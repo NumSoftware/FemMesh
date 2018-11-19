@@ -104,7 +104,7 @@ function cplot(X, Y, filename=""; xlabel="\$x\$", ylabel="\$y\$", lw=0.7, ms=2, 
         plt[:plot](X[i], Y[i], marker=marker[i], ms=ms[i], color=color[i], lw=lw, label=legend[i])
     end
 
-    grid && plt[:grid]( ls="dotted", lw=0.3)
+    grid && plt[:grid]( color="lightgrey", ls="dotted", lw=0.3)
     ax = plt[:axes]()
     plt[:locator_params](axis="x", nbins=xbins)
     plt[:locator_params](axis="y", nbins=ybins)
@@ -138,4 +138,6 @@ function cplot(X, Y, filename=""; xlabel="\$x\$", ylabel="\$y\$", lw=0.7, ms=2, 
     else
         plt[:savefig](filename, bbox_inches="tight", pad_inches=0.01, format="pdf")
     end
+
+    plt[:close]("all")
 end

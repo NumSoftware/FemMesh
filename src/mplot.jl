@@ -166,7 +166,6 @@ function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true, lw=0.5,
 
     @eval import PyPlot:plt, matplotlib, figure, art3D, Axes3D
 
-
     plt[:close]("all")
 
     plt[:rc]("font", family="serif", size=7)
@@ -297,7 +296,7 @@ function mplot(ugrid::UnstructuredGrid, filename::String=""; axis=true, lw=0.5,
 
         #cltn = art3D[:Poly3DCollection](all_verts, cmap=cmap, facecolor="aliceblue", edgecolor="black", lw=2)
         cltn = @eval art3D[:Poly3DCollection]($all_verts, cmap=$cmap, facecolor="aliceblue", edgecolor="black",
-                                              lw=lw, alpha=$alpha)
+                                              lw=$lw, alpha=$alpha)
 
         if has_field
             cltn[:set_array](fvals)
