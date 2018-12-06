@@ -466,30 +466,27 @@ function mountA(mesh::Mesh, fixed::Bool, conds, facetol)
     return A
 end
 
-function rigid_transform(Cr::Array{Float64,2}, Ce::Array{Float64,2})
-    # Cr : Reference coordinates (source)
-    # Ce : Cell coordinates (target)
-    #A, B = copy(source), copy(target)
+
+
+function rigid_transform(source::Array{Float64,2}, target::Array{Float64,2})
+    A, B = copy(source), copy(target)
     #@test size(A) == size(B)
 
-    n = size(Cr,1)
-    ndim = size(Cr,2)
+    n = size(A,1)
+    ndim = size(A,2)
 
     # Centralizing both sets of points
-    cCr = mean(Cr, dims=1)
-    cCe = mean(Ce, dims=1)
-    #for i = 1:n
-        #for j = 1:ndim
-            #Cr[i,j] -= cCr[1,j]
-            #Ce[i,j] -= cCe[1,j]
-        #end
-    #end
-    D = Cr .- cCr 
-    Dp = Ce .- cCe 
+    cA = mean(A, dims=1)
+    cB = mean(B, dims=1)
+    for i = 1:n
+        for j = 1:ndim
+            A[i,j] -= cA[1,j]
+            B[i,j] -= cB[1,j]
+        end
+    end
 
     # Singular value decomposition
-    #U, S, V = svd(Cr'*Ce)
-    U, S, V = svd(D'*Dp)
+    U, S, V = svd(A'*B)
 
     # Rotation matrix
     R = V*U'
@@ -500,7 +497,7 @@ function rigid_transform(Cr::Array{Float64,2}, Ce::Array{Float64,2})
        R[:2] *= -1
     end
 
-    T = cCe - cCr*R'
+    T = cB - cA*R'
 
     return R, T
 
