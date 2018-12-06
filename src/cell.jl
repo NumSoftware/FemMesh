@@ -168,10 +168,8 @@ end
 function get_faces(cell::AbstractCell)
     faces  = Cell[]
 
-    #all_faces_idxs = FACETS_IDXS[cell.shape]
     all_faces_idxs = cell.shape.facet_idxs
-    #facet_shape = FACETS_SHAPE[cell.shape]         # facet_shape could be of type ShapeType or Tuple
-    facet_shape = cell.shape.facet_shape
+    facet_shape    = cell.shape.facet_shape
     
     if facet_shape==() return faces end
 
@@ -391,5 +389,19 @@ function cell_aspect_ratio(c::Cell)::Float64
     faces = get_faces(c)
     len = [ cell_extent(f) for f in faces ]
     c.quality = minimum(len)/maximum(len)
-    return c.quality
+    return c.quality 
 end
+
+export getproperty
+function Base.getproperty(c::Cell, s::Symbol)
+    if s == "coords"
+        return getcoords(c)
+    elseif s == "faces"
+        return get_faces(c)
+    elseif s == "edges"
+        return get_edges(c)
+    else
+        return getfield(c, s)
+    end
+end
+
