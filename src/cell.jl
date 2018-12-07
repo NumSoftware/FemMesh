@@ -394,12 +394,14 @@ end
 
 export getproperty
 function Base.getproperty(c::Cell, s::Symbol)
-    if s == "coords"
+    if s == :coords
         return getcoords(c)
-    elseif s == "faces"
+    elseif s == :faces
         return get_faces(c)
-    elseif s == "edges"
+    elseif s == :edges
         return get_edges(c)
+    elseif s == :extent
+        return cell_extent(c)
     else
         return getfield(c, s)
     end
