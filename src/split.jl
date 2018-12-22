@@ -4,6 +4,7 @@
 
 export split!
 export generate_joints!
+export generate_joints_tag!
 
 function joint_shape(shape::ShapeType)
     if shape == LIN2  ; return JLIN2  end
@@ -261,3 +262,261 @@ function generate_joints_candidate!(mesh::Mesh, expr::Expr, tag::TagType="") # T
 
     tag!(jcells, tag)
 end
+
+                            
+ #Generate joints taking account tags
+
+function generate_joints_tag!(mesh::Mesh; layers::Int64=2, verbose::Bool=true)
+
+    verbose && printstyled("Mesh generation of joint elements:\n", bold=true, color=:cyan)
+    cells  = mesh.cells
+
+    any(c.shape.family==JOINT_SHAPE for c in cells) && error("generate_joints!: mesh already contains joint elements.")
+    solids = [ c for c in cells if c.shape.family==SOLID_SHAPE ]
+
+
+    # List all repeated faces
+    face_pairs = Tuple{Cell, Cell}[]
+
+    # Joints generation
+    facedict = Dict{UInt64, Cell}()
+
+    # Get paired faces 
+    for cell in solids
+        for face in get_faces(cell)
+            hs = hash(face)
+            f  = get(facedict, hs, nothing)
+            if f==nothing
+                facedict[hs] = face
+            else
+                if f.tag != face.tag #add to face_pairs only if are different materials. Delete of dictionary of faces them.
+                    push!(face_pairs, (face, f))
+                    delete!(facedict, hs)
+                end
+            end
+        end
+    end
+
+    newpoints = Point[]
+    # Splitting: generating new points
+
+    cfp = [fp[1] for fp in face_pairs] #cells of face (pairs) shared between diffenrent materials
+    cellsfp = [cfp;cfp]#cells of faces shared between different materials
+    pointsdict_fp = Dict{UInt64, Point}()
+    for c in cellsfp
+        for (i,p) in enumerate(c.points)
+            hs = hash(p)
+            pointsdict_fp[hs] = p
+            newp =Point([p.x, p.y, p.z])
+            push!(newpoints, newp)
+        end
+    end
+
+    c_other = collect(values(facedict))
+    pointsdict_other = Dict{UInt64, Point}()
+    for c in c_other
+        for (i,p) in enumerate(c.points)
+            hs = hash(p)
+            f = get(pointsdict_fp,hs,nothing)
+            if f==nothing
+                pointsdict_fp[hs] = p
+                newp =Point([p.x, p.y, p.z])
+                push!(newpoints, newp)
+            end
+        end
+    end
+
+    # Generate joint elements
+    jcells = Cell[]
+    for (f1, f2) in face_pairs
+        n   = length(f1.points)
+        con = Array{Point}(undef, 2*n)
+        for (i,p1) in enumerate(f1.points)
+            for p2 in f2.points
+                if hash(p1)==hash(p2)
+                    con[i]   = p1
+                    con[n+i] = p2
+                    break
+                end
+            end
+        end
+
+        jshape = joint_shape(f1.shape)
+        cell = Cell(jshape, con, "")
+        cell.linked_cells = [f1.ocell, f2.ocell]
+        push!(jcells, cell)
+    end
+
+
+    # Get points from non-separated cells
+    points_dict = Dict{UInt64, Point}()
+    for c in mesh.cells
+        c.shape.family == SOLID_SHAPE && continue # skip because they have points with same coordinates
+        c.shape.family == JOINT1D_SHAPE && continue # skip because their points were already considered
+        for p in c.points
+            points_dict[hash(p)] = p
+        end
+    end
+
+    # Add new cells
+    mesh.cells  = vcat(cells, jcells)
+
+
+    # Get points from solid and joint cells
+    mesh.points = [ collect(values(points_dict)); newpoints ]
+
+
+    #Creating dictionaries to after assign mesh.points to mesh.cells.points
+
+   pointsdict_1 =  Dict{UInt64, Point}()
+   pointsdict_2 =  Dict{UInt64, Point}()
+   pointsdict_3 =  Dict{UInt64, Point}()
+   pointsdict_4 =  Dict{UInt64, Point}()
+
+       for p in mesh.points
+            hs = hash(p)
+            f = get(pointsdict_1,hs,nothing)
+            if f == nothing
+                pointsdict_1[hs] = p
+            else
+                f = get(pointsdict_2,hs,nothing)
+                if f==nothing
+                    pointsdict_2[hs] = p
+                else
+                    f = get(pointsdict_3,hs,nothing)
+                    if f==nothing
+                        pointsdict_3[hs] = p
+                    else
+                        f = get(pointsdict_4,hs,nothing)
+                        if f==nothing
+                            pointsdict_4[hs] = p
+                        end
+                    end
+                end
+            end
+        end
+
+   pointsdict_1bk =  Dict{UInt64, Point}()
+   pointsdict_2bk =  Dict{UInt64, Point}()
+   pointsdict_3bk =  Dict{UInt64, Point}()
+   pointsdict_4bk =  Dict{UInt64, Point}()
+
+       for p in mesh.points
+            hs = hash(p)
+            f = get(pointsdict_1bk,hs,nothing)
+            if f == nothing
+                pointsdict_1bk[hs] = p
+            else
+                f = get(pointsdict_2bk,hs,nothing)
+                if f==nothing
+                    pointsdict_2bk[hs] = p
+                else
+                    f = get(pointsdict_3bk,hs,nothing)
+                    if f==nothing
+                        pointsdict_3bk[hs] = p
+                    else
+                        f = get(pointsdict_4bk,hs,nothing)
+                        if f==nothing
+                            pointsdict_4bk[hs] = p
+                        end
+                    end
+                end
+            end
+        end
+
+    #Copying points from mesh.points to mesh.cells[i].points if joints
+
+    for c in mesh.cells
+        c.shape.family == SOLID_SHAPE && continue
+        for (i,p) in enumerate(c.points)
+            hs = hash(p)
+            f = get(pointsdict_4,hs,nothing)
+            if f!=nothing
+                c.points[i] = f
+                delete!(pointsdict_4,hs)
+            else
+                f = get(pointsdict_3,hs,nothing)
+                if f!=nothing
+                    c.points[i] = f
+                    delete!(pointsdict_3,hs)
+                else
+                     f = get(pointsdict_2,hs,nothing)
+                    if f!=nothing
+                        c.points[i] = f
+                        delete!(pointsdict_2,hs)
+                    else
+                        f = get(pointsdict_1,hs,nothing)
+                        if f!=nothing
+                        c.points[i] = f
+                        delete!(pointsdict_1,hs)
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+
+    #Copying points from mesh.points to mesh.cells[i].points if solids
+
+    for c in mesh.cells
+        c.shape.family == JOINT_SHAPE && continue
+        for (i,p) in enumerate(c.points)
+            hs = hash(p)
+            f = get(pointsdict_1,hs,nothing)
+            if f!=nothing                   
+                c.points[i] = f
+                delete!(pointsdict_1,hs)
+            else
+                f = get(pointsdict_4bk,hs,nothing)
+                if f!=nothing
+                    c.points[i] = f
+                    delete!(pointsdict_4bk,hs)
+                else
+                    f = get(pointsdict_3bk,hs,nothing)
+                    if f!=nothing
+                        c.points[i] = f
+                        delete!(pointsdict_3bk,hs)
+                    else
+                        f = get(pointsdict_2bk,hs,nothing)
+                        if f!=nothing
+                            c.points[i] = f
+                            delete!(pointsdict_2bk,hs)
+                        else
+                            f = get(pointsdict_1bk,hs,nothing)
+                            if f!=nothing
+                                c.points[i] = f
+                                delete!(pointsdict_1bk,hs)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+
+    # update and reorder mesh
+    update!(mesh, verbose=verbose)
+
+    reorder!(mesh)
+
+    if verbose
+        @printf "  %4dd mesh                             \n" mesh.ndim
+        @printf "  %5d points\n" length(mesh.points)
+        @printf "  %5d total cells\n" length(mesh.cells)
+        @printf "  %5d new joint cells\n" length(jcells)
+        nfaces = length(mesh.faces)
+        nfaces>0 && @printf("  %5d faces\n", nfaces)
+        nedges = length(mesh.edges)
+        nedges>0 && @printf("  %5d edges\n", nedges)
+        println("  done.")
+    end
+
+    return mesh
+    
+end
+                            
+                        
+                            
+                            
