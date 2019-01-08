@@ -259,11 +259,6 @@ end
 function read_ugrid_tetgen(filekey::String)
     # reads files .node and .ele
 
-    alltext  = read(filename*".node", String)
-    nodedata = split(alltext, "\n")
-    alltext  = read(filename*".ele", String)
-    celldata = split(alltext, "\n")
-
     local points, cells, cell_types, npoints, ncells
     point_scalar_data = Dict{String,Array}()
     point_vector_data = Dict{String,Array}()
@@ -287,12 +282,12 @@ function read_ugrid_tetgen(filekey::String)
 
     # read cell information
 
-    f=open(filekey*".cell")
+    f=open(filekey*".ele")
     line = readline(f)
     ncells, npts, _ = parse.(Int, split(line))
     cells = Array{Int,1}[]
 
-    for i=1:npoints
+    for i=1:ncells
         line = readline(f)
         items = split(line)
         pts = parse.(Int, items[2:end])

@@ -666,8 +666,6 @@ end
 
 
 
-
-
 """
     save(mesh, filename, [verbose=true])
 
@@ -687,11 +685,6 @@ function save(mesh::Mesh, filename::String; verbose::Bool=true)
     verbose && printstyled( "  file $filename written (Mesh)\n", color=:cyan)
 end
 
-
-function read_mesh_vtk(filename::String, verbose::Bool=false)
-    ugrid = read_ugrid_vtk(filename)
-    return Mesh(ugrid)
-end
 
 function load_mesh_json(filename; format="json")
     mesh = Mesh()
@@ -804,10 +797,13 @@ function Mesh(filename::String; verbose::Bool=true, reorder::Bool=false)::Mesh
     basename, ext = splitext(filename)
     if ext==".vtk"
         verbose && print("  Reading VTK legacy format...\n")
-        mesh = read_mesh_vtk(filename)
-    else # try JSON
+        mesh = Mesh(read_ugrid_vtk(filename))
+    elseif ext==".json"
         verbose && print("  Reading JSON format...\n")
         mesh = load_mesh_json(filename)
+    else
+        verbose && print("  Reading tetgen output files...\n")
+        mesh = Mesh(read_ugrid_tetgen(filename))
     end
 
     # Reorder nodal numbering
@@ -832,6 +828,7 @@ function Mesh(filename::String; verbose::Bool=true, reorder::Bool=false)::Mesh
 end
 
 # Read a mesh from TetGen output files
+# TODO: deprecate this function. Consider read_ugrid_tetgen function
 export tetreader
 function tetreader(filekey::String)
     # reading .node file
