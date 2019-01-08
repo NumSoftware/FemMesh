@@ -127,12 +127,12 @@ end
 
 
 function read_ugrid_vtk(filename::String)
-    file = open(filename)
+    #file = open(filename)
 
     # read nodal information
     alltext = read(filename, String)
     data    = split(alltext)
-    close(file)
+    #close(file)
 
     local points, cells, cell_types, npoints, ncells
     point_scalar_data = Dict{String,Array}()
@@ -247,10 +247,65 @@ function read_ugrid_vtk(filename::String)
 
     end
 
-    vtk_data = UnstructuredGrid("VTK unstructured grid", points, cells, cell_types, 
+    ugrid = UnstructuredGrid("VTK unstructured grid", points, cells, cell_types, 
                                 point_scalar_data=point_scalar_data,
                                 point_vector_data=point_vector_data,
                                 cell_scalar_data =cell_scalar_data)
 
-    return vtk_data
+    return ugrid
+end
+
+
+function read_ugrid_tetgen(filekey::String)
+    # reads files .node and .ele
+
+    alltext  = read(filename*".node", String)
+    nodedata = split(alltext, "\n")
+    alltext  = read(filename*".ele", String)
+    celldata = split(alltext, "\n")
+
+    local points, cells, cell_types, npoints, ncells
+    point_scalar_data = Dict{String,Array}()
+    point_vector_data = Dict{String,Array}()
+    cell_scalar_data  = Dict{String,Array}()
+
+    # read nodal information
+
+    f=open(filekey*".node")
+    line = readline(f)
+    npoints, ndim, _, _ = parse.(Int, split(line))
+    points  = zeros(npoints,3)
+
+    for i=1:npoints
+        line = readline(f)
+        items = split(line)
+        points[i,1] = parse(Float64, items[2])
+        points[i,2] = parse(Float64, items[3])
+        points[i,3] = parse(Float64, items[4])
+    end
+    close(f)
+
+    # read cell information
+
+    f=open(filekey*".cell")
+    line = readline(f)
+    ncells, npts, _ = parse.(Int, split(line))
+    cells = Array{Int,1}[]
+
+    for i=1:npoints
+        line = readline(f)
+        items = split(line)
+        pts = parse.(Int, items[2:end])
+        push!(cells, pts)
+    end
+    close(f)
+
+    # cell types
+    #
+    cell_types = 10*ones(Int, ncells) 
+
+
+    ugrid = UnstructuredGrid("Unstructured grid from tetgen", points, cells, cell_types)
+
+    return ugrid
 end

@@ -102,7 +102,7 @@ function get_neighbors(cells::Array{Cell,1})::Array{Cell,1}
 end
 
 # Return the cell patch for each point
-function get_patches(mesh::Mesh)::Array{Array{Cell,1},1}
+function get_patches(mesh::Mesh)
     patches = [ Cell[] for i=1:length(mesh.points) ]
     for cell in mesh.cells
         for pt in cell.points
@@ -110,7 +110,7 @@ function get_patches(mesh::Mesh)::Array{Array{Cell,1},1}
         end
     end
 
-    return patches
+    return mesh.points, patches
 end
 
 # Reverse Cuthill–McKee algorithm (RCM) 
@@ -493,36 +493,15 @@ end
 
 
 
-"""
-    save(mesh, filename, [verbose=true])
+function Mesh(ugrid::UnstructuredGrid)
 
-Saves a mesh object into a file in VTK legacy format
-"""
-function save(mesh::Mesh, filename::String; verbose::Bool=true)
-    vtk_data = convert(UnstructuredGrid, mesh)
-
-    # Warning for lost of embedded flag
-    has_embedded = any( C -> C.embedded, mesh.cells )
-    if has_embedded
-        # the function read_mesh_vtk cannot setup jet embedded cells
-        @warn "save: the flag for embedded cells will be lost after saving mesh to file $filename"
-    end
-
-    save_vtk(vtk_data, filename)
-    verbose && printstyled( "  file $filename written (Mesh)\n", color=:cyan)
-end
-
-
-function read_mesh_vtk(filename::String, verbose::Bool=false)
-
-    vtk_data = read_ugrid_vtk(filename)
     mesh = Mesh()
 
     # Setting points
-    npoints = size(vtk_data.points,1)
+    npoints = size(ugrid.points,1)
     ndim = 2
     for i=1:npoints
-        X = vtk_data.points[i,:]
+        X = ugrid.points[i,:]
         point = Point(X[1], X[2], X[3])
         point.id = i
         push!(mesh.points, point)
@@ -535,12 +514,12 @@ function read_mesh_vtk(filename::String, verbose::Bool=false)
     mesh.ndim = ndim
 
     # Setting cells
-    ncells = length(vtk_data.cells)
+    ncells = length(ugrid.cells)
     has_polyvertex = false
 
     for i=1:ncells
-        conn = mesh.points[ vtk_data.cells[i] ]
-        vtk_shape = VTKCellType(vtk_data.cell_types[i])
+        conn = mesh.points[ ugrid.cells[i] ]
+        vtk_shape = VTKCellType(ugrid.cell_types[i])
         if vtk_shape == VTK_POLY_VERTEX
             shape = POLYV
             has_polyvertex = true
@@ -552,9 +531,9 @@ function read_mesh_vtk(filename::String, verbose::Bool=false)
     end
 
     # Setting data
-    mesh.point_scalar_data = vtk_data.point_scalar_data
-    mesh.point_vector_data = vtk_data.point_vector_data
-    mesh.cell_scalar_data  = vtk_data.cell_scalar_data
+    mesh.point_scalar_data = ugrid.point_scalar_data
+    mesh.point_vector_data = ugrid.point_vector_data
+    mesh.cell_scalar_data  = ugrid.cell_scalar_data
 
     # Fix shape for polyvertex cells
     if has_polyvertex
@@ -682,6 +661,36 @@ function read_mesh_vtk(filename::String, verbose::Bool=false)
     end
 
     return mesh
+end
+
+
+
+
+
+
+"""
+    save(mesh, filename, [verbose=true])
+
+Saves a mesh object into a file in VTK legacy format
+"""
+function save(mesh::Mesh, filename::String; verbose::Bool=true)
+    ugrid = convert(UnstructuredGrid, mesh)
+
+    # Warning for lost of embedded flag
+    has_embedded = any( C -> C.embedded, mesh.cells )
+    if has_embedded
+        # the function read_mesh_vtk cannot setup jet embedded cells
+        @warn "save: the flag for embedded cells will be lost after saving mesh to file $filename"
+    end
+
+    save_vtk(ugrid, filename)
+    verbose && printstyled( "  file $filename written (Mesh)\n", color=:cyan)
+end
+
+
+function read_mesh_vtk(filename::String, verbose::Bool=false)
+    ugrid = read_ugrid_vtk(filename)
+    return Mesh(ugrid)
 end
 
 function load_mesh_json(filename; format="json")

@@ -11,12 +11,14 @@ const KeyType = Union{Symbol,AbstractString}
 const ColType = Array{T,1} where T
 
 mutable struct DTable
-    columns ::Array{ColType,1} # TODO: Array{AbstractArray}
+    columns ::Array{ColType,1}
     colindex::OrderedDict{String,Int} # Data index
+    header::Array{String,1}
     function DTable()
         this = new()
-        this.columns     = [ ]
+        this.columns  = []
         this.colindex = OrderedDict() 
+        this.header   = []
         return this
     end
     function DTable(header::Array)
@@ -24,6 +26,7 @@ mutable struct DTable
         header = vec(header)
         this.columns  = [ [] for s in header ]
         this.colindex = OrderedDict( string(key)=>i for (i,key) in enumerate(header) )
+        this.header   = string.(header)
         return this
     end
 end
@@ -86,6 +89,7 @@ function Base.push!(table::DTable, dict::AbstractDict)
     if length(table.columns)==0
         table.columns  = [ [v] for (k,v) in dict ]
         table.colindex = OrderedDict( string(key)=>i for (i,key) in enumerate(keys(dict)) )
+        table.header   = string.(keys(dict))
     else
         nrows = length(table.columns[1])
         for (k,v) in dict
@@ -97,6 +101,7 @@ function Base.push!(table::DTable, dict::AbstractDict)
                 push!(new_col, v)
                 push!(table.columns, new_col)
                 table.colindex[string(k)] = length(table.columns)
+                push!(table.header, string(k))
             else
                 push!(table.columns[colindex], v)
             end
