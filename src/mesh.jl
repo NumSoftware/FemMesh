@@ -13,12 +13,14 @@ mutable struct Mesh
     ndim   ::Int
     points ::Array{Point,1}
     cells  ::Array{Cell,1}
+
     faces  ::Array{Cell,1}
     edges  ::Array{Cell,1}
     bpoints::Dict{UInt64,Point}
     bins   ::Bins
     quality::Float64
     qmin   ::Float64 
+
     # Data
     point_scalar_data::Dict{String,Array}
     cell_scalar_data ::Dict{String,Array}
@@ -270,9 +272,7 @@ function update!(mesh::Mesh; verbose::Bool=false, genfacets::Bool=true, genedges
     end
 
     # Quality
-    #if 0<length(mesh.cells)<=1000
-        quality!(mesh)
-    #end
+    quality!(mesh)
 
     return nothing
 end
@@ -901,3 +901,38 @@ function tetreader(filekey::String)
     return mesh
 end
 
+# Gets a part of a mesh filtering elements
+function Base.getindex(mesh::Mesh, cond::Expr)
+    # filter cells
+    cells  = mesh.cells[cond]
+    # get points
+    points = get_points(cells)
+
+    # ids from selected cells and poitns
+    cids = [ c.id for c in cells ]
+    pids = [ p.id for p in points ]
+
+    # new mesh object
+    new_mesh = Mesh()
+    new_mesh.points = points
+    new_mesh.cells = cells
+
+    # select relevant data
+    for (key,vals) in mesh.point_scalar_data
+        new_mesh.point_scalar_data[key] = vals[pids]
+    end
+
+    for (key,vals) in mesh.cell_scalar_data
+        new_mesh.cell_scalar_data[key] = vals[cids]
+    end
+
+    for (key,vals) in mesh.point_vector_data
+        new_mesh.point_vector_data[key] = vals[pids,:]
+    end
+
+    # update node numbering, facets and edges
+    update!(new_mesh)
+
+    return new_mesh
+
+end
