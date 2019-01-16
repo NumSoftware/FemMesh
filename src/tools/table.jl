@@ -87,14 +87,14 @@ end
 
 function Base.push!(table::DTable, dict::AbstractDict)
     if length(table.columns)==0
-        table.columns  = [ [v] for (k,v) in dict ]
+        table.columns  = [ typeof(v)[v] for (k,v) in dict ]
         table.colindex = OrderedDict( string(key)=>i for (i,key) in enumerate(keys(dict)) )
         table.header   = string.(keys(dict))
     else
         nrows = length(table.columns[1])
         for (k,v) in dict
             # Add data
-            colindex = get(table.colindex, k, 0)
+            colindex = get(table.colindex, string(k), 0)
             if colindex==0
                 # add new column
                 new_col = zeros(nrows)
@@ -106,6 +106,7 @@ function Base.push!(table::DTable, dict::AbstractDict)
                 push!(table.columns[colindex], v)
             end
         end
+
         # Add zero for missing values if any
         for col in table.columns
             if length(col)==nrows
@@ -123,6 +124,15 @@ function Base.getindex(table::DTable, keys::Array{<:KeyType,1})
     columns = [ table[string(key)] for key in keys ]
     subtable = DTable(keys, columns)
     return subtable
+end
+
+function Base.getindex(table::DTable, rowindex::Int, colon::Colon)
+    row = []
+    for j=1:length(table.header)
+        push!(row, table.columns[j][rowindex])
+    end
+
+    return row
 end
 
 function Base.getindex(book::DBook, index::Int)
@@ -458,8 +468,6 @@ function Base.show(io::IO, table::DTable)
             widths[i] = max(widths[i], maximum(length.(string.(col))))
         end
     end
-
-    #@show widths
 
     #for (key,width) in zip(header,widths)
     print(" │ ")
