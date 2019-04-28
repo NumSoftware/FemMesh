@@ -9,8 +9,6 @@ VERTEX_SHAPE  = 5,
 EMBEDDED      = 6
 )
 
-const TagType = Union{Int,String}
-
 # Export
 for s in instances(ShapeFamily)
     @eval export $(Symbol(s))
@@ -48,6 +46,8 @@ function MakePOLIV()
     shape.ndim        = 0
     shape.npoints     = 0
     shape.vtk_type    = VTK_POLY_VERTEX
+    shape.facet_idxs  = []
+    shape.facet_shape = ()
     return shape
 end
 const POLYV = MakePOLIV()

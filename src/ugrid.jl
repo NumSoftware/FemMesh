@@ -291,6 +291,7 @@ function read_ugrid_tetgen(filekey::String)
         line = readline(f)
         items = split(line)
         pts = parse.(Int, items[2:end])
+        pts .+= 1  # convert to one-based
         push!(cells, pts)
     end
     close(f)

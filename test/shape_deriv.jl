@@ -1,7 +1,7 @@
 using FemMesh, LinearAlgebra
 using Test
 
-printstyled("\nShape functions\n", color=:cyan)
+printstyled("\nShape functions\n", color=:blue, bold=true)
 
 for shape in ALL_SHAPES
     print("shape : ", shape.name)
@@ -23,11 +23,11 @@ for shape in ALL_SHAPES
     #@show Q
     RR = [ Q[i,:] for i=1:nip ]
     NN = shape.func.(RR)
-    @test sum(sum(NN)) ≈ nip atol=1e-10
-    println("  ok")
+    TR = @test sum(sum(NN)) ≈ nip atol=1e-10
+    println(TR)
 end
 
-printstyled("\nShape functions derivatives\n", color=:cyan)
+printstyled("\nShape functions derivatives\n", color=:blue, bold=true)
 
 for shape in ALL_SHAPES
     print("shape : ", shape.name)
@@ -41,6 +41,8 @@ for shape in ALL_SHAPES
 
     # numerical derivative
     δ  = 1e-8
+    shape_pass = true
+    TR = Test.Pass(:test, nothing, nothing, true)
     for R in RR
         RI = R .+ Id*δ
         fR = f(R)
@@ -49,7 +51,8 @@ for shape in ALL_SHAPES
             Di     = 1/δ*(f(RI[:,i]) - fR)
             D[i,:] = Di
         end
-        @test D ≈ shape.deriv(R) atol=1e-6
+        tr = @test D ≈ shape.deriv(R) atol=1e-6
+        tr isa Test.Pass || (TR = tr)
     end
-    println("  ok")
+    println(TR)
 end

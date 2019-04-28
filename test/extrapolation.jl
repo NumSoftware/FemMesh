@@ -1,7 +1,7 @@
 using FemMesh
 using Test
 
-printstyled("\nShape extrapolation\n", color=:cyan)
+printstyled("\nShape extrapolation\n", color=:blue, bold=true)
 
 for shape in ALL_SHAPES
     println("shape : ", shape.name)
@@ -26,7 +26,7 @@ for shape in ALL_SHAPES
         #(nip ==18 && shape == WED15) && continue  # WED15 does not work with nip=18 !
 
         # Calculate values at ips
-        println("  nip = ", nip)
+        print("  nip = ", nip)
         P = zeros(nip)
         for i=1:nip
             x, y, z = [ Cip[i,:]; 0.0; 0.0 ]
@@ -37,8 +37,8 @@ for shape in ALL_SHAPES
         VV = E*P
 
         #display([V VV V-VV ])
-        @test V ≈ VV atol=1e-10
+        TR = @test V ≈ VV atol=1e-10
+        println(TR)
     end
-    println("  ok")
 end
 

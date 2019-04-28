@@ -4,7 +4,7 @@
 include("block_inset.jl")
 
 """
-`BlockTruss(coords, conns, [shape=LIN2,] [tag=0,])`
+`BlockTruss(coords, conns, [shape=LIN2,] [tag="",])`
 
 Generates a block object for the mesh generation of trusses:
 """
@@ -13,10 +13,10 @@ mutable struct BlockTruss <: Block
     conns ::Array{Int64,2}
     shape ::ShapeType
     cellshape::ShapeType
-    tag::TagType
+    tag::String
     id::Int64
 
-    function BlockTruss(coords::Array{<:Real}, conns::Array{Int64,2}; cellshape=LIN2, tag=0, id=-1)
+    function BlockTruss(coords::Array{<:Real}, conns::Array{Int64,2}; cellshape=LIN2, tag="", id=-1)
         ncols = size(coords,2)
         size(conns,2)==2 || error("BlockTruss: Invalid size for connectivities matrix")
 
@@ -68,17 +68,17 @@ end
 
 
 """
-`BlockCoords(coords, conns, [cellshape=LIN2,] [tag=0,])`
+`BlockCoords(coords, conns, [cellshape=LIN2,] [tag="",])`
 
 Generates a 2D or 3D block object based on a matrix of coordinates and a matrix of connectivities.
 """
 mutable struct BlockCoords <: Block
     coords::Array{Float64,2}
     conns ::Array{Int64,2}
-    tag::TagType
+    tag::String
     id::Int64
 
-    function BlockCoords(coords::Array{<:Real}, conns::Array{Int64,2}; tag=0, id=-1)
+    function BlockCoords(coords::Array{<:Real}, conns::Array{Int64,2}; tag="", id=-1)
         ncols = size(coords,2)
         if !(ncols in (2,3)); error("Invalid coordinates matrix for BlockCoords") end
         if ncols==2
@@ -93,7 +93,7 @@ end
 
 
 """
-`Block2D(coords, [nx=1,] [ny=1,] [cellshape=QUAD4,] [tag=0] )`
+`Block2D(coords, [nx=1,] [ny=1,] [cellshape=QUAD4,] [tag=""] )`
 
 Generates a block object for the mesh generation of 2D meshes.
 `shape` can be TRI3, TRI6, QUAD4, QUAD8.
@@ -104,10 +104,10 @@ mutable struct Block2D <: Block
     cellshape::ShapeType
     nx::Int64
     ny::Int64
-    tag::TagType
+    tag::String
     id::Int64
 
-    function Block2D(coords::Array{<:Real}; nx::Int=1, ny::Int=1, cellshape::ShapeType=QUAD4, tag=0, id=-1, shape=nothing)
+    function Block2D(coords::Array{<:Real}; nx::Int=1, ny::Int=1, cellshape::ShapeType=QUAD4, tag="", id=-1, shape=nothing)
         if shape != nothing
             @warn "Block2D: argument shape was deprecated. Please use cellshape instead"
             cellshape = shape
@@ -132,7 +132,7 @@ end
 
 
 """
-`Block3D(coords, [nx=1,] [ny=1,] [nz=1,] [cellshape=HEX8,] [tag=0] )`
+`Block3D(coords, [nx=1,] [ny=1,] [nz=1,] [cellshape=HEX8,] [tag=""] )`
 
 Generates a block object for the mesh generation of 3D meshes.
 """
@@ -143,10 +143,10 @@ mutable struct Block3D <: Block
     nx::Int64
     ny::Int64
     nz::Int64
-    tag::TagType
+    tag::String
     id::Int64
 
-    function Block3D(coords::Array{<:Real}; nx=1, ny=1, nz=1, cellshape=HEX8, tag=0, id=-1, shape=nothing)
+    function Block3D(coords::Array{<:Real}; nx=1, ny=1, nz=1, cellshape=HEX8, tag="", id=-1, shape=nothing)
         if shape != nothing
             @warn "Block3D: argument `shape` was deprecated. Please use cellshape instead"
             cellshape = shape
@@ -171,7 +171,7 @@ end
     #points::Array{Point,1}
     #shape::ShapeType # LIN2
     #cellshape::ShapeType # HEX8, HEX20
-    #function Block3D(coords::Array{<:Real}; nx=1, ny=1, nz=1, shape=HEX8, tag=0, id=-1)
+    #function Block3D(coords::Array{<:Real}; nx=1, ny=1, nz=1, shape=HEX8, tag="", id=-1)
         #shape in (TET4, TET10, HEX8, HEX20) || error("Block3D: shape must be TET4, TET10, HEX8 or HEX20")
         #C    = size(coords,1)==2 ? box_coords(coords[1,:], coords[2,:]) : coords
         #this = new(C, nx, ny, nz, shape, tag, id)
@@ -187,10 +187,10 @@ mutable struct BlockArc <: Block
     n1::Int64
     n2::Int64
     shape::ShapeType
-    tag::TagType
+    tag::String
     id::Int64
 
-    function BlockArc(coords::Array{<:Real}; r1=1.0, th=45, nr=3, n=2, shape=QUAD4, tag=0, id=-1)
+    function BlockArc(coords::Array{<:Real}; r1=1.0, th=45, nr=3, n=2, shape=QUAD4, tag="", id=-1)
         size(coords,1) == 2 || error("Invalid coordinates matrix for BlockArc")
         shape.ndim==2 || error("BlockArc: shape must be a 2d shape")
         #r2 = norm(coords[2,:]-coords[1,:])
@@ -198,7 +198,7 @@ mutable struct BlockArc <: Block
         return this
     end
 
-    function BlockArc(center::Array{<:Real}=[0.0,0.0]; r1=1.0, r2=2.0, th1=45, th2=90, nr=3, n=2, shape=QUAD4, tag=0, id=-1)
+    function BlockArc(center::Array{<:Real}=[0.0,0.0]; r1=1.0, r2=2.0, th1=45, th2=90, nr=3, n=2, shape=QUAD4, tag="", id=-1)
         size(coords,1) == 1 || error("Invalid coordinates matrix for BlockArc")
         shape.ndim==2 || error("BlockArc: shape must be a 2d shape")
         th1r = deg2rad(th1)
@@ -221,10 +221,10 @@ mutable struct BlockCylinder <: Block
     r::Float64
     nr::Int64
     n::Int64
-    tag::TagType
+    tag::String
     id::Int64
 
-    function BlockCylinder(coords::Array{<:Real}; r=1.0, nr=3, n=2, cellshape=HEX8, tag=0, id=-1)
+    function BlockCylinder(coords::Array{<:Real}; r=1.0, nr=3, n=2, cellshape=HEX8, tag="", id=-1)
         size(coords,1) != 2 && error("Invalid coordinates matrix for BlockCylinder")
         nr<2 && error("Invalid nr=$nr value for BlockCylinder")
         cellshape in (HEX8, HEX20) || error("BlockCylinder: cellshape must be HEX8 or HEX20")
@@ -274,7 +274,7 @@ function split_block(bl::Block2D, msh::Mesh)
                 p3 = p_arr[i+1, j+1]
                 p4 = p_arr[i  , j+1]
 
-                cell = Cell(cellshape, [p1, p2, p3, p4], bl.tag)
+                cell = Cell(cellshape, [p1, p2, p3, p4], tag=bl.tag)
                 push!(msh.cells, cell)
             end
         end
@@ -319,10 +319,10 @@ function split_block(bl::Block2D, msh::Mesh)
                 p8 = p_arr[i  , j+1]
 
                 if cellshape==QUAD8
-                    cell = Cell(cellshape, [p1, p2, p3, p4, p5, p6, p7, p8], bl.tag)
+                    cell = Cell(cellshape, [p1, p2, p3, p4, p5, p6, p7, p8], tag=bl.tag)
                 else
                     p9   = p_arr[i+1, j+1]
-                    cell = Cell(cellshape, [p1, p2, p3, p4, p5, p6, p7, p8, p9], bl.tag)
+                    cell = Cell(cellshape, [p1, p2, p3, p4, p5, p6, p7, p8, p9], tag=bl.tag)
                 end
                 push!(msh.cells, cell)
             end
@@ -372,7 +372,7 @@ function split_block(bl::Block2D, msh::Mesh)
                 p11 = p_arr[i+1, j+3]
                 p12 = p_arr[i  , j+1]
 
-                cell = Cell(cellshape, [p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12], bl.tag)
+                cell = Cell(cellshape, [p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12], tag=bl.tag)
                 push!(msh.cells, cell)
             end
         end
@@ -409,8 +409,8 @@ function split_block(bl::Block2D, msh::Mesh)
                 p3 = p_arr[i+1, j+1]
                 p4 = p_arr[i  , j+1]
 
-                cell1 = Cell(cellshape, [p1, p2, p3], bl.tag)
-                cell2 = Cell(cellshape, [p4, p1, p3], bl.tag)
+                cell1 = Cell(cellshape, [p1, p2, p3], tag=bl.tag)
+                cell2 = Cell(cellshape, [p4, p1, p3], tag=bl.tag)
                 push!(msh.cells, cell1)
                 push!(msh.cells, cell2)
             end
@@ -451,12 +451,12 @@ function split_block(bl::Block2D, msh::Mesh)
                 p2 = p_arr[i+1, j  ]
                 p3 = p_arr[i+1, j+1]
 
-                cell1 = Cell(cellshape, [p1, p2, p3], bl.tag)
+                cell1 = Cell(cellshape, [p1, p2, p3], tag=bl.tag)
                 push!(msh.cells, cell1)
                 
                 if i>j
                     p4 = p_arr[i  , j+1]
-                    cell2 = Cell(cellshape, [p4, p1, p3], bl.tag)
+                    cell2 = Cell(cellshape, [p4, p1, p3], tag=bl.tag)
                     push!(msh.cells, cell2)
                 end
             end
@@ -512,8 +512,8 @@ function split_block(bl::Block2D, msh::Mesh)
 
                 p9   = p_arr[i+1, j+1]
 
-                cell1 = Cell(cellshape, [p1, p2, p3, p5, p6, p9], bl.tag)
-                cell2 = Cell(cellshape, [p4, p1, p3, p8, p9, p7], bl.tag)
+                cell1 = Cell(cellshape, [p1, p2, p3, p5, p6, p9], tag=bl.tag)
+                cell2 = Cell(cellshape, [p4, p1, p3, p8, p9, p7], tag=bl.tag)
                 push!(msh.cells, cell1)
                 push!(msh.cells, cell2)
             end
@@ -569,14 +569,14 @@ function split_block(bl::Block2D, msh::Mesh)
                 p6 = p_arr[i+2, j+1]
                 p9 = p_arr[i+1, j+1]
 
-                cell1 = Cell(cellshape, [p1, p2, p3, p5, p6, p9], bl.tag)
+                cell1 = Cell(cellshape, [p1, p2, p3, p5, p6, p9], tag=bl.tag)
                 push!(msh.cells, cell1)
 
                 if i>j
                     p4 = p_arr[i  , j+2]
                     p7 = p_arr[i+1, j+2]
                     p8 = p_arr[i  , j+1]
-                    cell2 = Cell(cellshape, [p4, p1, p3, p8, p9, p7], bl.tag)
+                    cell2 = Cell(cellshape, [p4, p1, p3, p8, p9, p7], tag=bl.tag)
                     push!(msh.cells, cell2)
                 end
             end
@@ -634,16 +634,16 @@ function split_block(bl::Block3D, msh::Mesh)
                     p8 = p_arr[i  , j+1, k+1]
 
                     if cellshape==HEX8
-                        cell = Cell(cellshape, [p1, p2, p3, p4, p5, p6, p7, p8], bl.tag)
+                        cell = Cell(cellshape, [p1, p2, p3, p4, p5, p6, p7, p8], tag=bl.tag)
                         push!(msh.cells, cell)
                     end
                     if cellshape==TET4
-                        push!( msh.cells, Cell(cellshape, [p2, p4, p1, p8], bl.tag) )
-                        push!( msh.cells, Cell(cellshape, [p2, p1, p5, p8], bl.tag) )
-                        push!( msh.cells, Cell(cellshape, [p2, p5, p6, p8], bl.tag) )
-                        push!( msh.cells, Cell(cellshape, [p2, p6, p7, p8], bl.tag) )
-                        push!( msh.cells, Cell(cellshape, [p2, p3, p4, p8], bl.tag) )
-                        push!( msh.cells, Cell(cellshape, [p2, p7, p3, p8], bl.tag) )
+                        push!( msh.cells, Cell(cellshape, [p2, p4, p1, p8], tag=bl.tag) )
+                        push!( msh.cells, Cell(cellshape, [p2, p1, p5, p8], tag=bl.tag) )
+                        push!( msh.cells, Cell(cellshape, [p2, p5, p6, p8], tag=bl.tag) )
+                        push!( msh.cells, Cell(cellshape, [p2, p6, p7, p8], tag=bl.tag) )
+                        push!( msh.cells, Cell(cellshape, [p2, p3, p4, p8], tag=bl.tag) )
+                        push!( msh.cells, Cell(cellshape, [p2, p7, p3, p8], tag=bl.tag) )
                     end
                 end
             end
@@ -711,7 +711,7 @@ function split_block(bl::Block3D, msh::Mesh)
                         p_arr[i  , j+2, k+1]]
 
                     if cellshape == HEX20
-                        cell = Cell(cellshape, conn, bl.tag)
+                        cell = Cell(cellshape, conn, tag=bl.tag)
                         push!(msh.cells, cell)
                     end
                     if cellshape == TET10
@@ -747,12 +747,12 @@ function split_block(bl::Block3D, msh::Mesh)
                         p26 = p_arr[i  , j+1, k+1]
                         p27 = p_arr[i+1, j+1, k+1]
 
-                        push!( msh.cells, Cell(cellshape, [p2, p4, p1, p8, p21, p12, p9, p27, p20, p26], bl.tag) )
-                        push!( msh.cells, Cell(cellshape, [p2, p1, p5, p8, p9, p17, p23, p27, p26, p16], bl.tag) )
-                        push!( msh.cells, Cell(cellshape, [p2, p5, p6, p8, p23, p13, p18, p27, p16, p22], bl.tag) )
-                        push!( msh.cells, Cell(cellshape, [p2, p6, p7, p8, p18, p14, p24, p27, p22, p15], bl.tag) )
-                        push!( msh.cells, Cell(cellshape, [p2, p3, p4, p8, p10, p11, p21, p27, p25, p20], bl.tag) )
-                        push!( msh.cells, Cell(cellshape, [p2, p7, p3, p8, p24, p19, p10, p27, p15, p25], bl.tag) )
+                        push!( msh.cells, Cell(cellshape, [p2, p4, p1, p8, p21, p12, p9, p27, p20, p26], tag=bl.tag) )
+                        push!( msh.cells, Cell(cellshape, [p2, p1, p5, p8, p9, p17, p23, p27, p26, p16], tag=bl.tag) )
+                        push!( msh.cells, Cell(cellshape, [p2, p5, p6, p8, p23, p13, p18, p27, p16, p22], tag=bl.tag) )
+                        push!( msh.cells, Cell(cellshape, [p2, p6, p7, p8, p18, p14, p24, p27, p22, p15], tag=bl.tag) )
+                        push!( msh.cells, Cell(cellshape, [p2, p3, p4, p8, p10, p11, p21, p27, p25, p20], tag=bl.tag) )
+                        push!( msh.cells, Cell(cellshape, [p2, p7, p3, p8, p24, p19, p10, p27, p15, p25], tag=bl.tag) )
                     end
                 end
             end
@@ -782,7 +782,7 @@ function split_block(bl::BlockTruss, msh::Mesh)
     for i=1:m
         p1 = p_arr[bl.conns[i, 1]]
         p2 = p_arr[bl.conns[i, 2]]
-        cell = Cell(bl.cellshape, [p1, p2], bl.tag)
+        cell = Cell(bl.cellshape, [p1, p2], tag=bl.tag)
         push!(msh.cells, cell)
     end
 end
@@ -807,7 +807,7 @@ function split_block(bl::BlockCoords, msh::Mesh)
         points = [ p_arr[j] for j in bl.conns[i,:] ] 
         #TODO: update shape calculation
         cellshape = [nothing, LIN2, TRI3, QUAD4, nothing, nothing, nothing ][length(points)]
-        cell = Cell(cellshape, points, bl.tag)
+        cell = Cell(cellshape, points, tag=bl.tag)
         push!(msh.cells, cell)
     end
 end

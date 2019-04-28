@@ -93,6 +93,16 @@ function basic_coords(shape::ShapeType) #check
                    0  0  a/2; a        0   a/2; a/2    b  a/2 ]
     end
 
+    if shape == PYR5
+        a = (√2/3)*(1/3)
+        return [ 0.0   0.0      0.0;
+                   a   0.0      0.0;
+                   a     a      0.0;
+                 0.0     a      0.0;
+                 a/2   a/2   √2/2*a;
+                ]
+    end
+
     error("No basic coordinates for shape $(shape.name)")
 end
 
@@ -205,8 +215,8 @@ function matrixK(cell::Cell, ndim::Int64, E::Float64, nu::Float64)
         @gemm dNdX = inv(J)*dNdR
         detJ = det(J)
         if detJ < 0.0 
-            @error "Negative jacobian determinant in cell" cell=cell.id ip=i coords=C
-            error()
+            #@error "Negative jacobian determinant in cell" cell=cell.id ip=i coords=C shape=cell.shape.name
+            #error()
         end
         matrixB(ndim, dNdX, detJ, B)
 
@@ -256,7 +266,7 @@ function get_map(c::Cell)
 end
 
 # Mount global stiffness matrix
-function mountKg(mesh::Mesh, E::Float64, nu::Float64, A::Array{Float64,2})
+function mountKg(mesh::Mesh, E::Float64, nu::Float64, A)
     ndim = mesh.ndim
     ndof = ndim*length(mesh.points)
     R, C, V = Int64[], Int64[], Float64[]
@@ -276,19 +286,13 @@ function mountKg(mesh::Mesh, E::Float64, nu::Float64, A::Array{Float64,2})
 
     # mount A and A'
     nbc = size(A,1)
-    for i = 1:nbc
-        for j = 1:ndof
-            val = A[i,j]
-            if val==0.0
-                continue
-            end
+    for (i,j,val) in zip(findnz(A)...)
             push!(R, ndof+i)
             push!(C, j)
             push!(V, val)
             push!(R, j)
             push!(C, ndof+i)
             push!(V, val)
-        end
     end
     
     return sparse(R, C, V, ndof+nbc, ndof+nbc)
@@ -350,7 +354,7 @@ function faces_normal(faces::Array{Cell,1}, facetol)
         I = ones(size(C,1))
         N = pinv(C)*I # best fit normal
 
-        #if norm(C*N - I) < facetol
+        #if norm(C*N - I) < facetol # TODO: check if points in face are coplanar
             #N = N/norm(N)
             normalize!(N)
             #check if the normal already exists
@@ -376,22 +380,10 @@ end
 function mountA(mesh::Mesh, fixed::Bool, conds, facetol)
     # get border faces
     ndim = mesh.ndim
-    border_fcs = get_surface(mesh.cells)
-
-    # get all points from surface including a list of faces per point
-    nodesd = Dict{UInt64, sNode}()
-    for cell in border_fcs
-        for point in cell.points
-            hk = hash(point)
-            if !haskey(nodesd, hk)
-                nodesd[hk] = sNode(point, Cell[cell], nothing)
-            else
-                push!(nodesd[hk].faces, cell)
-            end
-        end
-    end
-    border_nodes = [ values(nodesd)... ]
-
+    npoints = length(mesh.points)
+    surf_cells = get_surface(mesh.cells)
+    surf_points, surf_patches = get_patches(surf_cells)
+    border_nodes = [ sNode(point, patch, nothing) for (point,patch) in zip(surf_points,surf_patches)]
 
     local fconds=Function[]
     if conds!= nothing
@@ -428,16 +420,22 @@ function mountA(mesh::Mesh, fixed::Bool, conds, facetol)
     #  for fixed boundary
     if fixed
         n = length(border_nodes)
-        A = zeros(n*ndim, length(mesh.points)*ndim)
+        #A = zeros(n*ndim, length(mesh.points)*ndim)
+        R, C, V = Int64[], Int64[], Float64[]
 
         for i=1:n
             for j=1:ndim 
-                A[ (i-1)*ndim+j, (border_nodes[i].point.id-1)*ndim+j ] = 1.0
+                #A[ (i-1)*ndim+j, (border_nodes[i].point.id-1)*ndim+j ] = 1.0
+                push!(R, (i-1)*ndim+j )
+                push!(C, (border_nodes[i].point.id-1)*ndim+j )
+                push!(V, 1.0)
             end
         end
+        A = sparse(R, C, V, n*ndim, npoints*ndim)
     else
         # mount matrix A (Lagrange multipliers) according to bcs
-        A = zeros(n, length(mesh.points)*ndim)
+        #A = zeros(n, length(mesh.points)*ndim)
+        R, C, V = Int64[], Int64[], Float64[]
 
         baserow = 0
         for node in border_nodes
@@ -448,19 +446,26 @@ function mountA(mesh::Mesh, fixed::Bool, conds, facetol)
             if nnorm==1 || nnorm==2  # all faces in up to 2 planes
                 for i=1:nnorm
                     for j=1:ndim 
-                        A[ baserow+1, basecol+j ] = normals[i][j]
+                        push!(R, baserow+1)
+                        push!(C, basecol+j)
+                        push!(V, normals[i][j])
+                        #A[ baserow+1, basecol+j ] = normals[i][j]
                     end
                     baserow += 1
                 end
             else # zero or more than two non coplanar faces
                 for j=1:ndim 
-                    A[ baserow+j, basecol+j ] = 1.0
+                    #A[ baserow+j, basecol+j ] = 1.0
+                    push!(R, baserow+j)
+                    push!(C, basecol+j)
+                    push!(V, 1.0)
                 end
                 baserow += ndim
             end
 
         end
 
+        A = sparse(R, C, V, n, npoints*ndim)
     end
 
     return A
@@ -514,7 +519,7 @@ function force_bc(mesh::Mesh, E::Float64, nu::Float64, α::Float64, extended::Bo
         # get coordinates matrix
         np = length(c.points)
         C0 = cellcoords(c)
-        V  = cell_extent(c) # area or volume
+        V  = abs(cell_extent(c)) # area or volume
 
         #extended || (V = α*V)
 
@@ -561,10 +566,63 @@ function force_bc(mesh::Mesh, E::Float64, nu::Float64, α::Float64, extended::Bo
     return Fbc
 end
 
-function smooth!(mesh::Mesh; verbose=true, alpha::Float64=1.0, target::Float64=0.97, 
+
+
+# Mount a matrix with nodal displacements
+function find_disps(mesh::Mesh, patches)
+    n    = length(mesh.points)
+    m    = length(mesh.cells)
+    ndim = mesh.ndim
+    UU = zeros(n,ndim)
+    V = zeros(m) # vols
+
+    for c in mesh.cells
+        # get coordinates matrix
+        np = length(c.points)
+        C0 = cellcoords(c)
+        v  = abs(cell_extent(c)) # area or volume
+
+        v = v^2.5
+        V[c.id] = v
+        #@show v
+
+        R0 = cell_orientation(c)
+        s = v^(1.0/ndim) # scale factor
+
+        #extended && (s *= α)
+
+        BC = basic_coords(c.shape)*s
+        C = BC
+
+        # align C with cell orientation
+        R, d = rigid_transform(C, C0)
+        D = repeat( d , np, 1)
+        C1 = C*R' + D
+        U  = C1 - C0  # displacements matrix
+
+        # add forces to UU
+        dmap = [ p.id for p in c.points ]
+
+        UU[dmap, :] .+= v.*U
+    end
+
+    # weighted average
+    for node in mesh.points
+        patch = patches[node.id]
+        sumV = sum( V[c.id] for c in patch )
+        #@show sumV
+        UU[node.id, :] ./= sumV
+    end
+
+    return UU
+end
+
+
+export smooth2!
+function smooth2!(mesh::Mesh; verbose=true, alpha::Float64=1.0, target::Float64=0.97, 
                  fixed::Bool=false, maxit::Int64=30, mintol::Float64=1e-3, tol::Float64=1e-4, 
-                 facetol=1e-4, savesteps::Bool=false, savedata::Bool=false, filekey::String="smooth",
-                 conds=nothing, extended=false)
+                 facetol=1e-4, savesteps::Bool=false, savedata::Bool=false, bin::Float64=0.05,
+                 filekey::String="smooth", conds=nothing, extended=false, smart=false)
 
     # tol   : tolerance in change of mesh quality for succesive iterations
     # mintol: tolerance in change of worst cell quality in a mesh for succesive iterations
@@ -578,14 +636,33 @@ function smooth!(mesh::Mesh; verbose=true, alpha::Float64=1.0, target::Float64=0
         end
     end
 
-    # Elastic constants
-    E  = 1.0
-    nu = 0.0
-
     ndim = mesh.ndim
     npoints = length(mesh.points)
-    #quality!(mesh)
 
+    points, patches = get_patches(mesh)  # key points and corresponding patches
+
+    # get a list of surface nodes (sNodes) that include a list of faces per point 
+    surf_cells = get_surface(mesh.cells)
+    surf_points, surf_patches = get_patches(surf_cells)
+    border_nodes = [ sNode(point, patch, nothing) for (point,patch) in zip(surf_points,surf_patches)]
+
+    # find normals for border nodes
+    for node in border_nodes
+        node.normals = faces_normal(node.faces, facetol)
+    end
+
+    # arrays of flags
+    in_border = falses(length(mesh.points))
+    border_idxs = [ n.point.id for n in border_nodes ]
+    in_border[border_idxs] .= true
+
+    # map vector for border nodes
+    map_pn = zeros(Int, length(mesh.points)) # map point-node
+    for (i,node) in enumerate(border_nodes)
+        map_pn[ node.point.id ] = i
+    end
+
+    #savesteps && save(mesh, "$filekey-0.vtk", verbose=false)
 
     # Stats
     Q = Float64[ c.quality for c in mesh.cells]
@@ -599,54 +676,85 @@ function smooth!(mesh::Mesh; verbose=true, alpha::Float64=1.0, target::Float64=0
     hists = DTable()
     push!(stats, OrderedDict(:qavg=>q, :qmin=>qmin, :qmax=>qmax, :dev=>dev))
 
-    hist  = fit(Histogram, Q, 0.0:0.05:1.0, closed=:right).weights
-    push!(hists, OrderedDict(Symbol(r) => v for (r,v) in zip(0.0:0.05:0.95,hist)))
+    hist  = fit(Histogram, Q, 0.0:bin:1.0, closed=:right).weights
+    push!(hists, OrderedDict(Symbol(r) => v for (r,v) in zip(0.0:bin:1-bin,hist)))
 
-    verbose && @printf("%4s  %5s  %5s  %5s  %5s  %5s  %5s  %7s  %9s  %10s\n", "it", "qmin", "q1", "q2", "q3", "qmax", "qavg", "sdev", "time", "histogram (0.3, 1.0]")
+    verbose && @printf("%4s  %5s  %5s  %5s  %5s  %5s  %5s  %7s  %9s  %10s\n", "it", "qmin", "q1", "q2", "q3", "qmax", "qavg", "sdev", "time", "histogram (0.0:$bin:1.0]")
     verbose && @printf("%4d  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %7.5f  %9s", 0, qmin, q1, q2, q3, qmax, q, dev, "-")
-    verbose && println("  ", fit(Histogram, Q, 0.3:0.05:1.0, closed=:right).weights)
-
-    # Lagrange multipliers matrix
-    A   = mountA(mesh, fixed, conds, facetol) 
-    nbc = size(A,1)
+    #verbose && println("  ", fit(Histogram, Q, 0.3:0.05:1.0, closed=:right).weights)
+    verbose && println("  ", fit(Histogram, Q, 0.0:bin:1.0, closed=:right).weights)
 
     nits = 0
     t0 = time()
 
     for i=1:maxit
 
-        #if i>2; extended=true end
         sw = StopWatch()
 
-        # Forces vector needed for smoothing
-        F   = force_bc(mesh, E, nu, alpha, extended)
-
-        if ndim==2
-            mesh.point_vector_data["forces"] = [ reshape(F, ndim, npoints)' zeros(npoints)]
-        else
-            mesh.point_vector_data["forces"] = reshape(F, ndim, npoints)'
-        end
+        # Forces vector needed for smoothing # TODO: use displacements instead
+        D = find_disps(mesh, patches)
+        #if ndim==2
+            #mesh.point_vector_data["forces"] = [ reshape(F, ndim, npoints)' zeros(npoints)]
+        #else
+            #mesh.point_vector_data["forces"] = reshape(F, ndim, npoints)'
+        #end
 
         # Save last step file with current forces
         savesteps && save(mesh, "$filekey-$(i-1).vtk", verbose=false)
 
-        # Augmented forces vector
-        F   = vcat( F, zeros(nbc) )
-
-        # global stiffness plus LM
-        K = mountKg(mesh, E, nu, A)
-
-        # Solve system
-        LUf = lu(K)
-        U = LUf\F
 
         # Update mesh
-        for p in mesh.points
-            p.x += U[(p.id-1)*ndim+1]
-            p.y += U[(p.id-1)*ndim+2]
-            if ndim>2
-                p.z += U[(p.id-1)*ndim+3]
+        for point in mesh.points
+            id = point.id
+            X0 = [point.x, point.y, point.z][1:ndim]
+            X  = X0 + vec(D[id,:])
+
+            # skip surface nodes over non-flat locations
+            if in_border[id] 
+                node = border_nodes[ map_pn[id] ]
+                normals = node.normals
+                nnorm   = length(normals)
+
+                (nnorm == 1 && ndim==2) || (nnorm in (1,2) && ndim==3) || continue
+
+                ΔX = X - X0
+                if nnorm==1
+                    n1 = normals[1]
+                    X = X0 + ΔX - dot(ΔX,n1)*n1 # projection to surface plane
+                else
+                    n3 = normalize(cross(normals[1], normals[2]))
+                    X = X0 + dot(ΔX,n3)*n3 # projection to surface edge
+                end
             end
+
+            # update key point coordinates
+            point.x = X[1]
+            point.y = X[2]
+            if ndim==3 point.z = X[3] end
+
+            if smart
+                patch = patches[point.id]
+
+                patch_qmin0 = minimum( c.quality for c in patch )
+
+                # get patch new quality values
+                patch_q = [ cell_quality(c) for c in patch ]
+
+                patch_qmin = minimum(patch_q)
+
+                if patch_qmin < patch_qmin0
+                    # restore point coordinates if no improvement
+                    point.x = X0[1]
+                    point.y = X0[2]
+                    if ndim==3; point.z = X0[3] end
+                else
+                    # update quality values
+                    for (c,q) in zip(patch, patch_q)
+                        c.quality = q
+                    end
+                end
+            end
+
         end
 
         for c in mesh.cells
@@ -658,9 +766,9 @@ function smooth!(mesh::Mesh; verbose=true, alpha::Float64=1.0, target::Float64=0
         mesh.qmin    = minimum(Q)
         savesteps && save(mesh, "$filekey-$i.vtk", verbose=false)
 
-        if any(Q .== 0.0)
-            error("smooth!: Smooth procedure got invalid element(s). Try using alpha<1.")
-        end
+        #if any(Q .== 0.0)
+            #error("smooth!: Smooth procedure got invalid element(s). Try using alpha<1.")
+        #end
 
         Δq    = abs(q - mesh.quality)
         Δqmin = mesh.qmin - qmin
@@ -673,11 +781,12 @@ function smooth!(mesh::Mesh; verbose=true, alpha::Float64=1.0, target::Float64=0
 
         push!(stats, OrderedDict(:qavg=>q, :qmin=>qmin, :qmax=>qmax, :dev=>dev))
 
-        hist = fit(Histogram, Q, 0.0:0.05:1.0, closed=:right).weights
-        push!(hists, OrderedDict(Symbol(r) => v for (r,v) in zip(0.0:0.05:0.95,hist)))
+        hist = fit(Histogram, Q, 0.0:bin:1.0, closed=:right).weights
+        push!(hists, OrderedDict(Symbol(r) => v for (r,v) in zip(0.0:bin:1-bin,hist)))
 
         verbose && @printf("%4d  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %7.5f  %9s", i, qmin, q1, q2, q3, qmax, q, dev, hms(sw, format=:ms))
-        verbose && println("  ", fit(Histogram, Q, 0.3:0.05:1.0, closed=:right).weights)
+        #verbose && println("  ", fit(Histogram, Q, 0.3:0.05:1.0, closed=:right).weights)
+        verbose && println("  ", fit(Histogram, Q, 0.0:bin:1.0, closed=:right).weights)
 
         #Δqmin<0.0 && break
 
@@ -698,6 +807,197 @@ function smooth!(mesh::Mesh; verbose=true, alpha::Float64=1.0, target::Float64=0
     return nothing
 end
 
+
+
+function smooth!(mesh::Mesh; verbose=true, alpha::Float64=1.0, target::Float64=0.97, 
+                 fixed::Bool=false, maxit::Int64=30, mintol::Float64=1e-3, tol::Float64=1e-4, 
+                 facetol=1e-4, savesteps::Bool=false, savedata::Bool=false, bin::Float64=0.05,
+                 filekey::String="smooth", conds=nothing, extended=false, smart=false)
+
+    # tol   : tolerance in change of mesh quality for succesive iterations
+    # mintol: tolerance in change of worst cell quality in a mesh for succesive iterations
+
+    verbose && printstyled("Mesh $(smart ? "smart-" : "")cells-fitting smoothing:\n", bold=true, color=:cyan)
+
+    # check for not allowed cells
+    for c in mesh.cells
+        if c.shape.family != SOLID_SHAPE
+            error("smooth!: cells of family $(c.shape.family) are not allowed for smoothing: $(c.shape.name)")
+        end
+    end
+
+    # Elastic constants
+    E  = 1.0
+    nu = 0.0
+
+    ndim = mesh.ndim
+    npoints = length(mesh.points)
+    points, patches = get_patches(mesh)  # key points and corresponding patches
+
+    # Stats
+    Q = Float64[ c.quality for c in mesh.cells]
+    q    = mean(Q)
+    qmin = minimum(Q)
+    qmax = maximum(Q)
+    dev  = stdm(Q, q) 
+    q1, q2, q3 = quantile(Q, [0.25, 0.5, 0.75])
+
+    stats = DTable()
+    hists = DTable()
+    push!(stats, OrderedDict(:qavg=>q, :qmin=>qmin, :qmax=>qmax, :dev=>dev))
+
+    hist  = fit(Histogram, Q, 0.0:bin:1.0, closed=:right).weights
+    push!(hists, OrderedDict(Symbol(r) => v for (r,v) in zip(0.0:bin:1-bin,hist)))
+
+    verbose && @printf("%4s  %5s  %5s  %5s  %5s  %5s  %5s  %7s  %9s  %10s\n", "it", "qmin", "q1", "q2", "q3", "qmax", "qavg", "sdev", "time", "histogram (0.0:$bin:1.0]")
+    verbose && @printf("%4d  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %7.5f  %9s", 0, qmin, q1, q2, q3, qmax, q, dev, "-")
+    #verbose && println("  ", fit(Histogram, Q, 0.3:0.05:1.0, closed=:right).weights)
+    verbose && println("  ", fit(Histogram, Q, 0.0:bin:1.0, closed=:right).weights)
+
+    # Lagrange multipliers matrix
+    A   = mountA(mesh, fixed, conds, facetol) 
+    nbc = size(A,1)
+
+    nits = 0
+
+    for i=1:maxit
+
+        #if i>2; extended=true end
+        sw = StopWatch()
+
+        # Forces vector needed for smoothing
+        #verbose && print("calculating forces...")
+        F   = force_bc(mesh, E, nu, alpha, extended)
+
+        if ndim==2
+            mesh.point_vector_data["forces"] = [ reshape(F, ndim, npoints)' zeros(npoints)]
+        else
+            mesh.point_vector_data["forces"] = reshape(F, ndim, npoints)'
+        end
+
+        # Save last step file with current forces
+        savesteps && save(mesh, "$filekey-$(i-1).vtk", verbose=false)
+
+        # Augmented forces vector
+        F   = vcat( F, zeros(nbc) )
+
+        # global stiffness plus LM
+        #verbose && print("\rmounting stiffness matrix...")
+        K = mountKg(mesh, E, nu, A)
+        #verbose && println("\r")
+
+        # Solve system
+        #verbose && print("\rsolving system...         ")
+        LUf = lu(K)
+        U = LUf\F
+
+        # Update mesh
+        #verbose && print("\rupdating mesh...  ")
+        for point in mesh.points
+            id = point.id
+            X0 = [point.x, point.y, point.z][1:ndim]
+            pos = (point.id-1)*ndim+1
+            X   = X0 + vec( U[pos:pos+ndim-1] )
+
+            # update key point coordinates
+            point.x = X[1]
+            point.y = X[2]
+            if ndim==3 point.z = X[3] end
+
+            if smart
+                patch = patches[point.id]
+
+                patch_qmin0 = minimum( c.quality for c in patch )
+                patch_qavg0 = mean( c.quality for c in patch )
+
+                # get patch new quality values
+                patch_q = [ cell_quality(c) for c in patch ]
+
+                patch_qmin = minimum(patch_q)
+                patch_qavg = mean(patch_q)
+
+                #γ = 1.0
+                #γ = 0.9
+                γ = 0.8
+                if patch_qmin < γ*patch_qmin0
+                #if patch_qavg < γ*patch_qavg0
+                    # restore point coordinates if no improvement
+                    point.x = X0[1]
+                    point.y = X0[2]
+                    if ndim==3; point.z = X0[3] end
+                else
+                    # update quality values
+                    for (c,q) in zip(patch, patch_q)
+                        c.quality = q
+                    end
+                end
+            end
+
+        end
+
+        if !smart
+            for c in mesh.cells
+                c.quality = cell_quality(c)
+            end
+        end
+
+        Q = Float64[ c.quality for c in mesh.cells]
+        mesh.quality = mean(Q)
+        mesh.qmin    = minimum(Q)
+        savesteps && save(mesh, "$filekey-$i.vtk", verbose=false)
+
+        #if any(Q .== 0.0)
+            #error("smooth!: Smooth procedure got invalid element(s). Try using alpha<1.")
+        #end
+        Δq    = abs(q - mesh.quality)
+        Δqmin = mesh.qmin - qmin
+
+        q    = mesh.quality
+        qmin = mesh.qmin
+        qmax = maximum(Q)
+        dev  = stdm(Q, q)
+        q1, q2, q3 = quantile(Q, [0.25, 0.5, 0.75])
+
+        push!(stats, OrderedDict(:qavg=>q, :qmin=>qmin, :qmax=>qmax, :dev=>dev))
+
+        hist = fit(Histogram, Q, 0.0:bin:1.0, closed=:right).weights
+        push!(hists, OrderedDict(Symbol(r) => v for (r,v) in zip(0.0:bin:1-bin,hist)))
+
+        verbose && @printf("%4d  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %7.5f  %9s", i, qmin, q1, q2, q3, qmax, q, dev, hms(sw, format=:ms))
+        #verbose && println("  ", fit(Histogram, Q, 0.3:0.05:1.0, closed=:right).weights)
+        verbose && println("  ", fit(Histogram, Q, 0.0:bin:1.0, closed=:right).weights)
+
+        #Δqmin<0.0 && break
+
+        if Δq<tol && Δqmin<mintol && i>1
+            break
+        end
+
+        nits = i
+    end
+
+    n_bad_cells = count(q -> q<=0, Q)
+    n_bad_cells>0 && @warn "Invalid cells found: " n=n_bad_cells
+
+    # Set forces to zero for the last step
+    mesh.point_vector_data["forces"] = zeros(length(mesh.points), 3)
+    savesteps && save(mesh, "$filekey-$nits.vtk", verbose=false)
+
+    savedata && save(stats, "$filekey-stats.dat")
+    savedata && save(hists, "$filekey-hists.dat")
+
+    # update data at current mesh structure
+    mesh.cell_scalar_data["quality"] = Q
+
+    verbose && println("  done.")
+
+    return nothing
+end
+
+
+
+
+
 """
 laplacian_smooth!(mesh; maxit, verbose, mintol, tol, savesteps, savedata, filekey, smart, weighted)
 
@@ -705,10 +1005,10 @@ Smooths a finite element mesh using Laplacian smoothing (standard, weighted, sma
 """
 function laplacian_smooth!(mesh::Mesh; maxit::Int64=20, verbose::Bool=true, 
     mintol::Float64=1e-3, tol::Float64=1e-4, facetol::Float64=1e-5, 
-    savesteps::Bool=false, savedata::Bool=false, filekey::String="smooth",
-    smart=false, weighted=false)
+    savesteps::Bool=false, savedata::Bool=false, bin::Float64=0.05,
+    filekey::String="smooth", smart=false, weighted=false)
 
-    verbose && printstyled("Mesh Laplacian smoothing:\n", bold=true, color=:cyan)
+    verbose && printstyled("Mesh $(smart ? "smart-" : "")$(weighted ? "weighted-" : "")Laplacian smoothing:\n", bold=true, color=:cyan)
 
     ndim = mesh.ndim
 
@@ -727,7 +1027,7 @@ function laplacian_smooth!(mesh::Mesh; maxit::Int64=20, verbose::Bool=true,
     # get a list of surface nodes (sNodes) that include a list of faces per point 
     surf_cells = get_surface(mesh.cells)
     surf_points, surf_patches = get_patches(surf_cells)
-    border_nodes  = [ sNode(point, patch, nothing) for (point,patch) in zip(surf_points,surf_patches)]
+    border_nodes = [ sNode(point, patch, nothing) for (point,patch) in zip(surf_points,surf_patches)]
 
     # find normals for border nodes
     for node in border_nodes
@@ -749,7 +1049,7 @@ function laplacian_smooth!(mesh::Mesh; maxit::Int64=20, verbose::Bool=true,
 
     # stats
     Q    = Float64[ c.quality for c in mesh.cells]
-    q    = mesh.quality
+    q    = mean(Q)
     qmin = minimum(Q)
     qmax = maximum(Q)
     dev  = stdm(Q, q)
@@ -759,15 +1059,16 @@ function laplacian_smooth!(mesh::Mesh; maxit::Int64=20, verbose::Bool=true,
     hists = DTable()
     push!(stats, OrderedDict(:qavg=>q, :qmin=>qmin, :qmax=>qmax, :dev=>dev))
 
-    hist  = fit(Histogram, Q, 0.0:0.05:1.0, closed=:right).weights
-    push!(hists, OrderedDict(Symbol(r) => v for (r,v) in zip(0.0:0.05:0.95,hist)))
+    hist  = fit(Histogram, Q, 0.0:bin:1.0, closed=:right).weights
+    push!(hists, OrderedDict(Symbol(r) => v for (r,v) in zip(0.0:bin:1-bin,hist)))
 
     #verbose && @printf("  it: %2d  qmin: %7.5f  qavg: %7.5f  dev: %7.5f", 0, qmin, q, dev)
     #verbose && @printf("  it: %2d  q-range: %5.3f…%5.3f  qavg: %5.3f  dev: %7.5f", 0, qmin, qmax, q, dev)
-    #verbose && println("  hist: ", fit(Histogram, Q, 0.5:0.05:1.0, closed=:right).weights)
-    verbose && @printf("%4s  %5s  %5s  %5s  %5s  %5s  %5s  %7s  %9s  %10s\n", "it", "qmin", "q1", "q2", "q3", "qmax", "qavg", "sdev", "time", "histogram (0.3, 1.0]")
+    #verbose && println("  hist: ", fit(Histogram, Q, 0.5:bin:1.0, closed=:right).weights)
+    verbose && @printf("%4s  %5s  %5s  %5s  %5s  %5s  %5s  %7s  %9s  %10s\n", "it", "qmin", "q1", "q2", "q3", "qmax", "qavg", "sdev", "time", "histogram (0.0:$bin:1.0]")
     verbose && @printf("%4d  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %7.5f  %9s", 0, qmin, q1, q2, q3, qmax, q, dev, "-")
-    verbose && println("  ", fit(Histogram, Q, 0.3:0.05:1.0, closed=:right).weights)
+    #verbose && println("  ", fit(Histogram, Q, 0.3:bin:1.0, closed=:right).weights)
+    verbose && println("  ", fit(Histogram, Q, 0.0:bin:1.0, closed=:right).weights)
 
     # find center point and update point position
     for i=1:maxit
@@ -807,7 +1108,6 @@ function laplacian_smooth!(mesh::Mesh; maxit::Int64=20, verbose::Bool=true,
                 end
             end
 
-
             # update key point coordinates
             point.x = X[1]
             point.y = X[2]
@@ -817,12 +1117,15 @@ function laplacian_smooth!(mesh::Mesh; maxit::Int64=20, verbose::Bool=true,
             if smart
                 # get current minimum quality value in patch
                 patch_qavg0 = mean( c.quality for c in patch )
+                patch_qmin0 = minimum( c.quality for c in patch )
 
                 # get patch new quality values
                 patch_q = [ cell_quality(c) for c in patch ]
                 patch_qavg = mean(patch_q)
+                patch_qmin = minimum(patch_q)
 
-                if patch_qavg < patch_qavg0
+                if patch_qmin < patch_qmin0
+                #if patch_qavg < patch_qavg0
                     # restore point coordinates if no improvement
                     point.x = X0[1]
                     point.y = X0[2]
@@ -834,12 +1137,11 @@ function laplacian_smooth!(mesh::Mesh; maxit::Int64=20, verbose::Bool=true,
                     end
                 end
             end
-
         end
 
         if !smart
             for c in mesh.cells
-               update!(c)
+                c.quality = cell_quality(c)
             end
         end
 
@@ -849,9 +1151,9 @@ function laplacian_smooth!(mesh::Mesh; maxit::Int64=20, verbose::Bool=true,
         mesh.qmin    = minimum(Q)
         savesteps && save(mesh, "$filekey-$i.vtk", verbose=false)
 
-        if any(Q .== 0.0)
-            error("smooth!: Smooth procedure got invalid element(s).")
-        end
+        #if any(Q .== 0.0)
+            #error("smooth!: Smooth procedure got invalid element(s).")
+        #end
 
         Δq    = abs(q - mesh.quality)
         Δqmin = mesh.qmin - qmin
@@ -864,11 +1166,12 @@ function laplacian_smooth!(mesh::Mesh; maxit::Int64=20, verbose::Bool=true,
 
         push!(stats, OrderedDict(:qavg=>q, :qmin=>qmin, :qmax=>qmax, :dev=>dev))
 
-        hist = fit(Histogram, Q, 0.0:0.05:1.0, closed=:right).weights
-        push!(hists, OrderedDict(Symbol(r) => v for (r,v) in zip(0.0:0.05:0.95,hist)))
+        hist = fit(Histogram, Q, 0.0:bin:1.0, closed=:right).weights
+        push!(hists, OrderedDict(Symbol(r) => v for (r,v) in zip(0.0:bin:1-bin,hist)))
 
         verbose && @printf("%4d  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %7.5f  %9s", i, qmin, q1, q2, q3, qmax, q, dev, hms(sw, format=:ms))
-        verbose && println("  ", fit(Histogram, Q, 0.3:0.05:1.0, closed=:right).weights)
+        #verbose && println("  ", fit(Histogram, Q, 0.3:bin:1.0, closed=:right).weights)
+        verbose && println("  ", fit(Histogram, Q, 0.0:bin:1.0, closed=:right).weights)
 
         #Δqmin<0.0 && break
 
@@ -877,8 +1180,15 @@ function laplacian_smooth!(mesh::Mesh; maxit::Int64=20, verbose::Bool=true,
         end
     end
 
+    n_bad_cells = count(q -> q<=0, Q)
+    n_bad_cells>0 && @warn "Invalid cells found: " n=n_bad_cells
+
     savedata && save(stats, "$filekey-stats.dat")
     savedata && save(hists, "$filekey-hists.dat")
+
+    # update data at current mesh structure
+    mesh.cell_scalar_data["quality"] = Q
+
     verbose && println("  done.")
 
     return nothing

@@ -12,7 +12,7 @@ A geometry type that represent a definite line, area or volume.
 mutable struct Cell<:AbstractCell
     shape  ::ShapeType
     points ::Array{Point,1}
-    tag    ::TagType
+    tag    ::String
     id     ::Integer
     ndim   ::Integer
     quality::Float64              # quality index: surf/(reg_surf) 
@@ -20,9 +20,9 @@ mutable struct Cell<:AbstractCell
     crossed::Bool                 # flag if cell crossed by linear inclusion
     ocell  ::Union{AbstractCell,Nothing}     # owner cell if this cell is a face/edge
     nips   ::Int                  # number of integration points if required
-    iptag  ::TagType # tag for integration points if required
+    iptag  ::String # tag for integration points if required
     linked_cells::Array{Cell,1}   # neighbor cells in case of joint cell
-    function Cell(shape::ShapeType, points::Array{Point,1}, tag::TagType=0, ocell=nothing)
+    function Cell(shape::ShapeType, points::Array{Point,1}; tag::String="", ocell=nothing)
         this = new(shape, points, tag, -1)
         this.ndim = 0
         this.quality = 0.0
@@ -30,7 +30,7 @@ mutable struct Cell<:AbstractCell
         this.crossed = false
         this.ocell   = ocell
         this.nips  = 0
-        this.iptag = 0
+        this.iptag = ""
         this.linked_cells = []
         return this
     end
@@ -70,13 +70,38 @@ function get_points(cells::Array{Cell,1})::Array{Point,1}
             push!(points, point)
         end
     end
-    return Point[point for point in points]
+    R = Point[point for point in points]
+
+    sort!(R, by=p->p.x+p.y+p.z)
+    return R
 end
 
 # Updates cell internal data
 function update!(c::Cell)::Nothing
     c.quality = cell_quality(c)
     return nothing
+end
+
+export getproperty
+
+function Base.getproperty(c::Cell, s::Symbol)
+    s == :coords && return getcoords(c)
+    s == :faces  && return get_faces(c)
+    s == :edges  && return get_edges(c)
+    s == :extent && return cell_extent(c)
+    return getfield(c, s)
+end
+
+function Base.getproperty(cells::Array{Cell,1}, s::Symbol)
+    #s == :all      && return cells
+    #s == :solids   && return filter(cell -> cell.shape.family==SOLID_SHAPE, cells)
+    #s == :lines    && return filter(cell -> cell.shape.family==LINE_SHAPE, cells)
+    #s == :joints   && return filter(cell -> cell.shape.family==JOINT_SHAPE, cells)
+    #s == :joints1D && return filter(cell -> cell.shape.family==JOINT1D_SHAPE, cells)
+    #s == :points   && return get_points(cells)
+    s == :points && return get_points(cells)
+
+    error("type Array{Cell,1} has no property $s")
 end
 
 
@@ -89,49 +114,49 @@ function Base.getindex(cells::Array{Cell,1}, s::Symbol)
     s == :joints   && return filter(cell -> cell.shape.family==JOINT_SHAPE, cells)
     s == :joints1D && return filter(cell -> cell.shape.family==JOINT1D_SHAPE, cells)
     s == :points   && return get_points(cells)
-    error("Cell getindex: Invalid filter symbol $s")
+    error("Cell getindex: Invalid symbol $s")
 end
 
 
-function Base.getindex(cells::Array{Cell,1}, cond::Expr)
-    condm = fix_comparison_arrays(cond)
-    funex = :( (x,y,z,id,tag) -> false )
-    funex.args[2].args[2] = condm
-    fun = nothing
-    try
-        fun = eval(funex)
-    catch
-        error("Cell getindex: Invalid filter expression ", cond)
+function Base.getindex(cells::Array{Cell,1}, tag::String)
+    return filter(cell -> cell.tag==tag, cells)
+end
+
+
+function Base.getindex(cells::Array{Cell,1}, filter_ex::Expr)
+    points = cells.points
+    pointmap = zeros(Int, maximum(point.id for point in points) )
+
+    T = Bool[]
+    for (i,point) in enumerate(points)
+        pointmap[point.id] = i
+        x, y, z = point.x, point.y, point.z
+        push!(T, eval_arith_expr(filter_ex, x=x, y=y, z=z))
     end
 
-    result = Cell[]
+    R = Cell[]
     for cell in cells
-        x = [ p.x for p in cell.points ]
-        y = [ p.y for p in cell.points ]
-        z = [ p.z for p in cell.points ]
-        if Base.invokelatest(fun, x, y, z, cell.id, cell.tag)
-            push!(result, cell) 
-        end
+        all( T[pointmap[point.id]] for point in cell.points ) && push!(R, cell)
     end
-    return result
+    return R
 end
 
 
-function tag!(object::Union{Point, Cell}, tag::TagType)
+function tag!(object::Union{Point, Cell}, tag::String)
     object.tag = tag
 end
 
-function tag!(arr::Array{T,1}, tag::TagType) where T<:Union{Point,Cell}
+function tag!(arr::Array{T,1}, tag::String) where T<:Union{Point,Cell}
     for obj in arr
         obj.tag = tag
     end
 end
 
-function iptag!(object::Cell, tag::TagType)
+function iptag!(object::Cell, tag::String)
     object.iptag = tag
 end
 
-function iptag!(arr::Array{Cell,1}, tag::TagType)
+function iptag!(arr::Array{Cell,1}, tag::String)
     for obj in arr
         obj.iptag = tag
     end
@@ -179,7 +204,7 @@ function get_faces(cell::AbstractCell)
     for (i, face_idxs) in enumerate(all_faces_idxs)
         points = cell.points[face_idxs]
         shape  = sameshape ? facet_shape : facet_shape[i]
-        face   = Cell(shape, points, cell.tag, cell)
+        face   = Cell(shape, points, tag=cell.tag, ocell=cell)
         push!(faces, face)
     end
 
@@ -196,7 +221,7 @@ function get_edges(cell::Cell)
     for edge_idx in all_edge_idxs
         points = cell.points[edge_idx]
         shape  = (LIN2, LIN3, LIN4)[length(points)-1]
-        edge   = Cell(shape, points, cell.tag, cell)
+        edge   = Cell(shape, points, tag=cell.tag, ocell=cell)
         push!(edges, edge)
     end
 
@@ -241,7 +266,10 @@ function cell_extent(c::Cell)
         @gemm J = dNdR*C
         w    = IP[i,4]
         normJ = norm2(J)
-        normJ <= 0.0 && return 0.0
+        #if normJ<0
+            #@error "cell_extent: Negative Jacobian while calculating cell volume/area/length" id=c.id shape=c.shape.name
+            #error("cell_extent: Negative Jacobian while calculating cell volume/area/length id=$(c.id) shape=$(c.shape.name) ")
+        #end
         vol += normJ*w
     end
     return vol
@@ -352,10 +380,8 @@ function cell_quality_2(c::Cell)::Float64
     # quality calculation
     vol = cell_extent(c) # volume or area
     rvol = regular_vol(surf, c.shape)
-    c.quality = min(vol/rvol, 1.0) # << updates cell property!!!
-    return c.quality
+    return min(vol/rvol, 1.0)
 end
-
 
 
 # Returns the cell quality ratio as reg_surf/surf
@@ -373,15 +399,14 @@ function cell_quality(c::Cell)::Float64
     end
 
     # quality calculation
-    metric = cell_extent(c) # volume or area
-    rsurf  = regular_surface(metric, c.shape)
+    extent = cell_extent(c) # volume or area
+    rsurf  = regular_surface(abs(extent), c.shape)
 
     k = 2
-    q = (rsurf/surf)^k # << updates cell property!!!
+    q = sign(extent)*(rsurf/surf)^k
     if q>1
         q = 2 - q
     end
-    c.quality = q
     return q
 end
 
@@ -390,21 +415,6 @@ function cell_aspect_ratio(c::Cell)::Float64
     len = [ cell_extent(f) for f in faces ]
     c.quality = minimum(len)/maximum(len)
     return c.quality 
-end
-
-export getproperty
-function Base.getproperty(c::Cell, s::Symbol)
-    if s == :coords
-        return getcoords(c)
-    elseif s == :faces
-        return get_faces(c)
-    elseif s == :edges
-        return get_edges(c)
-    elseif s == :extent
-        return cell_extent(c)
-    else
-        return getfield(c, s)
-    end
 end
 
 # Get an array with shares for all points

@@ -135,6 +135,11 @@ function Base.getindex(table::DTable, rowindex::Int, colon::Colon)
     return row
 end
 
+function Base.lastindex(table::DTable, idx::Int)
+    length(table.columns)==0 && error("DTable: use of 'end' in an empty table")
+    return length(table.columns[1])
+end
+
 function Base.getindex(book::DBook, index::Int)
     return book.tables[index]
 end
@@ -223,7 +228,7 @@ function save(table::DTable, filename::String; verbose::Bool=true, digits::Array
 
         # printing header
         println(f, raw"\begin{tabular}{", "c"^nc, "}" )
-        println(f, raw"    \hline")
+        println(f, raw"    \toprule")
         print(f, "    ")
         for (i,key) in enumerate(header)
             etype = types[i]
@@ -267,7 +272,7 @@ function save(table::DTable, filename::String; verbose::Bool=true, digits::Array
             end
             println(f, raw" \\\\")
         end
-        println(f, raw"    \hline")
+        println(f, raw"    \bottomrule")
 
         # printing ending
         println(f, raw"\end{tabular}")
@@ -469,7 +474,6 @@ function Base.show(io::IO, table::DTable)
         end
     end
 
-    #for (key,width) in zip(header,widths)
     print(" │ ")
     for (i,key) in enumerate(header)
         etype = types[i]

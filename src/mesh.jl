@@ -272,14 +272,27 @@ function update!(mesh::Mesh; verbose::Bool=false, genfacets::Bool=true, genedges
     end
 
     # Quality
-    quality!(mesh)
+    Q = Float64[]
+    for c in mesh.cells
+        c.quality = cell_quality(c)
+        push!(Q, c.quality)
+    end
+
+    # Reset data
+    mesh.point_scalar_data = Dict()
+    mesh.cell_scalar_data  = Dict()
+    mesh.point_vector_data = Dict()
+    mesh.cell_scalar_data["quality"] = Q
 
     return nothing
 end
 
 # Mesh quality
 function quality!(mesh::Mesh)
-    Q = Float64[ cell_quality(c) for c in mesh.cells]
+    for c in mesh.cells
+        c.quality = cell_quality(c)
+    end
+    Q = Float64[ c.quality for c in mesh.cells]
     mesh.quality = sum(Q)/length(mesh.cells)
     mesh.qmin    = minimum(Q)
     return nothing
@@ -530,6 +543,9 @@ function Mesh(ugrid::UnstructuredGrid)
         push!(mesh.cells, cell)
     end
 
+    # update mesh and get faces and edges
+    update!(mesh)
+
     # Setting data
     mesh.point_scalar_data = ugrid.point_scalar_data
     mesh.point_vector_data = ugrid.point_vector_data
@@ -649,9 +665,6 @@ function Mesh(ugrid::UnstructuredGrid)
     if has_line
         # TODO: find the owner of orphan line cells OR use parent id information
     end
-
-    # update mesh and get faces and edges
-    update!(mesh)
 
     # Update boundary points: bpoints
     for f in mesh.faces
@@ -789,7 +802,7 @@ end
 """
 `Mesh(filename)` constructs a mesh object based on a file in VTK legacy format or JSON format.
 """
-function Mesh(filename::String; verbose::Bool=true, reorder::Bool=false)::Mesh
+function Mesh(filename::String; verbose::Bool=true, reorder::Bool=false)
     if verbose
         printstyled("Mesh loading:\n", bold=true, color=:cyan)
     end
@@ -902,9 +915,9 @@ function tetreader(filekey::String)
 end
 
 # Gets a part of a mesh filtering elements
-function Base.getindex(mesh::Mesh, cond::Expr)
+function Base.getindex(mesh::Mesh, filter_ex::Expr)
     # filter cells
-    cells  = mesh.cells[cond]
+    cells  = mesh.cells[filter_ex]
     # get points
     points = get_points(cells)
 
@@ -935,4 +948,75 @@ function Base.getindex(mesh::Mesh, cond::Expr)
 
     return new_mesh
 
+end
+
+
+function threshold!(mesh::Mesh, field::Union{Symbol,String}, minval::Float64, maxval::Float64)
+    field = string(field)
+
+    # check if field exists
+    found = haskey(mesh.cell_scalar_data, field)
+    if found
+        vals = mesh.cell_scalar_data[field]
+    else
+        found = haskey(mesh.point_scalar_data, field)
+        found || error("threshold: field $field not found")
+        data  = mesh.point_scalar_data[field]
+        vals = [ mean(data[i]) for i=1:ncells ]
+    end
+
+    # filter cells
+    cells = Cell[]
+    for (cell, val) in zip(mesh.cells, vals)
+        if minval <= val <= maxval
+            push!(cells, cell)
+        end
+    end
+
+    # get points
+    points = get_points(cells)
+
+    # ids from selected cells and points
+    cids = [ c.id for c in cells ]
+    pids = [ p.id for p in points ]
+
+    # new mesh object
+    new_mesh = Mesh()
+    new_mesh.points = points
+    new_mesh.cells = cells
+
+    # select relevant data
+    for (key,vals) in mesh.point_scalar_data
+        new_mesh.point_scalar_data[key] = vals[pids]
+    end
+
+    for (key,vals) in mesh.cell_scalar_data
+        new_mesh.cell_scalar_data[key] = vals[cids]
+    end
+
+    for (key,vals) in mesh.point_vector_data
+        new_mesh.point_vector_data[key] = vals[pids,:]
+    end
+
+    # update node numbering, facets and edges
+    update!(new_mesh)
+
+    return new_mesh
+
+end
+
+export randmesh
+function randmesh(l::Real...)
+    ndim = length(l)
+    if ndim==2
+        lx, ly = l
+        nx, ny = rand(4:7, 2)
+        cellshape = rand((TRI3, TRI6, QUAD4, QUAD8))
+        m = Mesh(Block2D([0.0 0.0; lx ly], nx=nx, ny=ny, cellshape=cellshape), verbose=false)
+    else
+        lx, ly, lz = l
+        nx, ny, nz = rand(4:7, 3)
+        cellshape = rand((TET4, TET10, HEX8, HEX20))
+        m = Mesh(Block3D([0.0 0.0 0.0; lx ly lz], nx=nx, ny=ny, nz=nz, cellshape=cellshape), verbose=false)
+    end
 end

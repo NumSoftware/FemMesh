@@ -1,7 +1,7 @@
 using FemMesh
 using Test
 
-printstyled("\nMesh smoothing\n", color=:cyan)
+printstyled("\nMesh smoothing\n", color=:blue, bold=true)
 
 println("QUAD4:")
 bl   = Block2D( [0 0; 1 1], nx=2, ny=2, cellshape=QUAD4)

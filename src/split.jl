@@ -4,7 +4,7 @@
 
 export split!
 export generate_joints!
-export generate_joints_tag!
+export generate_joints_by_tag!
 
 function joint_shape(shape::ShapeType)
     if shape == LIN2  ; return JLIN2  end
@@ -19,7 +19,7 @@ function joint_shape(shape::ShapeType)
 end
 
 # Adds joint cells over all shared faces
-function generate_joints!(mesh::Mesh; layers::Int64=2, verbose::Bool=true)
+function generate_joints!(mesh::Mesh; layers::Int64=2, verbose::Bool=true, tag="")
 
     verbose && printstyled("Mesh generation of joint elements:\n", bold=true, color=:cyan)
     cells  = mesh.cells
@@ -74,7 +74,7 @@ function generate_joints!(mesh::Mesh; layers::Int64=2, verbose::Bool=true)
         end
 
         jshape = joint_shape(f1.shape)
-        cell = Cell(jshape, con, "")
+        cell = Cell(jshape, con, tag=tag)
         cell.linked_cells = [f1.ocell, f2.ocell]
         push!(jcells, cell)
     end
@@ -151,7 +151,7 @@ mutable struct FacePair
     FacePair() = new()
 end
 
-function generate_joints_candidate!(mesh::Mesh, expr::Expr, tag::TagType="") # TODO: needs checking
+function generate_joints_candidate!(mesh::Mesh, expr::Expr, tag::String="") # TODO: needs checking
     solids = mesh.cells[:solids][expr]
     @assert length(solids)>0
 
@@ -248,7 +248,7 @@ function generate_joints_candidate!(mesh::Mesh, expr::Expr, tag::TagType="") # T
         end
 
         jshape = joint_shape(fp.face1.shape)
-        cell = Cell(jshape, con, "")
+        cell = Cell(jshape, con, tag="")
         cell.linked_cells = [fp.face1.ocell, fp.face2.ocell]
         push!(jcells, cell)
     end
@@ -266,7 +266,7 @@ end
                             
  #Generate joints taking account tags
 
-function generate_joints_tag!(mesh::Mesh; layers::Int64=2, verbose::Bool=true)
+function generate_joints_by_tag!(mesh::Mesh; layers::Int64=2, verbose::Bool=true, tag="")
 
     verbose && printstyled("Mesh generation of joint elements:\n", bold=true, color=:cyan)
     cells  = mesh.cells
@@ -342,7 +342,7 @@ function generate_joints_tag!(mesh::Mesh; layers::Int64=2, verbose::Bool=true)
         end
 
         jshape = joint_shape(f1.shape)
-        cell = Cell(jshape, con, "")
+        cell = Cell(jshape, con, tag=tag)
         cell.linked_cells = [f1.ocell, f2.ocell]
         push!(jcells, cell)
     end

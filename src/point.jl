@@ -9,9 +9,9 @@ mutable struct Point
     x    ::Float64
     y    ::Float64
     z    ::Float64
-    tag  ::TagType
+    tag  ::String
     id   ::Int64
-    function Point(x::Real, y::Real, z::Real=0.0, tag::TagType=0)
+    function Point(x::Real, y::Real, z::Real=0.0, tag::String="")
         NDIG = 14
         # zero is added to avoid negative bit sign for zero signed values
         x += 0.0
@@ -22,7 +22,7 @@ mutable struct Point
         #z = round(z, digits=NDIG) + 0.0
         return new(x, y, z, tag,-1)
     end
-    function Point(C::AbstractArray{<:Real}; tag=0)
+    function Point(C::AbstractArray{<:Real}; tag::String="")
         # zero is added to avoid negative bit sign for zero signed values
         if length(C)==2
             return new(C[1]+0.0, C[2]+0.0, 0.0, tag, -1)
@@ -78,13 +78,24 @@ end
 
 function setcoords!(points::Array{Point,1}, coords::AbstractArray{Float64,2})
     nrows, ncols = size(coords)
-    np = length(points)
-    @assert np==nrows
+    @assert nrows == length(points)
 
     for (i,p) in enumerate(points)
         p.x = coords[i,1]
         p.y = coords[i,2]
         ncols==3 && (p.z = coords[i,3])
     end
+end
+
+
+# Index operator for an collection of points
+function Base.getindex(points::Array{Point,1}, filter_ex::Expr) 
+    R = Point[]
+    for point in points
+        x, y, z = point.x, point.y, point.z
+        eval_arith_expr(filter_ex, x=x, y=y, z=z) && push!(R, point)
+    end
+
+    return R
 end
 

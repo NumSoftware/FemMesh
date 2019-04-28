@@ -20,6 +20,7 @@ copy, move!, array, rotate!, polar, extrude.
 module FemMesh
 using Printf, StatsBase, Statistics, LinearAlgebra, SparseArrays, DelimitedFiles
 using JSON, DataStructures
+#using DocStringExtensions
 
 # Mesh module
 include("tools/linalg.jl")
@@ -37,14 +38,14 @@ include("vtk.jl")
 include("quadrature.jl")
 
 include("shape.jl")
-export ShapeType, TagType, ALL_SHAPES, ShapeFamily
+export ShapeType, ALL_SHAPES, ShapeFamily
 export get_ip_coords, get_shape_from_vtk
 export inverse_map, extrapolator
 
 include("point.jl")
 export Point, Cell, hash, get_x, get_y, get_z
 include("cell.jl")
-export getcoords, get_point, get_points, get_faces, cell_extent, cell_quality
+export getcoords, get_point, get_points, get_faces, get_patches, cell_extent, cell_quality
 export tag!, iptag!, update!
 include("partition.jl")
 
@@ -52,13 +53,13 @@ include("ugrid.jl")
 export UnstructuredGrid, save_vtk, read_ugrid_vtk
 
 include("mesh.jl")
-export Mesh, update!, quality!, reorder!, save, get_surface, get_neighbors
+export Mesh, update!, quality!, reorder!, save, get_surface, get_neighbors, threshold!
 
 include("block.jl")
 export Block2D, Block3D, BlockTruss, BlockCoords, BlockCylinder
 
 include("operators.jl")
-export move!, array, copy, mirror, rotate!, polar, rollaxes!
+export move!, array, copy, mirror, rotate!, polar, rollaxes!, scale!
 
 include("extrude.jl") 
 export extrude

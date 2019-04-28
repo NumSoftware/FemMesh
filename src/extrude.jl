@@ -87,7 +87,7 @@ function extrude(mesh::Mesh; len::Number=1.0, n::Int=1, verbose::Bool=true)
             for i=1:n
                 zi = (i-1)*Δz
                 points  = [ Point(p.x, p.y, z) for z in (zi, zi+Δz) for p in cell.points ]
-                newcell = Cell(newshape, points, cell.tag)
+                newcell = Cell(newshape, points, tag=cell.tag)
                 push!(cells, newcell)
             end
         elseif cell.shape==TRI6
@@ -96,7 +96,7 @@ function extrude(mesh::Mesh; len::Number=1.0, n::Int=1, verbose::Bool=true)
                 points1 = [ Point(p.x, p.y, z) for z in (zi, zi+Δz) for p in view(cell.points, 1:3) ]
                 points2 = [ Point(p.x, p.y, z) for z in (zi, zi+Δz) for p in view(cell.points, 4:6) ]
                 points3 = [ Point(p.x, p.y, zi+Δz/2) for p in view(cell.points, 1:3) ]
-                newcell = Cell(WED15, [ points1; points2; points3 ], cell.tag)
+                newcell = Cell(WED15, [ points1; points2; points3 ], tag=cell.tag)
                 push!(cells, newcell)
             end
         elseif cell.shape==QUAD8
@@ -105,7 +105,7 @@ function extrude(mesh::Mesh; len::Number=1.0, n::Int=1, verbose::Bool=true)
                 points1 = [ Point(p.x, p.y, z) for z in (zi, zi+Δz) for p in view(cell.points, 1:4) ]
                 points2 = [ Point(p.x, p.y, z) for z in (zi, zi+Δz) for p in view(cell.points, 5:8) ]
                 points3 = [ Point(p.x, p.y, zi+Δz/2) for p in view(cell.points, 1:4) ]
-                newcell = Cell(WED6, [ points1; points2; points3 ], cell.tag)
+                newcell = Cell(WED6, [ points1; points2; points3 ], tag=cell.tag)
                 push!(cells, newcell)
             end
         else
@@ -199,7 +199,7 @@ function extrude2(mesh::Mesh; axis=[0.0,0.0,1.], len::Number=1.0, n::Int=1, verb
                     cpoints = vcat(cpoints[5:8], cpoints[1:4])
                 end
 
-                cell = Cell(HEX8, cpoints, c.tag)
+                cell = Cell(HEX8, cpoints, tag=c.tag)
                 push!(newmesh.cells, cell)
             end
         end
@@ -261,7 +261,7 @@ function extrude2(mesh::Mesh; axis=[0.0,0.0,1.], len::Number=1.0, n::Int=1, verb
                     cpoints = vcat(cpoints[5:8], cpoints[1:4], cpoints[13:16], cpoints[9:12], cpoints[17:20])
                 end
 
-                cell = Cell(HEX20, cpoints, c.tag)
+                cell = Cell(HEX20, cpoints, tag=c.tag)
                 push!(newmesh.cells, cell)
             end
         end
@@ -373,7 +373,7 @@ function extrude1(mesh::Mesh; axis=[0.0,0.0,1.], len::Number=1.0, n::Int=1, verb
                     cpoints = vcat(cpoints[5:8], cpoints[1:4])
                 end
 
-                cell = Cell(HEX8, cpoints, c.tag)
+                cell = Cell(HEX8, cpoints, tag=c.tag)
                 push!(newmesh.cells, cell)
             end
         end
@@ -435,7 +435,7 @@ function extrude1(mesh::Mesh; axis=[0.0,0.0,1.], len::Number=1.0, n::Int=1, verb
                     cpoints = vcat(cpoints[5:8], cpoints[1:4], cpoints[13:16], cpoints[9:12], cpoints[17:20])
                 end
 
-                cell = Cell(HEX20, cpoints, c.tag)
+                cell = Cell(HEX20, cpoints, tag=c.tag)
                 push!(newmesh.cells, cell)
             end
         end

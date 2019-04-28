@@ -21,8 +21,8 @@ mutable struct BlockInset <: Block
     embedded ::Bool
     shape    ::ShapeType
     cellshape::ShapeType
-    tag      ::TagType
-    jointtag ::TagType
+    tag      ::String
+    jointtag ::String
     ε        ::Float64 # bisection tolerance
     εn       ::Float64 # increment to find next cell
     εc       ::Float64 # tolerance to find cells
@@ -294,7 +294,7 @@ function split_curve(coords::Array{Float64,2}, bl::BlockInset, closed::Bool, msh
         bl._endpoint = P2
 
         # Saving line cell 
-        lcell = Cell(shape, Ps, bl.tag)
+        lcell = Cell(shape, Ps, tag=bl.tag)
         push!(msh.cells, lcell)
 
         if bl.embedded
@@ -304,7 +304,7 @@ function split_curve(coords::Array{Float64,2}, bl::BlockInset, closed::Bool, msh
         else
             # Generate a continuous joint element
             jntpts  = vcat( ccell.points, lcell.points )
-            jntcell = Cell(jntshape, jntpts, bl.jointtag)
+            jntcell = Cell(jntshape, jntpts, tag=bl.jointtag)
             push!(msh.cells, jntcell)
             jntcell.linked_cells = [ccell, lcell]
         end

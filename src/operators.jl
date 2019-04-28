@@ -2,7 +2,7 @@
 
 
 #Base.copy(p::Point) = Point(p.x, p.y, p.z, p.tag)
-Base.copy(c::Cell)  = Cell(c.shape, c.points, c.tag, c.ocell)
+Base.copy(c::Cell)  = Cell(c.shape, c.points, tag=c.tag, ocell=c.ocell)
 
 """
 `copy(block)` 
@@ -311,10 +311,10 @@ end
 
 
 function scale!(msh::Mesh; factor=1.0, base=[0.0,0,0])
-    for pt in mesh.points
+    for p in msh.points
         p.x, p.y, p.z = base + ([p.x, p.y, p.z] - base)*factor
     end
-    return mesh
+    return msh
 end
 
 
@@ -333,7 +333,9 @@ function rotate!(mesh::Mesh; base=[0.0,0,0], axis=[0.0,0,1], angle=90.0 )
     axis = axis/norm(axis)
     a, b, c = axis
     d = sqrt(b^2+c^2)
+    #@show d
     d==0.0 && ( d=1.0 )
+    #@show d
 
     # unit vector for rotation
     l = cos(angle*pi/180)
@@ -362,6 +364,12 @@ function rotate!(mesh::Mesh; base=[0.0,0,0], axis=[0.0,0,1], angle=90.0 )
 
     # all rotations matrix
     R = Rxi*Ryi*Rz*Ry*Rx
+
+    if axis==[1.0, 0.0, 0.0]
+        R  = [ 1.0   0.0   0.0 
+               0.0   l     -m
+               0.0   m     l ]
+    end
 
     for p in mesh.points
         p.x, p.y, p.z = base + R*([p.x, p.y, p.z] - base)
