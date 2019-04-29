@@ -24,11 +24,10 @@ mutable struct Point
     end
     function Point(C::AbstractArray{<:Real}; tag::String="")
         # zero is added to avoid negative bit sign for zero signed values
-        if length(C)==2
-            return new(C[1]+0.0, C[2]+0.0, 0.0, tag, -1)
-        else
-            return new(C[1]+0.0, C[2]+0.0, C[3]+0.0, tag, -1)
-        end
+        n = length(C)
+        n==1 && return new(C[1]+0.0, 0.0, 0.0, tag, -1)
+        n==2 && return new(C[1]+0.0, C[2]+0.0, 0.0, tag, -1)
+        return new(C[1]+0.0, C[2]+0.0, C[3]+0.0, tag, -1)
     end
 end
 

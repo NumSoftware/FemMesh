@@ -73,7 +73,7 @@ function plot_data_for_cell3d(points::Array{Array{Float64,1},1}, shape::ShapeTyp
 end
 
 
-function mplot_old(items::Union{Block, Array}...; args...)
+function mplot(items::Union{Block, Array}...; args...)
     # Get list of blocks and check type
     blocks = unfold(items)
 
@@ -83,14 +83,15 @@ function mplot_old(items::Union{Block, Array}...; args...)
 
     # Using Point and Cell types
     points = Array{Point,1}()
-    cells  = Array{AbstractCell,1}()
+    cells  = Array{Cell,1}()
 
     for bl in blocks
         append!(points, bl.points)
 
         if bl.shape.family==SOLID_SHAPE
             if bl.shape.ndim==2
-                push!(cells, bl)
+                cell = Cell(bl.shape, bl.points)
+                push!(cells, cell)
             else
                 faces = get_faces(bl)
                 append!(cells, faces)
@@ -104,17 +105,18 @@ function mplot_old(items::Union{Block, Array}...; args...)
 
     end
 
-    # points, conns and types
-    #points  = [ p for bl in blocks for p in bl.points]
-    for (i,p) in enumerate(points); p.id = i end
-    pts_arr = [ [p.x, p.y, p.z] for p in points ]
-    coords  = [ pts_arr[i][j] for i=1:length(pts_arr), j=1:3]
-    conns   = [ [ p.id for p in c.points ] for c in cells]
-    stypes  = [ Int(c.shape.vtk_type) for c in cells]
-    #colors  = Dict("family" => [ ty==LIN2 ? 0.0 : 1.0 for ty in stypes])
+    # Get ndim
+    ndim = 1
+    for point in points
+        point.y != 0.0 && (ndim=2)
+        point.z != 0.0 && (ndim=3; break)
+    end
 
-    ugrid = UnstructuredGrid("Blocks", coords, conns, stypes)
-    mplot(ugrid; args...)
+    mesh = Mesh()
+    mesh.ndim = ndim
+    mesh.points = points
+    mesh.cells  = cells
+    mplot(mesh; args...)
 end
 
 
@@ -261,7 +263,7 @@ function mplot(mesh::Mesh, filename::String=""; axis=true, lw=0.5,
 
     # Lazy import of PyPlot
     @eval import PyPlot:plt, matplotlib, figure, art3D, Axes3D, ioff
-    ioff()
+    @eval ioff()
 
     # fix PyPlot
     @eval import PyPlot:getproperty, LazyPyModule
@@ -502,7 +504,7 @@ function mplot(mesh::Mesh, filename::String=""; axis=true, lw=0.5,
     # Draw cell numbers
     if celllabels && ndim==2
         for i=1:ncells
-            coo = points[ cells[i], : ]
+            coo = getcoords(cells[i])
             x = mean(coo[:,1])
             y = mean(coo[:,2])
             ax.text(x, y, i, va="top", ha="left", color="blue", backgroundcolor="none", size=8)

@@ -243,9 +243,10 @@ end
 function update!(mesh::Mesh; verbose::Bool=false, genfacets::Bool=true, genedges::Bool=true)
 
     # Get ndim
-    ndim = 2
+    ndim = 1
     for point in mesh.points
-        if point.z != 0.0; ndim = 3; break end
+        point.y != 0.0 && (ndim=2)
+        point.z != 0.0 && (ndim=3; break)
     end
     mesh.ndim = ndim
     
@@ -353,6 +354,41 @@ function join_mesh!(m1::Mesh, m2::Mesh)
     return nothing
 end
 
+
+function Mesh(coords::Array{Float64}, conns::Array{Array{Int64,1},1}, cellshapes::Array{ShapeType,1}=ShapeType[])
+    n = size(coords, 1) # number of points
+    m = size(conns , 1) # number of cells
+
+    points = Point[]
+    for i=1:n
+        C = coords[i,:]
+        push!(points, Point(C))
+    end
+
+    # Get ndim
+    ndim = size(coords,2)
+    
+    cells = Cell[]
+    for i=1:m
+        pts = points[conns[i]]
+        if length(cellshapes)>0
+            shape = cellshapes[i]
+        else
+            shape = get_shape_from_ndim_npoints(length(pts), ndim)
+        end
+        cell = Cell(shape, points)
+        push!(cells, cell)
+    end
+
+    mesh = Mesh()
+    mesh.points = points
+    mesh.cells  = cells
+    update!(mesh) # no node ordering
+
+    return mesh
+end
+
+
 # flattens a list of nested lists
 function flatten(x, y)
     ty = typeof(x)
@@ -373,7 +409,8 @@ flatten(x)=flatten(x, [])
 
 Generates a mesh based on an array of geometry blocks
 """
-function Mesh(items::Union{Block, Mesh, Array}...; verbose::Bool=true, genfacets::Bool=true, genedges::Bool=true, reorder=true)
+function Mesh(items::Union{Mesh, Block, Array{<:Union{Block, Array},1}}...; 
+              verbose::Bool=true, genfacets::Bool=true, genedges::Bool=true, reorder=true)
 
     # Flatten items list
     fitems = flatten(items)

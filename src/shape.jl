@@ -48,13 +48,14 @@ function MakePOLIV()
     shape.vtk_type    = VTK_POLY_VERTEX
     shape.facet_idxs  = []
     shape.facet_shape = ()
+    shape.quadrature  = Dict( 0 => [] )
     return shape
 end
 const POLYV = MakePOLIV()
 export POLYV
 
 
-function get_ip_coords(shape::ShapeType, nips=0)::Array{Float64,2}
+function get_ip_coords(shape::ShapeType, nips=0)
     !haskey(shape.quadrature, nips) && error("Number of ips ($nips) for shape ($shape) is not available")
     return shape.quadrature[nips]
 end
@@ -132,6 +133,30 @@ function get_shape_from_vtk(vtk_type::VTKCellType, npoints::Int64, ndim::Int64, 
     end
 
     error("get_shape_from_vtk: Unknown shape for vtk_type $vtk_type and npoints $npoints with ndim $ndim")
+end
+
+
+function get_shape_from_ndim_npoints(npoints::Int64, ndim::Int64)::ShapeType
+    # npoints : total number of cell points
+    # ndim    : analysis dimension
+
+    if ndim==3
+        npoints==4  &&  return TET4
+        npoints==10 &&  return TET10
+        npoints==8  &&  return HEX8
+        npoints==20 &&  return HEX20
+    else
+        npoints==2  && return LIN2
+        npoints==3  && return TRI3
+        npoints==6  && return TRI6
+        npoints==4  && return QUAD4
+        npoints==8  && return QUAD8
+        npoints==12 && return QUAD12
+    end
+
+    npoints==1 && return POLYV
+
+    error("get_shape_from_ndim_npoints: Cannot get the cell shape from npoints=$npoints and ndim=$ndim")
 end
 
 
