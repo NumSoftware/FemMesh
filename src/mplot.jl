@@ -230,7 +230,6 @@ function mplot(mesh::Mesh, filename::String=""; axis=true, lw=0.5,
     @eval import PyPlot:getproperty, LazyPyModule
     if ! @eval hasmethod(getproperty, (LazyPyModule, AbstractString))
         @eval Base.getproperty(lm::LazyPyModule, s::AbstractString) = getproperty(PyCall.PyObject(lm), s)
-        @eval Base.getproperty(lm::LazyPyModule, s::Symbol) = getproperty(PyCall.PyObject(lm), s)
     end
 
     plt.close("all")

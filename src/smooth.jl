@@ -784,7 +784,7 @@ function smooth2!(mesh::Mesh; verbose=true, alpha::Float64=1.0, target::Float64=
         hist = fit(Histogram, Q, 0.0:bin:1.0, closed=:right).weights
         push!(hists, OrderedDict(Symbol(r) => v for (r,v) in zip(0.0:bin:1-bin,hist)))
 
-        verbose && @printf("%4d  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %7.5f  %9s", i, qmin, q1, q2, q3, qmax, q, dev, hms(sw, format=:ms))
+        verbose && @printf("%4d  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %7.5f  %9s", i, qmin, q1, q2, q3, qmax, q, dev, see(sw, format=:ms))
         #verbose && println("  ", fit(Histogram, Q, 0.3:0.05:1.0, closed=:right).weights)
         verbose && println("  ", fit(Histogram, Q, 0.0:bin:1.0, closed=:right).weights)
 
@@ -963,7 +963,7 @@ function smooth!(mesh::Mesh; verbose=true, alpha::Float64=1.0, target::Float64=0
         hist = fit(Histogram, Q, 0.0:bin:1.0, closed=:right).weights
         push!(hists, OrderedDict(Symbol(r) => v for (r,v) in zip(0.0:bin:1-bin,hist)))
 
-        verbose && @printf("%4d  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %7.5f  %9s", i, qmin, q1, q2, q3, qmax, q, dev, hms(sw, format=:ms))
+        verbose && @printf("%4d  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %7.5f  %9s", i, qmin, q1, q2, q3, qmax, q, dev, see(sw, format=:ms))
         #verbose && println("  ", fit(Histogram, Q, 0.3:0.05:1.0, closed=:right).weights)
         verbose && println("  ", fit(Histogram, Q, 0.0:bin:1.0, closed=:right).weights)
 
@@ -1169,7 +1169,7 @@ function laplacian_smooth!(mesh::Mesh; maxit::Int64=20, verbose::Bool=true,
         hist = fit(Histogram, Q, 0.0:bin:1.0, closed=:right).weights
         push!(hists, OrderedDict(Symbol(r) => v for (r,v) in zip(0.0:bin:1-bin,hist)))
 
-        verbose && @printf("%4d  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %7.5f  %9s", i, qmin, q1, q2, q3, qmax, q, dev, hms(sw, format=:ms))
+        verbose && @printf("%4d  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %7.5f  %9s", i, qmin, q1, q2, q3, qmax, q, dev, see(sw, format=:ms))
         #verbose && println("  ", fit(Histogram, Q, 0.3:bin:1.0, closed=:right).weights)
         verbose && println("  ", fit(Histogram, Q, 0.0:bin:1.0, closed=:right).weights)
 
