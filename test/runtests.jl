@@ -10,6 +10,7 @@ FILES = [
     "operations.jl"
     "extrapolation.jl"
     "smoothing.jl"
+    "plotting.jl"
 ]
 
 @testset begin

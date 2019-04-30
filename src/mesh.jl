@@ -376,7 +376,7 @@ function Mesh(coords::Array{Float64}, conns::Array{Array{Int64,1},1}, cellshapes
         else
             shape = get_shape_from_ndim_npoints(length(pts), ndim)
         end
-        cell = Cell(shape, points)
+        cell = Cell(shape, pts)
         push!(cells, cell)
     end
 

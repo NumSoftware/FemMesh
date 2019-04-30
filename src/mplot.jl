@@ -73,9 +73,9 @@ function plot_data_for_cell3d(points::Array{Array{Float64,1},1}, shape::ShapeTyp
 end
 
 
-function mplot(items::Union{Block, Array}...; args...)
+function mplot(items::Union{Block, Array}, filename::String=""; args...)
     # Get list of blocks and check type
-    blocks = unfold(items)
+    blocks = unfold(items) # only close if not saving to file
 
     for item in blocks
         isa(item, Block) || error("mplot: Block object expected")
@@ -89,13 +89,8 @@ function mplot(items::Union{Block, Array}...; args...)
         append!(points, bl.points)
 
         if bl.shape.family==SOLID_SHAPE
-            if bl.shape.ndim==2
-                cell = Cell(bl.shape, bl.points)
-                push!(cells, cell)
-            else
-                faces = get_faces(bl)
-                append!(cells, faces)
-            end
+            cell = Cell(bl.shape, bl.points)
+            push!(cells, cell)
         elseif bl.shape.family==LINE_SHAPE
             lines = [ Cell(LIN2, bl.points[i-1:i]) for i=2:length(bl.points)]
             append!(cells, lines)
@@ -116,42 +111,8 @@ function mplot(items::Union{Block, Array}...; args...)
     mesh.ndim = ndim
     mesh.points = points
     mesh.cells  = cells
-    mplot(mesh; args...)
+    mplot(mesh, filename; args...)
 end
-
-
-function mplot_old(mesh::Mesh, filename::String=""; args...)
-    ugrid = convert(UnstructuredGrid, mesh)
-    if mesh.ndim==3
-        # get surface cells and update ugrid
-        scells = get_surface(mesh.cells)
-        spoints = [ p for c in scells for p in c.points ]
-        pt_ids = [ p.id for p in spoints ]
-        oc_ids = [ c.ocell.id for c in scells ]
-
-        # update data
-        for (field, data) in ugrid.point_scalar_data
-            ugrid.point_scalar_data[field] = data[pt_ids]
-        end
-        for (field, data) in ugrid.cell_scalar_data
-            ugrid.cell_scalar_data[field] = data[oc_ids]
-        end
-        for (field, data) in ugrid.point_vector_data
-            ugrid.point_vector_data[field] = data[pt_ids, :]
-        end
-
-        # renumerate points
-        id_dict = Dict{Int, Int}( p.id => i for (i,p) in enumerate(spoints) )
-
-        # points and cells
-        pts_arr      = [ [p.x, p.y, p.z] for p in spoints ]
-        ugrid.points = [ pts_arr[i][j] for i=1:length(pts_arr), j=1:3]
-        ugrid.cells  = [ Int[ id_dict[p.id] for p in c.points ] for c in scells ]
-        ugrid.cell_types = [ Int(c.shape.vtk_type) for c in scells ]
-    end
-    mplot(ugrid, filename; args...)
-end
-
 
 
 function get_main_edges(cells::Array{Cell,1}, angle=30)
@@ -269,8 +230,7 @@ function mplot(mesh::Mesh, filename::String=""; axis=true, lw=0.5,
     @eval import PyPlot:getproperty, LazyPyModule
     if ! @eval hasmethod(getproperty, (LazyPyModule, AbstractString))
         @eval Base.getproperty(lm::LazyPyModule, s::AbstractString) = getproperty(PyCall.PyObject(lm), s)
-    #else
-        #@info "mplot: function PyPlot.getproperty(::PyPlot.LazyPyModule, ::AbstractString) is already defined"
+        @eval Base.getproperty(lm::LazyPyModule, s::Symbol) = getproperty(PyCall.PyObject(lm), s)
     end
 
     plt.close("all")
@@ -278,8 +238,7 @@ function mplot(mesh::Mesh, filename::String=""; axis=true, lw=0.5,
     plt.rc("font", family="serif", size=7)
     plt.rc("lines", lw=0.5)
     plt.rc("legend", fontsize=7)
-    #plt.rc]("figure", figsize=(4.5, 3))
-    plt.rc("figure", figsize=figsize)
+    plt.rc("figure", figsize=figsize) # suggested size (4.5,3)
 
     # All points coordinates
     if warpscale>0
@@ -522,18 +481,11 @@ function mplot(mesh::Mesh, filename::String=""; axis=true, lw=0.5,
         plt.savefig(filename, bbox_inches="tight", pad_inches=0.00, format="pdf")
     end
 
-    # close the figure
-    #@show plt.isinteractive()
-    #@show isinteractive()
-
-    #plt.isinteractive() || plt.close("all")
-    #isinteractive() || plt.close("all")
-
     # Do not close if in IJulia
     if isdefined(Main, :IJulia) && Main.IJulia.inited
         return
     end
-    if !leaveopen
+    if !leaveopen && filename=="" # only close if not saving to file
         plt.close("all")
     end
 
