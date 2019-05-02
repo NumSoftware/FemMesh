@@ -4,41 +4,10 @@
 #Base.copy(p::Point) = Point(p.x, p.y, p.z, p.tag)
 Base.copy(c::Cell)  = Cell(c.shape, c.points, tag=c.tag, ocell=c.ocell)
 
-"""
-`copy(block)` 
-
-Creates a copy of a `block` object.
-"""
-Base.copy(bl::BlockTruss) = BlockTruss(copy(getcoords(bl.points)), bl.conns, cellshape=bl.cellshape, tag=bl.tag)
-
-Base.copy(bl::Block2D) = Block2D(copy(getcoords(bl.points)), nx=bl.nx, ny=bl.ny, cellshape=bl.cellshape, tag=bl.tag)
-
-Base.copy(bl::Block3D) = Block3D(copy(getcoords(bl.points)), nx=bl.nx, ny=bl.ny, nz=bl.nz, cellshape=bl.cellshape, tag=bl.tag)
-
-function Base.copy(bl::Block; dx=0.0, dy=0.0, dz=0.0)
-    newbl = copy(bl)
-    move!(newbl, dx=dx, dy=dy, dz=dz)
+function Base.copy(bls::Array{<:Block,1})
+    return [ copy(obj) for obj in bls ]
 end
 
-function Base.copy(bls::Array{<:Block,1}; dx=0.0, dy=0.0, dz=0.0)
-    return [ copy(obj, dx=dx, dy=dy, dz=dz) for obj in bls ]
-end
-
-
-function Base.copy(mesh::Mesh)
-    newmesh = Mesh()
-    newmesh.ndim = mesh.ndim
-    newmesh.points = copy.(mesh.points)
-    newmesh.cells  = copy.(mesh.cells)
-    for c in newmesh.cells
-        ids = [ p.id for p in c.points ]
-        c.points = newmesh.points[ids]
-    end
-
-    newmesh.bpoints = Dict( k => newmesh.points[p.id] for (k,p) in mesh.bpoints )
-    update!(newmesh)
-    return newmesh
-end
 
 """
 `move(block, [dx=0.0,] [dy=0.0,] [dz=0.0])` 

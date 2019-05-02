@@ -206,6 +206,8 @@ Plots a `mesh` using `PyPlot` backend. If `filename` is provided it writes a pdf
 
 `celllabels    = false` : If true, shows cell labels
 
+`alpha         = 1.0`   : Opacity,
+
 `field         = nothing` : If provided, plots corresponding field
 
 `fieldscale    = 1.0` : Factor multiplied to `field` values
@@ -250,6 +252,7 @@ function mplot(
                pointmarkers     = false,
                pointlabels      = false,
                celllabels       = false,
+               alpha            = 1.0,
                field            = nothing,
                fieldscale       = 1.0,
                fieldlims        = (),

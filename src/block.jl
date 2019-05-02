@@ -1,42 +1,6 @@
 # This file is part of FemMesh package. See copyright license in https://github.com/NumSoftware/FemMesh
 
 
-include("block_inset.jl")
-
-"""
-`BlockTruss(coords, conns, [shape=LIN2,] [tag="",])`
-
-Generates a block object for the mesh generation of trusses:
-"""
-mutable struct BlockTruss <: Block
-    points::Array{Point,1}
-    conns ::Array{Int64,2}
-    shape ::ShapeType
-    cellshape::ShapeType
-    tag::String
-    id::Int64
-
-    function BlockTruss(coords::Array{<:Real}, conns::Array{Int64,2}; cellshape=LIN2, tag="", id=-1)
-        ncols = size(coords,2)
-        size(conns,2)==2 || error("BlockTruss: Invalid size for connectivities matrix")
-
-        local points
-
-        if ncols==2
-            points = [ Point(coords[i,1], coords[i,2], 0.0) for i=1:size(coords,1) ]
-        elseif ncols==3
-            points = [ Point(coords[i,1], coords[i,2], coords[i,3]) for i=1:size(coords,1) ]
-        else
-            error("BlockTruss: Invalid coordinates matrix")
-        end
-
-        for (i,p) in enumerate(points); p.id=i end
-
-        return new(points, conns, POLYV, cellshape, tag, id)
-    end
-end
-
-
 function box_points(C1::Array{<:Real,1}, C2::Array{<:Real,1})
     x1 = C1[1]
     y1 = C1[2]
@@ -68,75 +32,12 @@ end
 
 
 """
-`BlockCoords(coords, conns, [cellshape=LIN2,] [tag="",])`
-
-Generates a 2D or 3D block object based on a matrix of coordinates and a matrix of connectivities.
-"""
-mutable struct BlockCoords <: Block
-    coords::Array{Float64,2}
-    conns ::Array{Int64,2}
-    tag::String
-    id::Int64
-
-    function BlockCoords(coords::Array{<:Real}, conns::Array{Int64,2}; tag="", id=-1)
-        ncols = size(coords,2)
-        if !(ncols in (2,3)); error("Invalid coordinates matrix for BlockCoords") end
-        if ncols==2
-            C = [coords  zeros(size(coords,1)) ]
-        else
-            C = coords
-        end
-        this = new(C, conns, tag, id)
-        return this
-    end
-end
-
-
-"""
-`Block2D(coords, [nx=1,] [ny=1,] [cellshape=QUAD4,] [tag=""] )`
+`Block(coords, [nx=1,] [ny=1,] [cellshape=QUAD4,] [tag=""] )`
 
 Generates a block object for the mesh generation of 2D meshes.
 `shape` can be TRI3, TRI6, QUAD4, QUAD8.
 """
-mutable struct Block2D <: Block
-    points::Array{Point,1}
-    shape::ShapeType
-    cellshape::ShapeType
-    nx::Int64
-    ny::Int64
-    tag::String
-    id::Int64
-
-    function Block2D(coords::Array{<:Real}; nx::Int=1, ny::Int=1, cellshape::ShapeType=QUAD4, tag="", id=-1, shape=nothing)
-        if shape != nothing
-            @warn "Block2D: argument shape was deprecated. Please use cellshape instead"
-            cellshape = shape
-        end
-        cellshape in (TRI3, TRI6, QUAD4, QUAD8, QUAD9, QUAD12) || error("Block2D: shape must be TRI3, TRI6, QUAD4, QUAD8, QUAD9 or QUAD12")
-
-        if size(coords,1)==2
-            points = box_points(coords[1,:], coords[2,:])
-        elseif size(coords,2)==2
-            points = [ Point(coords[i,1], coords[i,2], 0.0) for i=1:size(coords,1) ]
-        else
-            points = [ Point(coords[i,1], coords[i,2], coords[i,3]) for i=1:size(coords,1) ]
-        end
-
-        npoints = length(points)
-        shape = npoints==4 ? QUAD4 : QUAD8
-        for (i,p) in enumerate(points); p.id=i end
-
-        return new(points, shape, cellshape, nx, ny, tag, id)
-    end
-end
-
-
-"""
-`Block3D(coords, [nx=1,] [ny=1,] [nz=1,] [cellshape=HEX8,] [tag=""] )`
-
-Generates a block object for the mesh generation of 3D meshes.
-"""
-mutable struct Block3D <: Block
+mutable struct Block <: AbstractBlock
     points::Array{Point,1}
     shape::ShapeType
     cellshape::ShapeType
@@ -146,102 +47,78 @@ mutable struct Block3D <: Block
     tag::String
     id::Int64
 
-    function Block3D(coords::Array{<:Real}; nx=1, ny=1, nz=1, cellshape=HEX8, tag="", id=-1, shape=nothing)
+    function Block(coords::Array{<:Real}; nx::Int=1, ny::Int=1, nz::Int=1, cellshape=nothing, tag="", id=-1, shape=nothing)
         if shape != nothing
-            @warn "Block3D: argument `shape` was deprecated. Please use cellshape instead"
+            @warn "Block: argument shape was deprecated. Please use cellshape instead"
             cellshape = shape
         end
-        cellshape in (TET4, TET10, HEX8, HEX20) || error("Block3D: shape must be TET4, TET10, HEX8 or HEX20")
 
-        if size(coords,1)==2
+        shapes1d = (LIN2, LIN3)
+        shapes2d = (TRI3, TRI6, QUAD4, QUAD8, QUAD9, QUAD12)
+        shapes3d = (TET4, TET10, HEX8, HEX20)
+
+        ncoord, ndim = size(coords)
+        ndim<=3 || error("Block: invalid coordinate matrix")
+        (ndim==3 && cellshape in shapes2d) && (ndim=2)
+        cellshape in shapes3d && (ndim==3 || error("Block: 3d points are required for cell shape $cellshape"))
+       
+        if ndim==1
+            ncoord==2 || error("Block: invalid coordinates matrix rows ($ncoord) for dimension $ndim")
+            cellshape==nothing && (cellshape=LIN2)
+            cellshape in shapes1d || error("Block: invalid cell type $cellshape for dimension $ndim")
+            shape = LIN2
             points = box_points(coords[1,:], coords[2,:])
+        elseif ndim==2
+            ncoord in (2, 4, 8) || error("Block: invalid coordinates matrix rows ($ncoord) for dimension $ndim")
+            cellshape==nothing && (cellshape=QUAD4)
+            cellshape in shapes2d || error("Block: invalid cell type $cellshape for dimension $ndim")
+            if ncoord==2
+                points = box_points(coords[1,:], coords[2,:])
+                shape = QUAD4
+            else
+                points = [ Point(coords[i,:]) for i=1:ncoord ]
+                shape = length(points)==4 ? QUAD4 : QUAD8
+            end
         else
-            points = [ Point(coords[i,1], coords[i,2], coords[i,3]) for i=1:size(coords,1) ]
+            ncoord in (2, 8, 20) || error("Block: invalid coordinates matrix rows ($ncoord) for dimension $ndim")
+            cellshape==nothing && (cellshape=QUAD4)
+            cellshape in shapes3d || error("Block: invalid cell type $cellshape for dimension $ndim")
+            if ncoord==2
+                points = box_points(coords[1,:], coords[2,:])
+                shape = HEX8
+            else
+                points = [ Point(coords[i,:]) for i=1:ncoord ]
+                shape = length(points)==8 ? HEX8 : HEX20
+            end
         end
 
-        npoints = length(points)
-        shape = npoints==8 ? HEX8 : HEX20
-        for (i,p) in enumerate(points); p.id=i end
+        for i=1:length(points)
+            points[i].id = i
+        end
 
         return new(points, shape, cellshape, nx, ny, nz, tag, id)
     end
 end
 
-#type BlockCylinder <: Block
-    #points::Array{Point,1}
-    #shape::ShapeType # LIN2
-    #cellshape::ShapeType # HEX8, HEX20
-    #function Block3D(coords::Array{<:Real}; nx=1, ny=1, nz=1, shape=HEX8, tag="", id=-1)
-        #shape in (TET4, TET10, HEX8, HEX20) || error("Block3D: shape must be TET4, TET10, HEX8 or HEX20")
-        #C    = size(coords,1)==2 ? box_coords(coords[1,:], coords[2,:]) : coords
-        #this = new(C, nx, ny, nz, shape, tag, id)
-        #return this
-    #end
-#end
+# For backward compatibility
+Block2D = Block
+Block3D = Block
 
-#=
-mutable struct BlockArc <: Block
-    coords::Array{Float64,2}
-    r1::Float64
-    th::Float64
-    n1::Int64
-    n2::Int64
-    shape::ShapeType
-    tag::String
-    id::Int64
 
-    function BlockArc(coords::Array{<:Real}; r1=1.0, th=45, nr=3, n=2, shape=QUAD4, tag="", id=-1)
-        size(coords,1) == 2 || error("Invalid coordinates matrix for BlockArc")
-        shape.ndim==2 || error("BlockArc: shape must be a 2d shape")
-        #r2 = norm(coords[2,:]-coords[1,:])
-        this = new(coords, r1, th, nr, n, shape, tag, id)
-        return this
-    end
-
-    function BlockArc(center::Array{<:Real}=[0.0,0.0]; r1=1.0, r2=2.0, th1=45, th2=90, nr=3, n=2, shape=QUAD4, tag="", id=-1)
-        size(coords,1) == 1 || error("Invalid coordinates matrix for BlockArc")
-        shape.ndim==2 || error("BlockArc: shape must be a 2d shape")
-        th1r = deg2rad(th1)
-        V = [cos(th1r),sin(th1r)]
-        th2r = deg2rad(th2)
-        X1 = center + r1*V
-        X2 = center + r2*V
-        coords = [X1'; X2']
-        this = new(coords, r1, th, nr, n, shape, tag, id)
-        return this
-    end
-end
-=#
-
-mutable struct BlockCylinder <: Block
-    points::Array{Point,1}
-    shape::ShapeType # LIN2
-    cellshape::ShapeType # HEX8, HEX20
-    #coords::Array{Float64,2} # two end points
-    r::Float64
-    nr::Int64
-    n::Int64
-    tag::String
-    id::Int64
-
-    function BlockCylinder(coords::Array{<:Real}; r=1.0, nr=3, n=2, cellshape=HEX8, tag="", id=-1)
-        size(coords,1) != 2 && error("Invalid coordinates matrix for BlockCylinder")
-        nr<2 && error("Invalid nr=$nr value for BlockCylinder")
-        cellshape in (HEX8, HEX20) || error("BlockCylinder: cellshape must be HEX8 or HEX20")
-        points = [ Point(coords[i,1], coords[i,2], coords[i,3]) for i=1:size(coords,1) ]
-        return new(points, LIN2, cellshape, r, nr, n, tag, id)
-    end
+function Base.copy(bl::Block; dx=0.0, dy=0.0, dz=0.0)
+    newbl = Block3D(copy(getcoords(bl.points)), nx=bl.nx, ny=bl.ny, nz=bl.nz, cellshape=bl.cellshape, tag=bl.tag)
 end
 
-# Splits a 2D block
+
+# Splits a block
 # TODO: replace msh::Mesh by points, bpoints and cells
 # TODO: optimize matrix products
-function split_block(bl::Block2D, msh::Mesh)
-    nx, ny = bl.nx, bl.ny
+function split_block(bl::Block, msh::Mesh)
+    #nx, ny = bl.nx, bl.ny
+    nx, ny, nz = bl.nx, bl.ny, bl.nz
     shape  = bl.shape # cell shape
     coords = getcoords(bl.points)
     cellshape = bl.cellshape
-    quadrilat_bshape = true
 
     if cellshape==QUAD4
         p_arr = Array{Point}(undef, nx+1, ny+1)
@@ -379,7 +256,7 @@ function split_block(bl::Block2D, msh::Mesh)
         return
     end
 
-    if cellshape == TRI3 && quadrilat_bshape
+    if cellshape == TRI3
         p_arr = Array{Point}(undef, nx+1, ny+1)
         for j = 1:ny+1
             for i = 1:nx+1
@@ -418,53 +295,7 @@ function split_block(bl::Block2D, msh::Mesh)
         return
     end
 
-    if cellshape == TRI3 && !quadrilat_bshape
-        p_arr = Array{Point}(undef, nx+1, nx+1)
-        for j = 1:ny+1
-            for i = 1:nx+1
-                j>i && continue
-                r = 1 - (1.0/nx)*(i-1)
-                s =  (1.0/ny)*(j-1)
-                #r = (2.0/nx)*(i-1) - 1.0
-                #s = (2.0/ny)*(j-1) - 1.0
-                N = bl.shape.func([r, s])
-                C = N'*coords
-                p::Any = nothing
-                if i in (1, nx+1) || j in (1, ny+1) || i==j
-                    C = round.(C, digits=8)
-                    p = get_point(msh.bpoints, C)
-                    if p==nothing
-                        p = Point(C); push!(msh.points, p)
-                        msh.bpoints[hash(p)] = p
-                    end
-                else
-                    p = Point(C); push!(msh.points, p)
-                end
-                p_arr[i,j] = p
-            end
-        end
-
-        for j = 1:ny
-            for i = 1:nx
-                j>i && continue
-                p1 = p_arr[i  , j  ]
-                p2 = p_arr[i+1, j  ]
-                p3 = p_arr[i+1, j+1]
-
-                cell1 = Cell(cellshape, [p1, p2, p3], tag=bl.tag)
-                push!(msh.cells, cell1)
-                
-                if i>j
-                    p4 = p_arr[i  , j+1]
-                    cell2 = Cell(cellshape, [p4, p1, p3], tag=bl.tag)
-                    push!(msh.cells, cell2)
-                end
-            end
-        end
-        return
-    end
-
-    if cellshape == TRI6 && quadrilat_bshape
+    if cellshape == TRI6
 
         #=   4       7       3
                @-----@-----@
@@ -520,80 +351,6 @@ function split_block(bl::Block2D, msh::Mesh)
         end
         return
     end
-
-    if cellshape == TRI6 && !quadrilat_bshape
-
-        #=   4       7       3
-               @-----@-----@
-               |         / |
-               |       /   |
-             8 @     @     @ 6
-               |   /  9    |
-               | /         |
-               @-----@-----@
-             1       5       2     =#
-
-        p_arr = Array{Point}(undef, 2*nx+1, 2*ny+1)
-        for j = 1:2*ny+1
-            for i = 1:2*nx+1
-                j>i && continue
-                r = (1.0/nx)*(i-1) # TODO
-                s = (1.0/ny)*(j-1)
-                #r = (1.0/nx)*(i-1) - 1.0
-                #s = (1.0/ny)*(j-1) - 1.0
-                N = bl.shape.func([r, s])
-                C = N'*coords
-                p::Any = nothing
-                if i in (1, 2*nx+1) || j in (1, 2*ny+1) || i==j
-                    C = round.(C, digits=8)
-                    p = get_point(msh.bpoints, C)
-                    if p==nothing
-                        p = Point(C); push!(msh.points, p)
-                        msh.bpoints[hash(p)] = p
-                    end
-                else
-                    p = Point(C); push!(msh.points, p)
-                end
-                p_arr[i,j] = p
-            end
-        end
-
-        for j = 1:2:2*ny
-            for i = 1:2:2*nx
-                j>i && continue
-
-                p1 = p_arr[i  , j  ]
-                p2 = p_arr[i+2, j  ]
-                p3 = p_arr[i+2, j+2]
-                p5 = p_arr[i+1, j  ]
-                p6 = p_arr[i+2, j+1]
-                p9 = p_arr[i+1, j+1]
-
-                cell1 = Cell(cellshape, [p1, p2, p3, p5, p6, p9], tag=bl.tag)
-                push!(msh.cells, cell1)
-
-                if i>j
-                    p4 = p_arr[i  , j+2]
-                    p7 = p_arr[i+1, j+2]
-                    p8 = p_arr[i  , j+1]
-                    cell2 = Cell(cellshape, [p4, p1, p3, p8, p9, p7], tag=bl.tag)
-                    push!(msh.cells, cell2)
-                end
-            end
-        end
-        return
-    end
-
-    error("block: Can not discretize using shape $(cellshape.name)")
-end
-
-# Split for 3D meshes
-
-function split_block(bl::Block3D, msh::Mesh)
-    nx, ny, nz = bl.nx, bl.ny, bl.nz
-    shape  = bl.shape 
-    coords = getcoords(bl.points)
-    cellshape = bl.cellshape
 
     if cellshape==HEX8 || cellshape==TET4
         p_arr = Array{Point}(undef, nx+1, ny+1, nz+1)
@@ -763,53 +520,28 @@ function split_block(bl::Block3D, msh::Mesh)
 end
 
 
-function split_block(bl::BlockTruss, msh::Mesh)
-    n = length(bl.points) # number of points
-    m = size(bl.conns,1)  # number of truss cells
-    p_arr = Array{Point}(undef, n)
+mutable struct BlockCylinder <: AbstractBlock
+    points::Array{Point,1}
+    shape::ShapeType # LIN2
+    cellshape::ShapeType # HEX8, HEX20
+    r::Float64
+    nr::Int64
+    n::Int64
+    tag::String
+    id::Int64
 
-    for (i,point) in enumerate(bl.points)
-        C  = [ point.x, point.y, point.z ]
-        p = get_point(msh.bpoints, C)
-        if p==nothing; 
-            p = Point(C) 
-            msh.bpoints[hash(p)] = p
-            push!(msh.points, p)
-        end
-        p_arr[i] = p
-    end
-
-    for i=1:m
-        p1 = p_arr[bl.conns[i, 1]]
-        p2 = p_arr[bl.conns[i, 2]]
-        cell = Cell(bl.cellshape, [p1, p2], tag=bl.tag)
-        push!(msh.cells, cell)
+    function BlockCylinder(coords::Array{<:Real}; r=1.0, nr=3, n=2, cellshape=HEX8, tag="", id=-1)
+        size(coords,1) != 2 && error("Invalid coordinates matrix for BlockCylinder")
+        nr<2 && error("Invalid nr=$nr value for BlockCylinder")
+        cellshape in (HEX8, HEX20) || error("BlockCylinder: cellshape must be HEX8 or HEX20")
+        points = [ Point(coords[i,1], coords[i,2], coords[i,3]) for i=1:size(coords,1) ]
+        return new(points, LIN2, cellshape, r, nr, n, tag, id)
     end
 end
 
 
-function split_block(bl::BlockCoords, msh::Mesh)
-    n = size(coords, 1) # number of points
-    m = size(bl.conns , 1) # number of cells
-    p_arr = Array{Point}(undef, n)
-    for i=1:n
-        C = coords[i,:]
-        p = get_point(msh.bpoints, C)
-        if p==nothing; 
-            p = Point(C) 
-            msh.bpoints[hash(p)] = p
-            push!(msh.points, p)
-        end
-        p_arr[i] = p
-    end
-    
-    for i=1:m
-        points = [ p_arr[j] for j in bl.conns[i,:] ] 
-        #TODO: update shape calculation
-        cellshape = [nothing, LIN2, TRI3, QUAD4, nothing, nothing, nothing ][length(points)]
-        cell = Cell(cellshape, points, tag=bl.tag)
-        push!(msh.cells, cell)
-    end
+function Base.copy(bl::BlockCylinder; dx=0.0, dy=0.0, dz=0.0)
+    newbl = BlockCylinder(copy(getcoords(bl.points)), r=bl.r, nr=bl.nr, n=bl.n, cellshape=bl.cellshape, tag=bl.tag)
 end
 
 
@@ -821,7 +553,7 @@ function split_block(bl::BlockCylinder, msh::Mesh)
 
     # constructing quadratic blocks
     coords = bl.r*[ 0 0; 1/3 0; 1/3 1/3; 0 1/3; 1/6 0; 1/3 1/6; 1/6 1/3; 0 1/6 ]
-    bl1 = Block2D(coords, nx=nx1, ny=nx1, cellshape= shape2D, tag=bl.tag)
+    bl1 = Block(coords, nx=nx1, ny=nx1, cellshape= shape2D, tag=bl.tag)
 
     s45  = sin(45*pi/180)
     c45  = s45
@@ -829,10 +561,10 @@ function split_block(bl::BlockCylinder, msh::Mesh)
     c225 = cos(22.5*pi/180)
 
     coords = bl.r*[ 1/3 0; 1 0; c45 s45; 1/3 1/3; 2/3 0; c225 s225; (c45+1/3)/2 (s45+1/3)/2; 1/3 1/6 ]
-    bl2    = Block2D(coords, nx=nx2, ny=nx1, cellshape= shape2D, tag=bl.tag)
+    bl2    = Block(coords, nx=nx2, ny=nx1, cellshape= shape2D, tag=bl.tag)
 
     coords = bl.r*[ 0 1/3; 1/3 1/3; c45 s45; 0 1; 1/6 1/3; (c45+1/3)/2 (s45+1/3)/2; s225 c225; 0 2/3 ]
-    bl3    = Block2D(coords, nx=nx1, ny=nx2, cellshape= shape2D, tag=bl.tag)
+    bl3    = Block(coords, nx=nx1, ny=nx2, cellshape= shape2D, tag=bl.tag)
 
     blocks = [bl1, bl2, bl3 ]
 

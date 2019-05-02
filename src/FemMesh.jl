@@ -56,7 +56,8 @@ include("mesh.jl")
 export Mesh, update!, quality!, reorder!, save, get_surface, get_neighbors, threshold!
 
 include("block.jl")
-export Block2D, Block3D, BlockTruss, BlockCoords, BlockCylinder
+include("block_inset.jl")
+export Block, Block2D, Block3D, BlockTruss, BlockCoords, BlockCylinder
 
 include("operators.jl")
 export move!, array, copy, mirror, rotate!, polar, rollaxes!, scale!

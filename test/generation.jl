@@ -80,17 +80,15 @@ println(TR)
 
 printstyled("\nMesh generation on trusses\n", color=:blue, bold=true)
 coord = [ 0 0; 9 0; 18 0; 0 9; 9 9; 18 9.]
-conn  = [ 1 2; 1 5; 2 3; 2 6; 2 5; 2 4; 3 6; 3 5; 4 5; 5 6]
-bl   = BlockTruss(coord, conn)
-mesh = Mesh(bl)
+conn  = [ [1, 2], [1, 5], [2, 3], [2, 6], [2, 5], [2, 4], [3, 6], [3, 5], [4, 5], [5, 6] ]
+mesh = Mesh(coord, conn)
 save(mesh, "out.vtk", verbose=false)
 TR = @test length(mesh.points) == 6
 println(TR)
 
 coord = [ 0.0 0.0 0.0; 0.0 1.0 0.0; 0.0 1.0 1.0]  
-conn  = [ 1 3; 1 2; 2 3] 
-bl   = BlockTruss(coord, conn)
-mesh = Mesh(bl)
+conn  = [ [1, 3], [1, 2], [2, 3] ]
+mesh = Mesh(coord, conn)
 save(mesh, "out.vtk", verbose=false)
 TR = @test length(mesh.points) == 3
 println(TR)

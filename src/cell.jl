@@ -1,7 +1,11 @@
 # This file is part of FemMesh package. See copyright license in https://github.com/NumSoftware/FemMesh
 
 abstract type AbstractCell end
-abstract type Block<:AbstractCell end
+
+abstract type AbstractBlock<:AbstractCell end
+
+
+
 
 # Cell
 # ====

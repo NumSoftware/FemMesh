@@ -141,6 +141,7 @@ function get_shape_from_ndim_npoints(npoints::Int64, ndim::Int64)::ShapeType
     # ndim    : analysis dimension
 
     if ndim==3
+        npoints==2  &&  return LIN2
         npoints==4  &&  return TET4
         npoints==10 &&  return TET10
         npoints==8  &&  return HEX8

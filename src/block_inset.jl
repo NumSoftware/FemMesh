@@ -13,7 +13,7 @@ that represents the inset curve and can be:
 `cellshape` represents the shape for 1D elements used in the final mesh. Possible values are LIN2 and LIN3.
 `closed=true` can be used if a closed inset curve is required.
 """
-mutable struct BlockInset <: Block
+mutable struct BlockInset <: AbstractBlock
     #coords   ::Array{Float64,2}
     points::Array{Point,1}
     curvetype::Union{Int,AbstractString} # 0:polyline, 1:closed polyline, 2: lagrangian, 3:cubic Bezier with inner points
@@ -59,9 +59,13 @@ mutable struct BlockInset <: Block
     end
 end
 
-Base.copy(bl::BlockInset) = BlockInset(getcoords(bl.points), curvetype=bl.curvetype, closed=bl.closed, 
-                                       embedded=bl.embedded, cellshape=bl.cellshape, tag=bl.tag,
-                                       jointtag=bl.jointtag)
+
+function Base.copy(bl::BlockInset; dx=0.0, dy=0.0, dz=0.0)
+    newbl = BlockInset(getcoords(bl.points), curvetype=bl.curvetype, closed=bl.closed, 
+                       embedded=bl.embedded, cellshape=bl.cellshape, tag=bl.tag,
+                       jointtag=bl.jointtag)
+end
+
 
 function cubicBezier(s::Float64, PorQ::Array{Float64,2}, isQ::Bool=false)
     # check

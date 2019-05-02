@@ -45,6 +45,23 @@ mutable struct Mesh
     end
 end
 
+
+function Base.copy(mesh::Mesh)
+    newmesh = Mesh()
+    newmesh.ndim = mesh.ndim
+    newmesh.points = copy.(mesh.points)
+    newmesh.cells  = copy.(mesh.cells)
+    for c in newmesh.cells
+        ids = [ p.id for p in c.points ]
+        c.points = newmesh.points[ids]
+    end
+
+    newmesh.bpoints = Dict( k => newmesh.points[p.id] for (k,p) in mesh.bpoints )
+    update!(newmesh)
+    return newmesh
+end
+
+
 function get_surface(cells::Array{Cell,1})::Array{Cell,1}
     surf_dict = Dict{UInt64, Cell}()
 
@@ -366,7 +383,7 @@ end
 `cellshapes=[]` : Array of cell shapes
 """
 function Mesh(
-              coords     :: Array{Float64},
+              coords     :: Array{<:Real},
               conns      :: Array{Array{Int64,1},1},
               cellshapes :: Array{ShapeType,1}=ShapeType[]
              )
@@ -440,7 +457,7 @@ Subarrays of these type of objects are also supported.
 `reorder   = true` : If true, reorder nodes numbering
 """
 function Mesh(
-              items     :: Union{Mesh, Block, Array{<:Union{Block, Array},1}}...; 
+              items     :: Union{Mesh, AbstractBlock, Array{<:Union{AbstractBlock, Array},1}}...; 
               verbose   :: Bool = true,
               genfacets :: Bool = true,
               genedges  :: Bool = true,
@@ -454,7 +471,7 @@ function Mesh(
     blocks = []
     meshes = []
     for item in fitems
-        if isa(item, Block)
+        if isa(item, AbstractBlock)
             push!(blocks, item)
         elseif isa(item, Mesh)
             push!(meshes, copy(item))
