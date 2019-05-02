@@ -3,63 +3,63 @@ using Test
 
 printstyled("\nMesh generation on solids\n", color=:blue, bold=true)
 println("\nMesh using TRI3")
-bl = Block2D( [0 0; 1 1], nx=10, ny=10, cellshape=TRI3)
+bl = Block( [0 0; 1 1], nx=10, ny=10, cellshape=TRI3)
 mesh = Mesh(bl)
 save(mesh, "out.vtk", verbose=false)
 TR = @test length(mesh.points) == 121
 println(TR)
 
 println("\nMesh using TRI6")
-bl = Block2D( [0 0; 1 1], nx=10, ny=10, cellshape=TRI6)
+bl = Block( [0 0; 1 1], nx=10, ny=10, cellshape=TRI6)
 mesh = Mesh(bl)
 save(mesh, "out.vtk", verbose=false)
 TR = @test length(mesh.points) == 441
 println(TR)
 
 println("\nMesh using QUAD4")
-bl = Block2D( [0 0; 1 1], nx=10, ny=10, cellshape=QUAD4)
+bl = Block( [0 0; 1 1], nx=10, ny=10, cellshape=QUAD4)
 mesh = Mesh(bl)
 save(mesh, "out.vtk", verbose=false)
 TR = @test length(mesh.points) == 121
 println(TR)
 
 println("\nMesh using QUAD8")
-bl = Block2D( [0 0; 1 1], nx=10, ny=10, cellshape=QUAD8)
+bl = Block( [0 0; 1 1], nx=10, ny=10, cellshape=QUAD8)
 mesh = Mesh(bl)
 save(mesh, "out.vtk", verbose=false)
 TR = @test length(mesh.points) == 341
 println(TR)
 
 println("\nMesh using QUAD9")
-bl = Block2D( [0 0; 1 1], nx=10, ny=10, cellshape=QUAD9)
+bl = Block( [0 0; 1 1], nx=10, ny=10, cellshape=QUAD9)
 mesh = Mesh(bl)
 save(mesh, "out.vtk", verbose=false)
 TR = @test length(mesh.points) == 441
 println(TR)
 
 println("\nMesh using HEX8")
-bl = Block3D( [0 0 0; 1 1 1], nx=10, ny=10, nz=10, cellshape=HEX8)
+bl = Block( [0 0 0; 1 1 1], nx=10, ny=10, nz=10, cellshape=HEX8)
 mesh = Mesh(bl)
 save(mesh, "out.vtk", verbose=false)
 TR = @test length(mesh.points) == 1331
 println(TR)
 
 println("\nMesh using HEX20")
-bl = Block3D( [0 0 0; 1 1 1], nx=10, ny=10, nz=10, cellshape=HEX20)
+bl = Block( [0 0 0; 1 1 1], nx=10, ny=10, nz=10, cellshape=HEX20)
 mesh = Mesh(bl)
 save(mesh, "out.vtk", verbose=false)
 TR = @test length(mesh.points) == 4961
 println(TR)
 
 println("\nMesh using TET4")
-bl = Block3D( [0 0 0; 1 1 1], nx=10, ny=10, nz=10, cellshape=TET4)
+bl = Block( [0 0 0; 1 1 1], nx=10, ny=10, nz=10, cellshape=TET4)
 mesh = Mesh(bl)
 save(mesh, "out.vtk", verbose=false)
 TR = @test length(mesh.points) == 1331
 println(TR)
 
 println("\nMesh using TET10")
-bl = Block3D( [0 0 0; 1 1 1], nx=10, ny=10, nz=10, cellshape=TET10)
+bl = Block( [0 0 0; 1 1 1], nx=10, ny=10, nz=10, cellshape=TET10)
 mesh = Mesh(bl)
 save(mesh, "out.vtk", verbose=false)
 TR = @test length(mesh.points) == 9261
@@ -94,14 +94,14 @@ TR = @test length(mesh.points) == 3
 println(TR)
 
 printstyled("\nMesh with embedded cells\n", color=:blue, bold=true)
-bl = Block3D( [0 0 0; 1 1 1], nx=8, ny=8, nz=8, cellshape=HEX8)
+bl = Block( [0 0 0; 1 1 1], nx=8, ny=8, nz=8, cellshape=HEX8)
 bli = BlockInset( [0 0 0; 1 1 1] )
 mesh = Mesh(bl, bli)
 save(mesh, "out.vtk", verbose=false)
 TR = @test length(mesh.cells[:lines]) == 8
 println(TR)
 
-bl = Block3D( [0 0 0; 1 1 1], nx=8, ny=8, nz=8, cellshape=HEX20)
+bl = Block( [0 0 0; 1 1 1], nx=8, ny=8, nz=8, cellshape=HEX20)
 bli = BlockInset( [0 0 0; 1 1 1] )
 mesh = Mesh(bl, bli)
 save(mesh, "out.vtk", verbose=false)

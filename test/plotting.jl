@@ -8,7 +8,7 @@ printstyled("\nPlotting\n", color=:blue, bold=true)
 # 2D
 
 blocks = [
-    Block2D( [0 0; 3 0.4], nx=30, ny=8, cellshape=QUAD8),
+    Block( [0 0; 3 0.4], nx=30, ny=8, cellshape=QUAD8),
 ]
 
 print("Blocks 2D")
@@ -26,7 +26,7 @@ rm("out.pdf")
 # 3D
 
 blocks = [
-    Block3D( [0 0 0; 0.2 2.0 0.2], nx=2, ny=12, nz=2, cellshape=HEX8),
+    Block( [0 0 0; 0.2 2.0 0.2], nx=2, ny=12, nz=2, cellshape=HEX8),
 ]
 print("Blocks 3D")
 mplot(blocks, "out.pdf")
