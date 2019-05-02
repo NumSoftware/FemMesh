@@ -73,6 +73,21 @@ function plot_data_for_cell3d(points::Array{Array{Float64,1},1}, shape::ShapeTyp
 end
 
 
+"""
+    mplot(blocks, filename="", kwargs...)
+
+Plots an array of blocks using `PyPlot` backend. If filename is provided it saves the output in a pdf file.
+
+# Arguments
+
+`blocks` : An array of `Block` objects. Subarrays are also supported.
+
+`filename` = ""` : If provided, a pdf file with the output is saved
+
+# See also
+
+See documentation of `mplot(mesh, filename="", kwargs...)` for details about keyword arguments.
+"""
 function mplot(items::Union{Block, Array}, filename::String=""; args...)
     # Get list of blocks and check type
     blocks = unfold(items) # only close if not saving to file
@@ -168,13 +183,92 @@ end
 
 using PyCall # required
 
-function mplot(mesh::Mesh, filename::String=""; axis=true, lw=0.5,
-               pointmarkers=false, pointlabels=false, celllabels=false, alpha=1.0, 
-               field=nothing, fieldscale=1.0, fieldlims=nothing, 
-               vectorfield=nothing, arrowscale=0.0,
-               cmap=nothing, colorbarscale=0.9, colorbarlabel="", colorbarpad=0.0,
-               warpscale=0.0, highlightcell=0, elev=30.0, azim=45.0, dist=10.0,
-               mainedges=false, edgeangle=30, figsize=(4,2.5), leaveopen=false)
+"""
+    mplot(mesh, filename="", kwargs...)
+
+Plots a `mesh` using `PyPlot` backend. If `filename` is provided it writes a pdf file containing the plot.
+
+# Arguments
+
+`mesh` : A finite element mesh
+
+`filename = ""` : If provided, a pdf file with the output is saved
+
+# Keyword arguments
+
+`axis          = true` : If true, show axes
+
+`lw            = 0.5` : Line width
+
+`pointmarkers  = false` : If true, shows point markers
+
+`pointlabels   = false` : If true, shows point labels
+
+`celllabels    = false` : If true, shows cell labels
+
+`field         = nothing` : If provided, plots corresponding field
+
+`fieldscale    = 1.0` : Factor multiplied to `field` values
+
+`fieldlims     = ()` : Tuple `(min, max)` with field limits
+
+`vectorfield   = nothing` : If provided, plots corresponding vector field
+
+`arrowscale    = 0.0` : Factor multiplied to `vectorfield` values
+
+`cmap          = nothing` : Colormap accrding to PyPlot
+
+`colorbarscale = 0.9` : Scale of color bar
+
+`colorbarlabel = ""` : Label at color bar
+
+`colorbarpad   = 0.0` : Separation of color bar from the plot
+
+`warpscale     = 0.0` : Factor multiplied to "U" field when available
+
+`highlightcell = 0` : Cell number to be highlighted
+
+`elev          = 30.0` : 3D plot elevation
+
+`azim          = 45.0` : 3D plot azimute
+
+`dist          = 10.0` : 3D plot distance from observer
+
+`mainedges     = true` : Highlight main edges of 3D meshes in the pdf output
+
+`edgeangle     = 30` : Limit angle to identify main edges
+
+`figsize       = (4,2.5)` : Figure size
+
+`leaveopen     = false` : If true, leaves the plot open so other drawings can be added
+"""
+function mplot(
+               mesh::Mesh, 
+               filename::String = "";
+               axis             = true,
+               lw               = 0.5,
+               pointmarkers     = false,
+               pointlabels      = false,
+               celllabels       = false,
+               field            = nothing,
+               fieldscale       = 1.0,
+               fieldlims        = (),
+               vectorfield      = nothing,
+               arrowscale       = 0.0,
+               cmap             = nothing,
+               colorbarscale    = 0.9,
+               colorbarlabel    = "",
+               colorbarpad      = 0.0,
+               warpscale        = 0.0,
+               highlightcell    = 0,
+               elev             = 30.0,
+               azim             = 45.0,
+               dist             = 10.0,
+               mainedges        = true,
+               edgeangle        = 30,
+               figsize          = (4,2.5),
+               leaveopen        = false
+              )
 
     # Get initial info from mesh
     ndim = mesh.ndim
@@ -324,7 +418,7 @@ function mplot(mesh::Mesh, filename::String=""; axis=true, lw=0.5,
             fvals = [ mean(data[connect[i]]) for i=1:ncells ]
         end
         fvals *= fieldscale
-        fieldlims==nothing && (fieldlims = extrema(fvals))
+        fieldlims==() && (fieldlims = extrema(fvals))
     end
 
     # Plot cells
@@ -355,6 +449,7 @@ function mplot(mesh::Mesh, filename::String=""; axis=true, lw=0.5,
         edgecolor = (0.3, 0.3, 0.3, 0.65)
 
         # Plot main edges
+        filename == "" || (mainedges = false)
         if mainedges
             edges = get_main_edges(cells, edgeangle)
             θ, γ = (azim+0)*pi/180, elev*pi/180

@@ -6,7 +6,7 @@
 """
     Mesh()
 
-constructs an unitialized mesh object to be used in finite element analyses.
+Constructs an unitialized mesh object to be used in finite element analyses.
 It contains geometric fields as: points, cells, faces, edges, ndim, quality, etc.
 """
 mutable struct Mesh
@@ -354,8 +354,22 @@ function join_mesh!(m1::Mesh, m2::Mesh)
     return nothing
 end
 
+"""
+    Mesh(coords, conns, cellshapes=[])
 
-function Mesh(coords::Array{Float64}, conns::Array{Array{Int64,1},1}, cellshapes::Array{ShapeType,1}=ShapeType[])
+# Arguments
+
+`coords` : Matrix with point coordinates
+
+`conns`  : Array of connectivities for each cell
+
+`cellshapes=[]` : Array of cell shapes
+"""
+function Mesh(
+              coords     :: Array{Float64},
+              conns      :: Array{Array{Int64,1},1},
+              cellshapes :: Array{ShapeType,1}=ShapeType[]
+             )
     n = size(coords, 1) # number of points
     m = size(conns , 1) # number of cells
 
@@ -405,12 +419,33 @@ flatten(x)=flatten(x, [])
 
 
 """
-    Mesh(blocks, [verbose=true], [genfacets=true], [genedges=false], [reorder=true])
+    Mesh(items, kwargs...)
 
-Generates a mesh based on an array of geometry blocks
+Generates a mesh based on an array of geometrical objects.
+
+# Arguments
+
+`items`     : Array of objects used to generate a `Mesh` object.
+These objects can be of type `Block` or `Mesh`. 
+Subarrays of these type of objects are also supported.
+
+# Keyword arguments
+
+`verbose   = true` : If true, provide information of the resulting mesh
+
+`genfacets = true` : If true, generates facet cells
+
+`genedges  = true` : If true, generates edge cells
+
+`reorder   = true` : If true, reorder nodes numbering
 """
-function Mesh(items::Union{Mesh, Block, Array{<:Union{Block, Array},1}}...; 
-              verbose::Bool=true, genfacets::Bool=true, genedges::Bool=true, reorder=true)
+function Mesh(
+              items     :: Union{Mesh, Block, Array{<:Union{Block, Array},1}}...; 
+              verbose   :: Bool = true,
+              genfacets :: Bool = true,
+              genedges  :: Bool = true,
+              reorder   :: Bool = true
+             )
 
     # Flatten items list
     fitems = flatten(items)
@@ -837,7 +872,9 @@ end
 
 
 """
-`Mesh(filename)` constructs a mesh object based on a file in VTK legacy format or JSON format.
+    Mesh(filename)
+
+Constructs a `Mesh` object based on a file in VTK legacy format or JSON format.
 """
 function Mesh(filename::String; verbose::Bool=true, reorder::Bool=false)
     if verbose
