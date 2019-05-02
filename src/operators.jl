@@ -4,7 +4,7 @@
 #Base.copy(p::Point) = Point(p.x, p.y, p.z, p.tag)
 Base.copy(c::Cell)  = Cell(c.shape, c.points, tag=c.tag, ocell=c.ocell)
 
-function Base.copy(bls::Array{<:Block,1})
+function Base.copy(bls::Array{<:AbstractBlock,1})
     return [ copy(obj) for obj in bls ]
 end
 
@@ -14,7 +14,7 @@ end
 
 Changes the coordinates of a `block`. Also returns a reference.
 """
-function move!(bl::Block; dx=0.0, dy=0.0, dz=0.0)
+function move!(bl::AbstractBlock; dx=0.0, dy=0.0, dz=0.0)
     for p in bl.points
         p.x += dx
         p.y += dy
@@ -41,7 +41,7 @@ function move!(blocks::Array; dx=0.0, dy=0.0, dz=0.0)
 end
 
 
-function scale!(bl::Block; factor=1.0, base=[0.,0,0], axis=nothing)
+function scale!(bl::AbstractBlock; factor=1.0, base=[0.,0,0], axis=nothing)
     coords = getcoords(bl)
     coords = ( base .+ factor*(coords' .- base) )'
 
@@ -53,14 +53,14 @@ function scale!(bl::Block; factor=1.0, base=[0.,0,0], axis=nothing)
 end
 
 
-function scale!(blocks::Array{Block,1}; factor=1.0, base=[0.0,0,0])
+function scale!(blocks::Array{AbstractBlock,1}; factor=1.0, base=[0.0,0,0])
     for bl in blocks
         scale!(bl, factor=factor, base=base)
     end
     return blocks
 end
 
-function mirror(block::Block; face=[0.0 0 0; 0 1 0; 0 0 1])
+function mirror(block::AbstractBlock; face=[0.0 0 0; 0 1 0; 0 0 1])
     nr, nc = size(face)
     if nc==2
         face = [ face zeros(nr) ]
@@ -100,7 +100,7 @@ function mirror(block::Block; face=[0.0 0 0; 0 1 0; 0 0 1])
     return bl
 end
 
-function mirror(blocks::Array{<:Block,1}; face=[0.0 0 0; 0 1 0; 0 0 1])
+function mirror(blocks::Array{<:AbstractBlock,1}; face=[0.0 0 0; 0 1 0; 0 0 1])
     return [ mirror(bl, face=face) for bl in blocks ]
 end
 
@@ -152,7 +152,7 @@ end
 
 Creates a list with copies of `block` along x, y and z axes.
 """
-function array(bl::Block; nx=1, ny=1, nz=1, dx=0.0, dy=0.0, dz=0.0)
+function array(bl::AbstractBlock; nx=1, ny=1, nz=1, dx=0.0, dy=0.0, dz=0.0)
     blocks = [ bl ]
     for k=0:nz-1
         for j=0:ny-1
@@ -172,7 +172,7 @@ end
 
 Rotate `block` according to the provided `base` point, `axis` vector and `angle`.
 """
-function rotate!(bl::Block; base=[0.0,0,0], axis=[0.0,0,1], angle=90.0 )
+function rotate!(bl::AbstractBlock; base=[0.0,0,0], axis=[0.0,0,1], angle=90.0 )
 
     length(axis)==2 && ( axis=vcat(axis, 0.0) )
     length(base)==2 && ( base=vcat(base, 0.0) )
@@ -226,7 +226,7 @@ function rotate!(bl::Block; base=[0.0,0,0], axis=[0.0,0,1], angle=90.0 )
     return bl
 end
 
-function rotate!(blocks::Array{T,1}; base=[0.0,0,0], axis=[0.0,0,1], angle=90.0 ) where T <: Block
+function rotate!(blocks::Array{T,1}; base=[0.0,0,0], axis=[0.0,0,1], angle=90.0 ) where T <: AbstractBlock
     for bl in blocks
         rotate!(bl, base=base, axis=axis, angle=angle)
     end
@@ -240,7 +240,7 @@ end
 Creates `n-1` copies of a `block` and places them using polar distribution based on 
 a `base` point, an `axis` vector, a total `angle`.
 """
-function polar(bl::T; base=[0.0,0,0], axis=[0.0,0,1], angle=360, n=2 ) where T <: Block
+function polar(bl::T; base=[0.0,0,0], axis=[0.0,0,1], angle=360, n=2 ) where T <: AbstractBlock
     blocks::Array{T,1} = [ bl ]
     angle = angle/n
     for i=1:n-1
@@ -251,7 +251,7 @@ function polar(bl::T; base=[0.0,0,0], axis=[0.0,0,1], angle=360, n=2 ) where T <
     return blocks
 end
 
-function polar(blocks::Array{T,1}; base=[0.0,0,0], axis=[0.0,0,1], angle=360, n=2 ) where T <: Block
+function polar(blocks::Array{T,1}; base=[0.0,0,0], axis=[0.0,0,1], angle=360, n=2 ) where T <: AbstractBlock
     rblocks::Array{T,1} = []
 
     for bl in blocks
@@ -351,14 +351,14 @@ end
 # Roll Axes
 # =========
 
-function rollaxes!(bl::Block)
+function rollaxes!(bl::AbstractBlock)
     for p in bl.points
         p.x, p.y, p.z = p.z, p.x, p.y
     end
     return nothing
 end
 
-rollaxes!(bls::Array{<:Block,1}) = (rollaxes!.(bls); nothing)
+rollaxes!(bls::Array{<:AbstractBlock,1}) = (rollaxes!.(bls); nothing)
 
 function rollaxes!(mesh::Mesh)
     if mesh.ndim==2

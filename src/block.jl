@@ -81,7 +81,7 @@ mutable struct Block <: AbstractBlock
             end
         else
             ncoord in (2, 8, 20) || error("Block: invalid coordinates matrix rows ($ncoord) for dimension $ndim")
-            cellshape==nothing && (cellshape=QUAD4)
+            cellshape==nothing && (cellshape=HEX8)
             cellshape in shapes3d || error("Block: invalid cell type $cellshape for dimension $ndim")
             if ncoord==2
                 points = box_points(coords[1,:], coords[2,:])
