@@ -11,7 +11,7 @@ mutable struct Point
     z    ::Float64
     tag  ::String
     id   ::Int64
-    function Point(x::Real, y::Real, z::Real=0.0, tag::String="")
+    function Point(x::Real, y::Real, z::Real=0.0; tag::String="")
         NDIG = 14
         # zero is added to avoid negative bit sign for zero signed values
         x += 0.0
@@ -34,7 +34,7 @@ end
 
 ### Point methods
 
-Base.copy(point::Point) = Point(point.x, point.y, point.z, point.tag)
+Base.copy(point::Point) = Point(point.x, point.y, point.z, tag=point.tag)
 Base.copy(points::Array{Point,1}) = [ copy(p) for p in points ]
 
 # The functions below can be used in conjuntion with sort
