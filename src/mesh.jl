@@ -17,14 +17,11 @@ mutable struct Mesh
     faces  ::Array{Cell,1}
     edges  ::Array{Cell,1}
 
-    #_points_dict::Dict{UInt64,Point}
-    #_cells_part::CellsPartition
+    pointdict::Dict{UInt64,Point}
+    cellpartition::CellPartition
 
-    bpoints::Dict{UInt64,Point}
-    bins   ::Bins
-
-    quality::Float64
-    qmin   ::Float64 
+    #quality::Float64
+    #qmin   ::Float64 
 
     # Data
     point_scalar_data::Dict{String,Array}
@@ -34,14 +31,14 @@ mutable struct Mesh
     function Mesh()
         this = new()
         this.points = []
-        this.bpoints = Dict{UInt64, Point}()
+        this.pointdict = Dict{UInt64, Point}()
         this.cells  = []
         this.faces  = []
         this.edges  = []
         this.ndim   = 0
-        this.bins   = Bins()
-        this.quality = 0.0
-        this.qmin    = 0.0
+        this.cellpartition = CellPartition()
+        #this.quality = 0.0
+        #this.qmin    = 0.0
 
         this.point_scalar_data = Dict()
         this.cell_scalar_data  = Dict()
@@ -61,7 +58,7 @@ function Base.copy(mesh::Mesh)
         c.points = newmesh.points[ids]
     end
 
-    newmesh.bpoints = Dict( k => newmesh.points[p.id] for (k,p) in mesh.bpoints )
+    newmesh.pointdict = Dict( k => newmesh.points[p.id] for (k,p) in mesh.pointdict )
     update!(newmesh)
     return newmesh
 end
@@ -316,8 +313,9 @@ function quality!(mesh::Mesh)
         c.quality = cell_quality(c)
     end
     Q = Float64[ c.quality for c in mesh.cells]
-    mesh.quality = sum(Q)/length(mesh.cells)
-    mesh.qmin    = minimum(Q)
+    #mesh.quality = sum(Q)/length(mesh.cells)
+    #mesh.qmin    = minimum(Q)
+    mesh.cell_scalar_data["quality"] = Q
     return nothing
 end
 
@@ -328,7 +326,7 @@ function join_mesh!(m1::Mesh, m2::Mesh)
     # copy m1 to m
     #m.points = copy(m1.points)
     #m.cells  = copy(m1.cells)
-    #m.bpoints = copy(m1.bpoints)
+    #m.pointdict = copy(m1.pointdict)
 
     pid = length(m1.points)
     cid = length(m1.cells)
@@ -336,14 +334,14 @@ function join_mesh!(m1::Mesh, m2::Mesh)
     #@show length(m1.points)
     #@show length(m2.points)
 
-    #for (h,p) in m1.bpoints
+    #for (h,p) in m1.pointdict
         #@show (p.id, p.x, p.y, p.z)
     #end
 
     # Add new points from m2
     for p in m2.points
         hs = hash(p)
-        if !haskey(m1.bpoints, hs)
+        if !haskey(m1.pointdict, hs)
             #@show (p.x, p.y, p.z)
             pid += 1
             p.id = pid
@@ -357,13 +355,13 @@ function join_mesh!(m1::Mesh, m2::Mesh)
     for c in m2.cells
         for (i,p) in enumerate(c.points)
             hs = hash(p)
-            if haskey(m1.bpoints, hs)
-                pp = m1.bpoints[hs]
+            if haskey(m1.pointdict, hs)
+                pp = m1.pointdict[hs]
                 c.points[i] = pp
             else
-                # update bpoints dict
-                if haskey(m2.bpoints, hs)
-                    m1.bpoints[hs] = p
+                # update pointdict dict
+                if haskey(m2.pointdict, hs)
+                    m1.pointdict[hs] = p
                 end
             end
         end

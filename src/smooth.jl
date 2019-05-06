@@ -514,6 +514,9 @@ function force_bc(mesh::Mesh, E::Float64, nu::Float64, α::Float64, extended::Bo
     n    = length(mesh.points)
     ndim = mesh.ndim
     Fbc  = zeros(n*ndim)
+    if extended
+        qmin = minimum(c.quality for c in mesh.cells)
+    end
 
     for c in mesh.cells
         # get coordinates matrix
@@ -545,8 +548,8 @@ function force_bc(mesh::Mesh, E::Float64, nu::Float64, α::Float64, extended::Bo
         K = matrixK(c, ndim, E, nu)
 
         if extended
-            if mesh.qmin<1.0
-                F = K*U*((1-c.quality)/(1-mesh.qmin))
+            if qmin<1.0
+                F = K*U*((1-c.quality)/(1-qmin))
             else
                 F = zeros(length(U))
             end
@@ -942,18 +945,21 @@ function smooth!(mesh::Mesh; verbose=true, alpha::Float64=1.0, target::Float64=0
         end
 
         Q = Float64[ c.quality for c in mesh.cells]
-        mesh.quality = mean(Q)
-        mesh.qmin    = minimum(Q)
+        #mesh.quality = mean(Q)
+        #mesh.qmin    = minimum(Q)
+        new_q = mean(Q)
+        new_qmin = minimum(Q)
+        mesh.cell_scalar_data["quality"] = Q
         savesteps && save(mesh, "$filekey-$i.vtk", verbose=false)
 
         #if any(Q .== 0.0)
             #error("smooth!: Smooth procedure got invalid element(s). Try using alpha<1.")
         #end
-        Δq    = abs(q - mesh.quality)
-        Δqmin = mesh.qmin - qmin
+        Δq    = abs(q - new_q)
+        Δqmin = new_qmin - qmin
 
-        q    = mesh.quality
-        qmin = mesh.qmin
+        q    = new_q
+        qmin = new_qmin
         qmax = maximum(Q)
         dev  = stdm(Q, q)
         q1, q2, q3 = quantile(Q, [0.25, 0.5, 0.75])
@@ -987,7 +993,7 @@ function smooth!(mesh::Mesh; verbose=true, alpha::Float64=1.0, target::Float64=0
     savedata && save(hists, "$filekey-hists.dat")
 
     # update data at current mesh structure
-    mesh.cell_scalar_data["quality"] = Q
+    #mesh.cell_scalar_data["quality"] = Q
 
     verbose && println("  done.")
 
@@ -1147,19 +1153,21 @@ function laplacian_smooth!(mesh::Mesh; maxit::Int64=20, verbose::Bool=true,
 
         # stats
         Q = Float64[ c.quality for c in mesh.cells]
-        mesh.quality = mean(Q)
-        mesh.qmin    = minimum(Q)
+        new_quality = mean(Q)
+        new_qmin    = minimum(Q)
+
+        mesh.cell_scalar_data["quality"] = Q
         savesteps && save(mesh, "$filekey-$i.vtk", verbose=false)
 
         #if any(Q .== 0.0)
             #error("smooth!: Smooth procedure got invalid element(s).")
         #end
 
-        Δq    = abs(q - mesh.quality)
-        Δqmin = mesh.qmin - qmin
+        Δq    = abs(q - new_quality)
+        Δqmin = new_qmin - qmin
 
-        q    = mesh.quality
-        qmin = mesh.qmin
+        q    = new_quality
+        qmin = new_qmin
         qmax = maximum(Q)
         dev  = stdm(Q, q)
         q1, q2, q3 = quantile(Q, [0.25, 0.5, 0.75])
