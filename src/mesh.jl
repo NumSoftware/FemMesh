@@ -418,6 +418,7 @@ function Mesh(
     mesh.points = points
     mesh.cells  = cells
     update!(mesh) # no node ordering
+    mesh.ndim = ndim # force ndim
 
     return mesh
 end
