@@ -1,28 +1,51 @@
 # This file is part of FemMesh package. See copyright license in https://github.com/NumSoftware/FemMesh
 
-mutable struct SpacePartition{T}
-    bins::Array{Array{T,1},3} # list of bins
+#mutable struct SpacePartition{T}
+    #bins::Array{Array{T,1},3} # list of bins
+    #bbox::Array{Float64,2}    # bounding box
+    #lbin::Float64             # length of a bin
+#
+    #function SpacePartition{T}() where T
+        #this = new{T}()
+        #this.bins = Array{Array{T,1}}(undef, 0, 0, 0)
+        #this.bbox = zeros(0,0)
+        #this.lbin = 0.0
+        #return this
+    #end
+#
+#end
+
+export PointsPartition
+
+mutable struct PointsPartition
+    bins::Array{Array{Point,1},3} # list of bins
     bbox::Array{Float64,2}    # bounding box
     lbin::Float64             # length of a bin
+    n::Int64
 
-    function SpacePartition{T}() where T
-        this = new{T}()
-        this.bins = Array{Array{T,1}}(undef, 0, 0, 0)
+    function PointsPartition()
+        this = new()
+        this.bins = Array{Array{Point,1}}(undef, 0, 0, 0)
         this.bbox = zeros(0,0)
         this.lbin = 0.0
+        this.n = 0
         return this
     end
 
 end
 
+function build_partition!(par::PointsPartition, hint::Int64, bbox::Array{Float64,2})
+    # hint: number of points hint
 
-function SpacePartition{Point}(n::Int64, bbox::Array{Float64,2})
-    # n: number of points hint
-
-    par = SpacePartition{Point}()
     par.bbox = bbox
-
+    Lxyz = bbox[2,:] - bbox[1,:]
     Lx, Ly, Lz = bbox[2,:] - bbox[1,:]
+
+    # extend by 5%
+    par.bbox .+= 0.05*[-Lx -Ly -Lz; Lx Ly Lz]
+    Lxyz = bbox[2,:] - bbox[1,:]
+    Lx, Ly, Lz = bbox[2,:] - bbox[1,:]
+
     ndim = 0
     V    = 1.0
     for L in (Lx, Ly, Lz)
@@ -31,61 +54,113 @@ function SpacePartition{Point}(n::Int64, bbox::Array{Float64,2})
         ndim += 1
     end
 
-    mpoints = 5
-    lbin = (V/n*mpoints)^(1/ndim) # estimated bin length
+    binnpoints = 5 # estimated number of points per bin
+    lbin = (V/hint*binnpoints)^(1/ndim) # estimated bin length
     par.lbin = lbin
+    par.n = 0
 
+    #@show Lx/lbin
+    #@show Ly/lbin
+    #@show Lz/lbin
     nx = floor(Int, Lx/lbin) + 1
     ny = floor(Int, Ly/lbin) + 1
     nz = floor(Int, Lz/lbin) + 1
+    #@show (nx, ny, nz)
 
     par.bins = Array{Array{Point,1}}(undef, nx, ny, nz)
+    for k=1:nz, j=1:ny, i=1:nx
+        par.bins[i,j,k] = Point[]
+    end
 
     return par
 end
 
 
-function Base.push!(par::SpacePartition{Point}, point::Point)
-    @assert(par.lbin>0)
+function build_partition!(par::PointsPartition, points::Array{Point,1})
+    # Get all points
+    npoints = length(points)
+    bbox = bounding_box(points)
+    build_partition!(par, npoints, bbox)
 
-    lbin = par.lbin
-    x, y, z, = point.x, point.y, point.z
-    ix = floor(Int, (x - minx)/lbin) + 1
-    iy = floor(Int, (y - miny)/lbin) + 1
-    iz = floor(Int, (z - minz)/lbin) + 1
-    push!(par.bins[ix, iy, iz], point)
+    # Fill bins
+    for point in points
+        lbin = par.lbin
+
+        #x, y, z, = point.x, point.y, point.z
+        #minx, miny, minz = par.bbox[1,:]
+        #ix = floor(Int, (x - minx)/lbin) + 1
+        #iy = floor(Int, (y - miny)/lbin) + 1
+        #iz = floor(Int, (z - minz)/lbin) + 1
+
+        X = (point.x, point.y, point.z)
+        min = par.bbox[1,:]
+        ix, iy, iz = floor.(Int, (X.-min)./lbin) .+ 1
+
+        push!(par.bins[ix, iy, iz], point)
+    end
+    par.n = length(points)
+end
+
+function Base.push!(par::PointsPartition, point::Point)
+    #if length(par.bins)==0
+        #build_partition!(par, [point])
+    #nx, ny, nz = size(par.bins)
+    #ndim = sign(nx)+sign(ny)+sign(nz)
+    #if par.n >= 2^(ndim)*(nx*ny*nz*5)
+    nbins = prod(size(par.bins))
+    if par.n >= 4*(nbins*5)
+        @show "rebuild by size" par.n size(par.bins)
+        #build_partition!(par, [point])
+
+        points = [ point ]
+        for bin in par.bins
+            for p in bin
+                push!(points, p)
+            end
+        end
+        build_partition!(par, points)
+        @show size(par.bins)
+    else
+        
+        bbox = par.bbox
+        if bbox[1,1] <= point.x <= bbox[2,1] &&
+           bbox[1,2] <= point.y <= bbox[2,2] &&
+           bbox[1,3] <= point.z <= bbox[2,3]
+
+            #@show "push"
+            lbin = par.lbin
+            X = (point.x, point.y, point.z)
+            min = par.bbox[1,:]
+            ix, iy, iz = floor.(Int, (X.-min)./lbin) .+ 1
+            push!(par.bins[ix, iy, iz], point)
+            par.n += 1
+        else
+            @show "rebuild" par.n
+            points = [ point ]
+            for bin in par.bins
+                for p in bin
+                    push!(points, p)
+                end
+            end
+            build_partition!(par, points)
+        end
+    end
 end
 
 
-function Base.get(par::SpacePartition{Point}, point::Point, default=nothing)
+function Base.get(par::PointsPartition, point::Point, default=nothing)
     @assert(par.lbin>0)
 
     lbin = par.lbin
-    x, y, z, = point.x, point.y, point.z
-    ix = floor(Int, (x - minx)/lbin) + 1
-    iy = floor(Int, (y - miny)/lbin) + 1
-    iz = floor(Int, (z - minz)/lbin) + 1
+    X = (point.x, point.y, point.z)
+    min = par.bbox[1,:]
+    ix, iy, iz = floor.(Int, (X.-min)./lbin) .+ 1
 
     for p in par.bins[ix, iy, iz]
         point == p && return p
     end
 
     return nothing
-end
-
-
-function build_partition!(points::Array{Point,1})
-    # Get all points
-    npoints = length(points)
-    bbox = bounding_box(points)
-
-    par = SpacePartition{Point}(npoints, bbox)
-
-    # Fill bins
-    for point in points
-        push!(par, point)
-    end
-
 end
 
 

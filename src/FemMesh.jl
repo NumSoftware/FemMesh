@@ -49,10 +49,11 @@ export getcoords, get_point, get_points, get_faces, get_patches, cell_extent, ce
 export tag!, iptag!, update!
 include("partition.jl")
 
-include("ugrid.jl")
-export UnstructuredGrid, save_vtk, read_ugrid_vtk
+#include("ugrid.jl")
+#export UnstructuredGrid, save_vtk, read_ugrid_vtk
 
 include("mesh.jl")
+include("io.jl")
 export Mesh, update!, quality!, reorder!, save, get_surface, get_neighbors, threshold!
 
 include("block.jl")
@@ -78,7 +79,8 @@ include("cplot.jl")
 export cplot
 
 # show function for FemMesh types
-for datatype in (:ShapeType, :Point, :Cell, :Block, :Mesh, :UnstructuredGrid )
+#for datatype in (:ShapeType, :Point, :Cell, :Block, :Mesh, :UnstructuredGrid )
+for datatype in (:ShapeType, :Point, :Cell, :Block, :Mesh)
     eval( quote
         function Base.show(io::IO, obj::$datatype)
             print_field_values(io, obj)

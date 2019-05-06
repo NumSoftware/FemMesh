@@ -11,23 +11,29 @@ mutable struct Point
     z    ::Float64
     tag  ::String
     id   ::Int64
+    _hash::UInt64
     function Point(x::Real, y::Real, z::Real=0.0; tag::String="")
-        NDIG = 14
         # zero is added to avoid negative bit sign for zero signed values
         x += 0.0
         y += 0.0
         z += 0.0
+
+        _hash = hash( (round(x, digits=8), round(y, digits=8), round(z, digits=8)) )
         #x = round(x, digits=NDIG) + 0.0
         #y = round(y, digits=NDIG) + 0.0
         #z = round(z, digits=NDIG) + 0.0
-        return new(x, y, z, tag,-1)
+        return new(x, y, z, tag,-1, _hash)
     end
     function Point(C::AbstractArray{<:Real}; tag::String="")
         # zero is added to avoid negative bit sign for zero signed values
         n = length(C)
-        n==1 && return new(C[1]+0.0, 0.0, 0.0, tag, -1)
-        n==2 && return new(C[1]+0.0, C[2]+0.0, 0.0, tag, -1)
-        return new(C[1]+0.0, C[2]+0.0, C[3]+0.0, tag, -1)
+        n==1 && return Point(C[1], 0.0, 0.0, tag=tag)
+        n==2 && return Point(C[1], C[2], 0.0, tag=tag)
+        return Point(C[1], C[2], C[3]+0.0, tag=tag)
+
+        #n==1 && return new(C[1]+0.0, 0.0, 0.0, tag, -1)
+        #n==2 && return new(C[1]+0.0, C[2]+0.0, 0.0, tag, -1)
+        #return new(C[1]+0.0, C[2]+0.0, C[3]+0.0, tag, -1)
     end
 end
 
