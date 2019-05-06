@@ -1,20 +1,5 @@
 # This file is part of FemMesh package. See copyright license in https://github.com/NumSoftware/FemMesh
 
-#mutable struct SpacePartition{T}
-    #bins::Array{Array{T,1},3} # list of bins
-    #bbox::Array{Float64,2}    # bounding box
-    #lbin::Float64             # length of a bin
-#
-    #function SpacePartition{T}() where T
-        #this = new{T}()
-        #this.bins = Array{Array{T,1}}(undef, 0, 0, 0)
-        #this.bbox = zeros(0,0)
-        #this.lbin = 0.0
-        #return this
-    #end
-#
-#end
-
 export PointsPartition
 
 mutable struct PointsPartition
