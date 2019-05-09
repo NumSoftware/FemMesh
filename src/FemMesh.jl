@@ -54,7 +54,7 @@ include("partition.jl")
 
 include("mesh.jl")
 include("io.jl")
-export Mesh, update!, quality!, reorder!, save, get_surface, get_neighbors, threshold!
+export Mesh, update!, quality!, reorder!, save, get_surface, get_neighbors, threshold!, datafields
 
 include("block.jl")
 include("block_inset.jl")

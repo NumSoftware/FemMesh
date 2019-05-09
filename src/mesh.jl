@@ -63,6 +63,14 @@ function Base.copy(mesh::Mesh)
     return newmesh
 end
 
+function datafields(mesh::Mesh)
+    return [ 
+            collect(keys(mesh.point_scalar_data));
+            collect(keys(mesh.point_vector_data));
+            collect(keys(mesh.cell_scalar_data));
+           ]
+end
+
 
 function get_surface(cells::Array{Cell,1})::Array{Cell,1}
     surf_dict = Dict{UInt64, Cell}()
@@ -302,7 +310,10 @@ function update!(mesh::Mesh; verbose::Bool=false, genfacets::Bool=true, genedges
     mesh.point_scalar_data = Dict()
     mesh.cell_scalar_data  = Dict()
     mesh.point_vector_data = Dict()
-    mesh.cell_scalar_data["quality"] = Q
+    mesh.point_scalar_data["point-id"] = collect(1:length(mesh.points))
+    mesh.cell_scalar_data["quality"]   = Q
+    mesh.cell_scalar_data["cell-id"]   = collect(1:length(mesh.cells))
+    mesh.cell_scalar_data["cell-type"] = [ Int(cell.shape.vtk_type) for cell in mesh.cells ]
 
     return nothing
 end
