@@ -218,7 +218,7 @@ Plots a `mesh` using `PyPlot` backend. If `filename` is provided it writes a pdf
 
 `arrowscale    = 0.0` : Factor multiplied to `vectorfield` values
 
-`cmap          = nothing` : Colormap accrding to PyPlot
+`colormap      = nothing` : Colormap accrding to PyPlot
 
 `colorbarscale = 0.9` : Scale of color bar
 
@@ -258,7 +258,7 @@ function mplot(
                fieldlims        = (),
                vectorfield      = nothing,
                arrowscale       = 0.0,
-               cmap             = nothing,
+               colormap         = nothing,
                colorbarscale    = 0.9,
                colorbarlabel    = "",
                colorbarpad      = 0.0,
@@ -395,7 +395,7 @@ function mplot(
         end
     end
 
-    if cmap==nothing # cmap may be "bone", "plasma", "inferno", etc.
+    if colormap==nothing # colormap may be "bone", "plasma", "inferno", etc.
         #cm = colors.ListedColormap([(1,0,0),(0,1,0),(0,0,1)],256)
         #colors =  matplotlib.colors]
         #cm = matplotlib.colors].ListedColormap]([(1,0,0),(0,1,0),(0,0,1)],256)
@@ -405,6 +405,14 @@ function mplot(
                      "blue"  => [(0.0,  0.0, 0.0), (0.5, 0.7, 0.7), (1.0, 0.6, 0.6)])
 
         cmap = matplotlib.colors.LinearSegmentedColormap("my_colormap",cdict,256)
+    else
+        colormaps = matplotlib.pyplot.colormaps()
+        if colormap in colormaps
+            cmap = matplotlib.cm.get_cmap(colormap)
+        else
+            @error "mplot: Invalid colormap $colormap"
+            error("  colormap should be one of:\n", colormaps)
+        end
     end
 
     has_field = field != nothing
@@ -429,7 +437,7 @@ function mplot(
         # Plot line cells
         for i=1:ncells 
             cells[i].shape.family == LINE_SHAPE || continue # only line cells
-            con = cells[i]
+            con = connect[i]
             X = XYZ[con, 1]
             Y = XYZ[con, 2]
             Z = XYZ[con, 3]
@@ -490,6 +498,24 @@ function mplot(
 
 
     else
+
+        # Plot line cells
+        for i=1:ncells 
+            cells[i].shape.family == LINE_SHAPE || continue # only line cells
+            con = connect[i]
+            X = XYZ[con, 1]
+            Y = XYZ[con, 2]
+            c = "red"
+
+            if has_field
+                v = fvals[i]
+                c = (v-fieldlims[1])/(fieldlims[2]-fieldlims[1])
+                c = cmap(c)
+            end
+            plt.plot(X, Y, color=c, lw=1.0)
+        end
+
+
         all_patches = []
         for i=1:ncells
             shape = cells[i].shape
