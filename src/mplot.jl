@@ -441,7 +441,14 @@ function mplot(
             X = XYZ[con, 1]
             Y = XYZ[con, 2]
             Z = XYZ[con, 3]
-            plt.plot(X, Y, Z, color="red", lw=1.0)
+            color = "red"
+
+            if has_field
+                v = fvals[i]
+                idx = (v-fieldlims[1])/(fieldlims[2]-fieldlims[1])
+                color = cmap(idx)
+            end
+            plt.plot(X, Y, Z, color=color, lw=1.0)
         end
 
         # Plot main edges and surface cells
@@ -505,14 +512,14 @@ function mplot(
             con = connect[i]
             X = XYZ[con, 1]
             Y = XYZ[con, 2]
-            c = "red"
+            color = "red"
 
             if has_field
                 v = fvals[i]
-                c = (v-fieldlims[1])/(fieldlims[2]-fieldlims[1])
-                c = cmap(c)
+                idx = (v-fieldlims[1])/(fieldlims[2]-fieldlims[1])
+                color = cmap(idx)
             end
-            plt.plot(X, Y, color=c, lw=1.0)
+            plt.plot(X, Y, color=color, lw=1.0)
         end
 
 
