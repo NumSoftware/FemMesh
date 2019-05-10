@@ -385,6 +385,7 @@ function join_mesh!(m1::Mesh, m2::Mesh)
     return nothing
 end
 
+
 """
     Mesh(coords, conns, cellshapes=[])
 
@@ -399,7 +400,8 @@ end
 function Mesh(
               coords     :: Array{<:Real},
               conns      :: Array{Array{Int64,1},1},
-              cellshapes :: Array{ShapeType,1}=ShapeType[]
+              cellshapes :: Array{ShapeType,1}=ShapeType[];
+              tag        :: String=""
              )
     n = size(coords, 1) # number of points
     m = size(conns , 1) # number of cells
@@ -421,7 +423,7 @@ function Mesh(
         else
             shape = get_shape_from_ndim_npoints(length(pts), ndim)
         end
-        cell = Cell(shape, pts)
+        cell = Cell(shape, pts, tag=tag)
         push!(cells, cell)
     end
 
