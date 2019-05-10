@@ -62,6 +62,8 @@ end
 function plot_data_for_cell3d(points::Array{Array{Float64,1},1}, shape::ShapeType)
     if shape == LIN2
         verts = points
+    elseif shape == LIN3
+        verts = points[[1,3,2]]
     elseif shape in (TRI3, QUAD4)
         verts = points
     elseif shape == TRI6
@@ -288,10 +290,15 @@ function mplot(
         point_vector_data = Dict{String,Array}()
 
         # get surface cells and update
-        scells = get_surface(mesh.cells)  # TODO: add line cells
-        spoints = [ p for c in scells for p in c.points ]
-        pt_ids = [ p.id for p in spoints ]
+        scells = get_surface(mesh.cells)  
         oc_ids = [ c.ocell.id for c in scells ]
+        linecells = [ cell for cell in mesh.cells if cell.shape.family==LINE_SHAPE] # add line cells
+        append!(oc_ids, [c.id for c in linecells])
+        #@show linecells
+        #append!(scells, linecells)
+        newcells = [ scells; linecells ]
+        newpoints = [ p for c in newcells for p in c.points ]
+        pt_ids = [ p.id for p in newpoints ]
 
         # update data
         for (field, data) in mesh.point_scalar_data
@@ -305,8 +312,8 @@ function mplot(
         end
 
         # points and cells
-        points = spoints
-        cells  = scells
+        points = newpoints
+        cells  = newcells
 
         # connectivities
         id_dict = Dict{Int, Int}( p.id => i for (i,p) in enumerate(points) )
@@ -435,9 +442,22 @@ function mplot(
     # Plot cells
     if ndim==3
         # Plot line cells
+        all_verts  = []
+        lfvals = Float64[]
         for i=1:ncells 
-            cells[i].shape.family == LINE_SHAPE || continue # only line cells
+            shape = cells[i].shape
+            shape.family == LINE_SHAPE || continue # only line cells
             con = connect[i]
+            points = [ XYZ[i,1:3] for i in con ]
+            verts = plot_data_for_cell3d(points, shape)
+            push!(all_verts, verts)
+            if has_field
+                push!(lfvals, fvals[i])
+            end
+            continue
+
+
+            length(con)==3 && ( con = con[[1,3,2]] )
             X = XYZ[con, 1]
             Y = XYZ[con, 2]
             Z = XYZ[con, 3]
@@ -450,6 +470,12 @@ function mplot(
             end
             plt.plot(X, Y, Z, color=color, lw=1.0)
         end
+        cltn = @eval art3D[:Line3DCollection]($all_verts, cmap=$cmap, lw=1)
+        if has_field
+            cltn.set_array(lfvals)
+            cltn.set_clim(fieldlims)
+        end
+        ax.add_collection3d(cltn)
 
         # Plot main edges and surface cells
         all_verts  = []
@@ -467,7 +493,7 @@ function mplot(
         edgecolor = (0.3, 0.3, 0.3, 0.65)
 
         # Plot main edges
-        filename == "" || (mainedges = false)
+        filename == "" && (mainedges = false)
         if mainedges
             edges = get_main_edges(cells, edgeangle)
             θ, γ = (azim+0)*pi/180, elev*pi/180
@@ -494,14 +520,18 @@ function mplot(
 
             cltn.set_array(fvals)
             cltn.set_clim(fieldlims)
-            #cbar = plt.colorbar(cltn, label=field, shrink=0.9)
+        end
+        ax.add_collection3d(cltn)
+
+        # plot colorbar
+        if has_field
             cbar = plt.colorbar(cltn, label=colorbarlabel, shrink=colorbarscale, aspect=10*colorbarscale*figsize[2], format="%.1f", pad=colorbarpad)
             cbar.ax.tick_params(labelsize=7)
             cbar.outline.set_linewidth(0.0)
             cbar.locator = matplotlib.ticker.MaxNLocator(nbins=8)
             cbar.update_ticks()
+            cbar.solids.set_alpha(1)
         end
-        @eval $ax.add_collection3d($cltn)
 
 
     else

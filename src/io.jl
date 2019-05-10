@@ -31,7 +31,6 @@ function save_vtk(mesh::Mesh, filename::String; desc::String="")
     println(f, "CELLS ", ncells, " ", nconns)
     for cell in mesh.cells
         print(f, length(cell.points), " ")
-        #for id in cell
         for point in cell.points
             print(f, point.id-1, " ")
         end
