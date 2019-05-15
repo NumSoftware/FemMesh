@@ -128,8 +128,11 @@ end
 
 
 function Base.getindex(cells::Array{Cell,1}, filter_ex::Expr)
-    points = cells.points
+    # cells id must be set
+    points = unique(p->p.id, p for c in cells for p in c.points )
     pointmap = zeros(Int, maximum(point.id for point in points) )
+
+    @assert length(points)==length(pointmap)
 
     T = Bool[]
     for (i,point) in enumerate(points)
