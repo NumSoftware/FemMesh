@@ -81,15 +81,19 @@ function generate_joints!(mesh::Mesh; layers::Int64=2, verbose::Bool=true, tag="
 
     # Generate inner points at joints (used in hydromechanical analyses)
     if layers==3
+
+        inipointsdict = Dict{UInt64,Point}( hash(p)=>p for p in mesh.points )
         for jcell in jcells
             npts = div(length(jcell.points),2) # number of points in one side
             side_pts = jcell.points[1:npts]
             for p in side_pts
-                newp = Point(p.x, p.y, p.z)
+                newp = get(inipointsdict, hash(p), Point(p.x, p.y, p.z) )
                 push!(newpoints, newp)
                 push!(jcell.points, newp)
             end
+
         end
+
     end
 
     # Fix JOINT1D_SHAPE cells connectivities
