@@ -104,3 +104,7 @@ function Base.getindex(points::Array{Point,1}, filter_ex::Expr)
     return R
 end
 
+function Base.getindex(points::Array{Point,1}, tag::String) 
+    return Point[ p for p in points if p.tag==tag ]
+end
+

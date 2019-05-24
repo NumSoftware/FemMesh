@@ -19,7 +19,7 @@ function joint_shape(shape::ShapeType)
 end
 
 # Adds joint cells over all shared faces
-function generate_joints!(mesh::Mesh; layers::Int64=2, verbose::Bool=true, tag="")
+function generate_joints!(mesh::Mesh; layers::Int64=2, verbose::Bool=true, tag="", midpointstag="")
 
     verbose && printstyled("Mesh generation of joint elements:\n", bold=true, color=:cyan)
     cells  = mesh.cells
@@ -82,14 +82,22 @@ function generate_joints!(mesh::Mesh; layers::Int64=2, verbose::Bool=true, tag="
     # Generate inner points at joints (used in hydromechanical analyses)
     if layers==3
 
-        inipointsdict = Dict{UInt64,Point}( hash(p)=>p for p in mesh.points )
+        auxpointdict = Dict{UInt64,Point}()
+
         for jcell in jcells
             npts = div(length(jcell.points),2) # number of points in one side
             side_pts = jcell.points[1:npts]
             for p in side_pts
-                newp = get(inipointsdict, hash(p), Point(p.x, p.y, p.z) )
-                push!(newpoints, newp)
-                push!(jcell.points, newp)
+                hs = hash(p)
+                if haskey(auxpointdict, hs)
+                    newp = auxpointdict[hs]
+                    push!(jcell.points, newp)
+                else
+                    newp = Point(p.x, p.y, p.z, tag=midpointstag)
+                    auxpointdict[hs] = newp
+                    push!(newpoints, newp)
+                    push!(jcell.points, newp)
+                end
             end
 
         end
