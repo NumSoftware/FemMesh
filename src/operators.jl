@@ -158,7 +158,8 @@ function array(bl::AbstractBlock; nx=1, ny=1, nz=1, dx=0.0, dy=0.0, dz=0.0)
         for j=0:ny-1
             for i=0:nx-1
                 i==j==k==0 && continue
-                cp = copy(bl, dx=i*dx, dy=j*dy, dz=k*dz)
+                cp = copy(bl)
+                move!(cp, dx=i*dx, dy=j*dy, dz=k*dz)
                 push!(blocks, cp)
             end
         end
