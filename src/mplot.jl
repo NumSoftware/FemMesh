@@ -364,7 +364,10 @@ function mplot(
     # Configure plot
     if ndim==3
         ax = @eval Axes3D(figure())
-        ax.set_aspect("equal")
+        try
+            ax.set_aspect("equal")
+        catch err
+        end
         
         # Set limits
         meanX = mean(limX)
