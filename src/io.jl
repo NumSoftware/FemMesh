@@ -60,7 +60,7 @@ function save_vtk(mesh::Mesh, filename::String; desc::String="")
                 dtype = eltype(D)<:Integer ? "int" : "float64"
                 println(f, "VECTORS ", "$field $dtype")
                 for i=1:npoints
-                    @printf f "%23.15e %23.15e %23.15e \n" D[i,1] D[i,2] D[i,3]
+                    @printf f "%23.15e %23.15e %23.15e \n" Float32(D[i,1]) Float32(D[i,2]) Float32(D[i,3])
                 end
             end
         end
@@ -73,7 +73,7 @@ function save_vtk(mesh::Mesh, filename::String; desc::String="")
                 println(f, "LOOKUP_TABLE default")
                 if dtype=="float64"
                     for i=1:npoints
-                        @printf f "%23.10e" D[i]
+                        @printf f "%23.10e" Float32(D[i])
                     end
                 else
                     for i=1:npoints
@@ -95,7 +95,7 @@ function save_vtk(mesh::Mesh, filename::String; desc::String="")
             println(f, "LOOKUP_TABLE default")
             if dtype=="float64"
                 for i=1:ncells
-                    @printf f "%23.10e" D[i]
+                    @printf f "%23.10e" Float32(D[i])
                 end
             else
                 for i=1:ncells
