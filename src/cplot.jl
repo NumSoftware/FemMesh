@@ -1,6 +1,9 @@
 using PyCall
-function cplot(X, Y, filename=""; xlabel="\$x\$", ylabel="\$y\$", lw=0.7, ms=2, marker=nothing, color="", legend=[], legendloc="best",
-               xbins=6, ybins=6, grid=false, figsize=(3,2), legendexpand=false, ncol=0)
+function cplot(X, Y, filename=""; xlabel="\$x\$", ylabel="\$y\$", lw=0.7, ls="-", ms=2, marker=nothing, color="", legend=[], legendloc="best",
+               xbins=6, ybins=6, grid=false, figsize=(3,2), legendexpand=false, ncol=0, 
+               xmin=NaN, xmax=NaN,
+               ymin=NaN, ymax=NaN,
+               fontsize=7, legendfontsize=0, labelspacing=0.5)
 
     @eval import PyPlot:plt, matplotlib, figure
 
@@ -38,21 +41,22 @@ function cplot(X, Y, filename=""; xlabel="\$x\$", ylabel="\$y\$", lw=0.7, ms=2, 
     xlabel, ylabel = labels
 
     # Configure plot
-    plt[:close]("all")
+    plt.close("all")
 
-    plt[:rc]("font", family="STIXGeneral", size=7)
-    plt[:rc]("mathtext", fontset="cm")
-    plt[:rc]("lines", scale_dashes=true)
+    plt.rc("font", family="STIXGeneral", size=fontsize)
+    plt.rc("mathtext", fontset="cm")
+    plt.rc("lines", scale_dashes=true)
 
     if filename!=""
-        plt[:ioff]()
-        plt[:rc]("xtick", labelsize=7)
-        plt[:rc]("ytick", labelsize=7)
-        plt[:rc]("lines", lw=lw)
-        plt[:rc]("lines", markersize=2)
-        plt[:rc]("axes" , linewidth=0.5)
-        plt[:rc]("figure", figsize=(3, 2))
-        plt[:rc]("legend", fontsize=7)
+        plt.ioff()
+        plt.rc("xtick", labelsize=7)
+        plt.rc("ytick", labelsize=7)
+        plt.rc("lines", lw=0.7)
+        plt.rc("lines", markersize=2)
+        plt.rc("axes" , linewidth=0.5)
+        plt.rc("figure", figsize=(3, 2))
+        legendfontsize==0 && (legendfontsize=fontsize)
+        plt.rc("legend", fontsize=legendfontsize)
     end
 
     # Convert amtrices to array of vectors
@@ -81,6 +85,18 @@ function cplot(X, Y, filename=""; xlabel="\$x\$", ylabel="\$y\$", lw=0.7, ms=2, 
     end
     @assert length(ms)==m
 
+    # Fix line widths - lw
+    if typeof(lw) <: Real
+        lw = repeat([lw], m)
+    end
+    @assert length(lw)==m
+
+    # Fix line styles - ls
+    if typeof(ls)==String
+        ls = repeat([ls], m)
+    end
+    @assert length(ls)==m
+
     # Fix line colors
     if typeof(color)==String
         if color==""
@@ -101,17 +117,21 @@ function cplot(X, Y, filename=""; xlabel="\$x\$", ylabel="\$y\$", lw=0.7, ms=2, 
 
     # Plot curves
     for i=1:m
-        plt[:plot](X[i], Y[i], marker=marker[i], ms=ms[i], color=color[i], lw=lw, label=legend[i])
+        plt.plot(X[i], Y[i], marker=marker[i], ms=ms[i], color=color[i], lw=lw[i], ls=ls[i], label=legend[i])
     end
 
-    grid && plt[:grid]( color="lightgrey", ls="dotted", lw=0.3)
-    ax = plt[:axes]()
-    plt[:locator_params](axis="x", nbins=xbins)
-    plt[:locator_params](axis="y", nbins=ybins)
+    grid && plt.grid( color="lightgrey", ls="dotted", lw=0.3)
+    ax = plt.axes()
+    plt.locator_params(axis="x", nbins=xbins)
+    plt.locator_params(axis="y", nbins=ybins)
+
+    # Set limits
+    !isnan(xmax) && plt.xlim(right=xmax)
+    !isnan(ymax) && plt.ylim(top=ymax)
 
     # Print axes labels
-    plt[:xlabel](xlabel)
-    plt[:ylabel](ylabel)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
 
     # plot legend
     if haslegend
@@ -119,25 +139,25 @@ function cplot(X, Y, filename=""; xlabel="\$x\$", ylabel="\$y\$", lw=0.7, ms=2, 
         ncol = ncol==0 ? m : ncol
 
         if legendloc=="top"
-            leg = plt[:legend](loc="lower left", bbox_to_anchor=(-0.02, 1.01, 1.04, 0.2), edgecolor="k", ncol=ncol, mode=mode)
+            leg = plt.legend(loc="lower left", bbox_to_anchor=(-0.02, 1.01, 1.04, 0.2), edgecolor="k", ncol=ncol, mode=mode)
         elseif legendloc=="right"
-            leg = plt[:legend](loc="upper left", bbox_to_anchor=(1.01, 1), edgecolor="k")
+            leg = plt.legend(loc="upper left", bbox_to_anchor=(1.01, 1), edgecolor="k")
         elseif legendloc=="bottom"
-            leg = plt[:legend](loc="upper left", bbox_to_anchor=(-0.02, -0.02, 1.04, -0.2), edgecolor="k", ncol=ncol, mode=mode)
+            leg = plt.legend(loc="upper left", bbox_to_anchor=(-0.02, -0.02, 1.04, -0.2), edgecolor="k", ncol=ncol, mode=mode)
         else
-            leg = plt[:legend](loc=legendloc, edgecolor="k")
+            leg = plt.legend(loc=legendloc, edgecolor="k", labelspacing=labelspacing)
         end
 
-        frame = leg[:get_frame]()
-        frame[:set_linewidth](0.5)
+        frame = leg.get_frame()
+        frame.set_linewidth(0.5)
     end
 
     # show or save plot
     if filename==""
-        plt[:show]()
+        plt.show()
     else
-        plt[:savefig](filename, bbox_inches="tight", pad_inches=0.01, format="pdf")
+        plt.savefig(filename, bbox_inches="tight", pad_inches=0.01, format="pdf")
     end
 
-    plt[:close]("all")
+    plt.close("all")
 end
