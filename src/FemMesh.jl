@@ -60,6 +60,9 @@ include("block.jl")
 include("block_inset.jl")
 export Block, Block2D, Block3D, BlockTruss, BlockCoords, BlockCylinder
 
+include("h_refine.jl")
+export hrefine
+
 include("operators.jl")
 export move!, array, copy, mirror, rotate!, polar, rollaxes!, scale!
 
