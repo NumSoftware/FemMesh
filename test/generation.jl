@@ -121,4 +121,35 @@ mesh = Mesh("out.vtk")
 TR = @test length(mesh.cells[:lines]) == 8
 println(TR)
 
+printstyled("\nMesh generation of joint cells\n", color=:blue, bold=true)
+
+bl  = Block( [0 0; 1 1], nx=4, ny=4, cellshape=TRI3)
+bli = BlockInset( [ 0 0; 1 1] )
+mesh = Mesh(bl, bli)
+mesh = generate_joints!(mesh)
+@test length(mesh.cells) == 80
+
+bl  = Block( [0 0; 1 1], nx=4, ny=4, cellshape=QUAD8)
+bli = BlockInset( [ 0 0; 1 1] )
+mesh = Mesh(bl, bli)
+mesh = generate_joints!(mesh)
+@test length(mesh.points) == 137
+@test length(mesh.cells) == 48
+
+bl  = Block( [0 0; 1 1], nx=4, ny=4, cellshape=QUAD8)
+bli = BlockInset( [ 0 0; 1 1] )
+mesh = Mesh(bl, bli)
+mesh = generate_joints!(mesh, layers=3)
+@test length(mesh.points) == 158
+@test length(mesh.cells) == 48
+
+bl  = Block( [0 0 0; 1.0 2.0 1.0], nx=2, ny=4, nz=2, cellshape=TET4)
+bli = BlockInset( [0 0 0; 1.0 2.0 1.0] )
+mesh = Mesh(bl, bli)
+mesh = generate_joints!(mesh)
+save(mesh, "out.vtk")
+mesh = Mesh("out.vtk")
+#save(mesh, "out.vtk")
+@test length(mesh.cells) == 264
+
 rm("out.vtk")

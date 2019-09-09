@@ -24,17 +24,16 @@ mutable struct Cell<:AbstractCell
     crossed::Bool                 # flag if cell crossed by linear inclusion
     ocell  ::Union{AbstractCell,Nothing}     # owner cell if this cell is a face/edge
     nips   ::Int                  # number of integration points if required
-    iptag  ::String # tag for integration points if required
     linked_cells::Array{Cell,1}   # neighbor cells in case of joint cell
-    function Cell(shape::ShapeType, points::Array{Point,1}; tag::String="", ocell=nothing)
+    function Cell(shape::ShapeType, points::Array{Point,1}; tag::String="", ocell=nothing, nips=0)
         this = new(shape, points, tag, -1)
         this.ndim = 0
         this.quality = 0.0
         this.embedded= false
         this.crossed = false
         this.ocell   = ocell
-        this.nips  = 0
-        this.iptag = ""
+        this.nips = nips != 0 ? get(shape.quadrature, nips, -1) : 0
+        this.nips >= 0 || error("Cell: integ. points number ($nips) not available for ShapeType $(shape.name)")
         this.linked_cells = []
         return this
     end
@@ -144,21 +143,13 @@ function tag!(object::Union{Point, Cell}, tag::String)
     object.tag = tag
 end
 
+
 function tag!(arr::Array{T,1}, tag::String) where T<:Union{Point,Cell}
     for obj in arr
         obj.tag = tag
     end
 end
 
-function iptag!(object::Cell, tag::String)
-    object.iptag = tag
-end
-
-function iptag!(arr::Array{Cell,1}, tag::String)
-    for obj in arr
-        obj.iptag = tag
-    end
-end
 
 # Gets the coordinates of a bounding box for an array of points
 function bounding_box(points::Array{Point,1})
@@ -175,10 +166,12 @@ function bounding_box(points::Array{Point,1})
     return [ minx miny minz; maxx maxy maxz ]
 end
 
+
 # Gets the coordinates of a bounding box for a cell
 function bounding_box(cell::Cell)
     return bounding_box(cell.points)
 end
+
 
 # Gets the coordinates of a bounding box for an array of cells
 function bounding_box(cells::Array{Cell,1})
@@ -208,6 +201,7 @@ function get_faces(cell::AbstractCell)
 
     return faces
 end
+
 
 # gets all edges of a cell
 function get_edges(cell::Cell)
@@ -244,6 +238,7 @@ function norm2(J::Array{Float64,2})
     error("No rule to calculate norm2 of a $r x $c matrix")
 end
 
+
 # Returns the volume/area/length of a cell, returns zero if jacobian<=0 at any ip
 function cell_extent(c::Cell)
     IP = get_ip_coords(c.shape)
@@ -272,6 +267,7 @@ function cell_extent(c::Cell)
     end
     return vol
 end
+
 
 # Returns the surface/perimeter of a regular element given the volume/area of a cell
 function regular_surface(metric::Float64, shape::ShapeType)
@@ -307,6 +303,7 @@ function regular_surface(metric::Float64, shape::ShapeType)
     end
     error("No regular surface/perimeter value for shape $(get_name(shape))")
 end
+
 
 # Returns the area/volume of a regular element given the perimeter/surface
 function regular_vol(metric::Float64, shape::ShapeType)

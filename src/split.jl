@@ -85,9 +85,10 @@ function generate_joints!(mesh::Mesh; layers::Int64=2, verbose::Bool=true, tag="
         auxpointdict = Dict{UInt64,Point}()
 
         for jcell in jcells
-            npts = div(length(jcell.points),2) # number of points in one side
-            side_pts = jcell.points[1:npts]
-            for p in side_pts
+            npts = jcell.shape.basic_shape.npoints
+            #npts = div(length(jcell.points),2) # number of points in one side
+            sample_pts = jcell.points[1:npts]
+            for p in sample_pts
                 hs = hash(p)
                 if haskey(auxpointdict, hs)
                     newp = auxpointdict[hs]

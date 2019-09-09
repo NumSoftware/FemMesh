@@ -2,7 +2,7 @@
 
 
 #Base.copy(p::Point) = Point(p.x, p.y, p.z, p.tag)
-Base.copy(c::Cell)  = Cell(c.shape, c.points, tag=c.tag, ocell=c.ocell)
+Base.copy(c::Cell)  = Cell(c.shape, c.points, tag=c.tag, ocell=c.ocell, nips=c.nips)
 
 function Base.copy(bls::Array{<:AbstractBlock,1})
     return [ copy(obj) for obj in bls ]

@@ -559,6 +559,8 @@ function Mesh(filename::String; verbose::Bool=true, format::String="", reorder::
     elseif format=="tetgen"
         verbose && print("  Reading tetgen output files...\n")
         mesh = read_tetgen(filename)
+    else
+        error("Could not read $format format file")
     end
 
     # Reorder nodal numbering

@@ -1,4 +1,49 @@
 using PyCall
+
+export newfig
+function newfig(; xlabel="\$x\$", ylabel="\$y\$", lw=0.7, ms=2, legendloc="best",
+               xbins=6, ybins=6, grid=false, figsize=(3,2), legendexpand=false, ncol=0, 
+               xmin=NaN, xmax=NaN, ymin=NaN, ymax=NaN,
+               fontsize=7, legendfontsize=0, labelspacing=0.5)
+
+    @eval import PyPlot:plt
+
+    # Configure plot
+    plt.close("all")
+
+    plt.rc("font", family="STIXGeneral", size=fontsize)
+    plt.rc("mathtext", fontset="cm")
+    plt.rc("lines", scale_dashes=true)
+
+    #if filename!=""
+        plt.ioff()
+        plt.rc("xtick", labelsize=7)
+        plt.rc("ytick", labelsize=7)
+        plt.rc("lines", lw=0.7)
+        plt.rc("lines", markersize=2)
+        plt.rc("axes" , linewidth=0.5)
+        plt.rc("figure", figsize=(3, 2))
+        legendfontsize==0 && (legendfontsize=fontsize)
+        plt.rc("legend", fontsize=legendfontsize)
+    #end
+
+    grid && plt.grid( color="lightgrey", ls="dotted", lw=0.3)
+    ax = plt.axes()
+    plt.locator_params(axis="x", nbins=xbins)
+    plt.locator_params(axis="y", nbins=ybins)
+
+    # Set limits
+    !isnan(xmax) && plt.xlim(right=xmax)
+    !isnan(ymax) && plt.ylim(top=ymax)
+
+    # Print axes labels
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+
+    return nothing
+end
+
+
 function cplot(X, Y, filename=""; xlabel="\$x\$", ylabel="\$y\$", lw=0.7, ls="-", ms=2, marker=nothing, color="", legend=[], legendloc="best",
                xbins=6, ybins=6, grid=false, figsize=(3,2), legendexpand=false, ncol=0, 
                xmin=NaN, xmax=NaN,

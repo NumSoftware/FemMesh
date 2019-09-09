@@ -465,21 +465,28 @@ Subarrays of these type of objects are also supported.
 
 # Keyword arguments
 
-`verbose   = true` : If true, provide information of the resulting mesh
-
 `genfacets = true` : If true, generates facet cells
 
 `genedges  = true` : If true, generates edge cells
 
 `reorder   = true` : If true, reorder nodes numbering
+
+`verbose   = false` : If true, prints extra information
+
+`silent    = false` : If true, does not print anything
 """
 function Mesh(
               items     :: Union{Mesh, AbstractBlock, Array{<:Union{AbstractBlock, Array},1}}...; 
-              verbose   :: Bool = true,
               genfacets :: Bool = true,
               genedges  :: Bool = true,
-              reorder   :: Bool = true
+              reorder   :: Bool = true,
+              verbose   :: Bool = false,
+              silent    :: Bool = false,
              )
+
+    verbosity = 1
+    verbose && (verbosity=2)
+    silent && (verbosity=0)
 
     # Flatten items list
     fitems = flatten(items)
@@ -500,7 +507,7 @@ function Mesh(
     nmeshes = length(meshes)
     nblocks = length(blocks)
     if verbose
-        printstyled("Mesh generation:\n", bold=true, color=:cyan)
+        verbosity>0 && printstyled("Mesh generation:\n", bold=true, color=:cyan)
         nmeshes>0 && @printf "  %5d meshes\n" nmeshes
         @printf "  %5d blocks\n" nblocks
     end
@@ -517,7 +524,7 @@ function Mesh(
     for (i,b) in enumerate(blocks)
         b.id = i
         split_block(b, mesh)
-        verbose && print("  spliting block ", i, "...    \r")
+        verbosity>1 && print("  spliting block ", i, "...    \r")
     end
 
     # Updates numbering, quality, facets and edges
@@ -525,18 +532,20 @@ function Mesh(
 
     # Reorder nodal numbering
     if reorder
-        verbose && print("  reordering points...             \r")
+        verbosity>1 && print("  reordering points...             \r")
         reorder!(mesh)
     end
 
-    if verbose
+    if verbosity>0
         npoints = length(mesh.points)
         ncells  = length(mesh.cells)
-        nfaces  = length(mesh.faces)
-        nedges  = length(mesh.edges)
         @printf "  %4dd mesh                             \n" mesh.ndim
         @printf "  %5d points\n" npoints
         @printf "  %5d cells\n" ncells
+    end
+    if verbosity>1
+        nfaces  = length(mesh.faces)
+        nedges  = length(mesh.edges)
         if genfacets
             @printf "  %5d faces\n" nfaces
         end
@@ -550,7 +559,6 @@ function Mesh(
         if icount>0
             @printf "  %5d intersections\n" icount
         end
-        println("  done.")
     end
 
     return mesh

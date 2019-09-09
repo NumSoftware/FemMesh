@@ -12,8 +12,8 @@ for (shape, npoints) in [ (:LIN2,4), (:LIN3,6), (:LIN4, 8), (:TRI3,6), (:QUAD4,8
         const $j2shape    = $makefunc()
         $j2shape.name     = $name
         $j2shape.family   = JOINT_SHAPE
-        $j2shape.npoints  = $npoints
-        $j2shape.basic_shape = $shape
+        $j2shape.npoints  = $shape.npoints*2
+        $j2shape.basic_shape = $shape.basic_shape
         $j2shape.vtk_type    = VTK_POLY_VERTEX
         $j2shape.facet_idxs  = []
         $j2shape.edge_idxs   = []
@@ -27,7 +27,7 @@ end
 # Three-layered joint shapes: J3LIN2, J3LIN3, J3LIN4, J3TRI3, J3QUAD4, J3TRI6, J3QUAD8
 # ====================================================================================
 
-for (shape, npoints) in [ (:LIN2,6), (:LIN3,9), (:LIN4, 8), (:TRI3,9), (:QUAD4,12), (:TRI6,18), (:QUAD8,24) ] 
+for (shape, npoints) in [ (:LIN2,6), (:LIN3,8), (:LIN4, 10), (:TRI3,9), (:QUAD4,12), (:TRI6,15), (:QUAD8,20) ] 
     # construction is based on modification of basic shapes
     name = "J3$shape"
     makefunc = Symbol("Make$shape")
@@ -37,8 +37,8 @@ for (shape, npoints) in [ (:LIN2,6), (:LIN3,9), (:LIN4, 8), (:TRI3,9), (:QUAD4,1
         const $j3shape    = $makefunc()
         $j3shape.name     = $name
         $j3shape.family   = JOINT_SHAPE
-        $j3shape.npoints  = $npoints
-        $j3shape.basic_shape = $shape
+        $j3shape.npoints  = $shape.npoints*2 + $shape.basic_shape.npoints
+        $j3shape.basic_shape = $shape.basic_shape
         $j3shape.vtk_type    = VTK_POLY_VERTEX
         $j3shape.facet_idxs  = []
         $j3shape.edge_idxs   = []

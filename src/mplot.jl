@@ -294,8 +294,6 @@ function mplot(
         oc_ids = [ c.ocell.id for c in scells ]
         linecells = [ cell for cell in mesh.cells if cell.shape.family==LINE_SHAPE] # add line cells
         append!(oc_ids, [c.id for c in linecells])
-        #@show linecells
-        #append!(scells, linecells)
         newcells = [ scells; linecells ]
         newpoints = [ p for c in newcells for p in c.points ]
         pt_ids = [ p.id for p in newpoints ]
@@ -390,8 +388,10 @@ function mplot(
             ax.set_axis_off()
         end
     else
-        ax = plt.gca()
-        plt.axes().set_aspect("equal", "datalim")
+        #ax = plt.gca()
+        #plt.axes().set_aspect("equal", "datalim")
+        ax = plt.axes()
+        ax.set_aspect("equal", "datalim")
 
         # Set limits
         ax.set_xlim(limX[1], limX[2])
@@ -648,9 +648,8 @@ function mplot(
     if isdefined(Main, :IJulia) && Main.IJulia.inited
         return
     end
-    if !leaveopen && filename=="" # only close if not saving to file
-        plt.close("all")
-    end
+
+    leaveopen || plt.close("all")
 
     return
 
@@ -661,11 +660,4 @@ end
 #
 #$(SIGNATURES)
 #
-#where `x` and `y` should both be positive.
-#
- #Details
-#
-#Some details about `func`...
-#""" mplot
-#
-
+#where `x` and `y`

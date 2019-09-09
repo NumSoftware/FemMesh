@@ -2,4 +2,5 @@
 *.dat
 *.datt
 *.bk.jl
+*.cov
 docs/build/

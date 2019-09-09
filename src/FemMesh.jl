@@ -46,7 +46,7 @@ include("point.jl")
 export Point, Cell, hash, get_x, get_y, get_z
 include("cell.jl")
 export getcoords, get_point, get_points, get_faces, get_patches, cell_extent, cell_quality
-export tag!, iptag!, update!
+export tag!, update!
 include("partition.jl")
 
 #include("ugrid.jl")
@@ -60,7 +60,7 @@ include("block.jl")
 include("block_inset.jl")
 export Block, Block2D, Block3D, BlockTruss, BlockCoords, BlockCylinder
 
-include("h_refine.jl")
+include("refine.jl")
 export hrefine
 
 include("operators.jl")
