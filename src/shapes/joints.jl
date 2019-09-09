@@ -2,7 +2,7 @@
 # Conventional (two-layered) joint shapes: JLIN2, JLIN3, JLIN4, JTRI3, JQUAD4, JTRI6, JQUAD8
 # ==========================================================================================
 
-for (shape, npoints) in [ (:LIN2,4), (:LIN3,6), (:LIN4, 8), (:TRI3,6), (:QUAD4,8), (:TRI6,12), (:QUAD8,16) ] 
+for shape in [ :LIN2, :LIN3, :LIN4, :TRI3, :QUAD4, :TRI6, :QUAD8 ] 
     # construction is based on modification of basic shapes
     name = "J$shape"
     makefunc = Symbol("Make$shape")
@@ -27,7 +27,7 @@ end
 # Three-layered joint shapes: J3LIN2, J3LIN3, J3LIN4, J3TRI3, J3QUAD4, J3TRI6, J3QUAD8
 # ====================================================================================
 
-for (shape, npoints) in [ (:LIN2,6), (:LIN3,8), (:LIN4, 10), (:TRI3,9), (:QUAD4,12), (:TRI6,15), (:QUAD8,20) ] 
+for shape in [ :LIN2, :LIN3, :LIN4, :TRI3, :QUAD4, :TRI6, :QUAD8 ] 
     # construction is based on modification of basic shapes
     name = "J3$shape"
     makefunc = Symbol("Make$shape")
