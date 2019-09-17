@@ -24,6 +24,10 @@ for shape in [ :LIN2, :LIN3, :LIN4, :TRI3, :QUAD4, :TRI6, :QUAD8 ]
     eval(ex)
 end
 
+# fix default quadrature for JTRI3
+JTRI3.quadrature[0] = TRI_IP3
+
+
 # Three-layered joint shapes: J3LIN2, J3LIN3, J3LIN4, J3TRI3, J3QUAD4, J3TRI6, J3QUAD8
 # ====================================================================================
 
@@ -48,6 +52,10 @@ for shape in [ :LIN2, :LIN3, :LIN4, :TRI3, :QUAD4, :TRI6, :QUAD8 ]
 
     eval(ex)
 end
+
+# fix default quadrature for JTRI3
+J3TRI3.quadrature[0] = TRI_IP3
+
 
 
 # JLINK2 shape
