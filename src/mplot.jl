@@ -582,7 +582,7 @@ function mplot(
         if has_field
             cltn.set_array(fvals)
             cltn.set_clim(fieldlims)
-            cbar = plt.colorbar(cltn, label=colorbarlabel, shrink=colorbarscale, aspect=0.9*20*colorbarscale, format="%.1f", location=colorbarlocation)
+            cbar = plt.colorbar(cltn, label=colorbarlabel, shrink=colorbarscale, aspect=0.9*20*colorbarscale, format="%.1f")
             cbar.ax.tick_params(labelsize=7)
             cbar.outline.set_linewidth(0.0)
             cbar.locator = matplotlib.ticker.MaxNLocator(nbins=8)
