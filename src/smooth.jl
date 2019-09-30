@@ -621,6 +621,15 @@ function find_disps(mesh::Mesh, patches)
 end
 
 
+function str_histogram(hist::Array{Int64,1})
+    m = maximum(hist)
+    H = round.(Int, hist./m*7)
+    #@show H
+    chars = [" ","_","▁","▂","▃","▄","▅","▆","▇","█"]
+    return "["*join( hist[i]==0 ? " " : chars[H[i]+2] for i=1:length(H) )*"]"
+end
+
+
 export smooth2!
 function smooth2!(mesh::Mesh; verbose=true, alpha::Float64=1.0, target::Float64=0.97, 
                  fixed::Bool=false, maxit::Int64=30, mintol::Float64=1e-3, tol::Float64=1e-4, 
@@ -682,10 +691,10 @@ function smooth2!(mesh::Mesh; verbose=true, alpha::Float64=1.0, target::Float64=
     hist  = fit(Histogram, Q, 0.0:bin:1.0, closed=:right).weights
     push!(hists, OrderedDict(Symbol(r) => v for (r,v) in zip(0.0:bin:1-bin,hist)))
 
-    verbose && @printf("%4s  %5s  %5s  %5s  %5s  %5s  %5s  %7s  %9s  %10s\n", "it", "qmin", "q1", "q2", "q3", "qmax", "qavg", "sdev", "time", "histogram (0.0:$bin:1.0]")
+    verbose && @printf("%4s  %5s  %5s  %5s  %5s  %5s  %5s  %7s  %9s  %10s\n", "it", "qmin", "q1", "q2", "q3", "qmax", "qavg", "sdev", "time", "histogram (0:$bin:1]")
     verbose && @printf("%4d  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %7.5f  %9s", 0, qmin, q1, q2, q3, qmax, q, dev, "-")
     #verbose && println("  ", fit(Histogram, Q, 0.3:0.05:1.0, closed=:right).weights)
-    verbose && println("  ", fit(Histogram, Q, 0.0:bin:1.0, closed=:right).weights)
+    verbose && println("  ", str_histogram(hist))
 
     nits = 0
     t0 = time()
@@ -789,7 +798,7 @@ function smooth2!(mesh::Mesh; verbose=true, alpha::Float64=1.0, target::Float64=
 
         verbose && @printf("%4d  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %7.5f  %9s", i, qmin, q1, q2, q3, qmax, q, dev, see(sw, format=:ms))
         #verbose && println("  ", fit(Histogram, Q, 0.3:0.05:1.0, closed=:right).weights)
-        verbose && println("  ", fit(Histogram, Q, 0.0:bin:1.0, closed=:right).weights)
+        verbose && println("  ", str_histogram(hist))
 
         #Δqmin<0.0 && break
 
@@ -813,7 +822,7 @@ end
 
 
 function smooth!(mesh::Mesh; verbose=true, alpha::Float64=1.0, target::Float64=0.97, 
-                 fixed::Bool=false, maxit::Int64=30, mintol::Float64=1e-3, tol::Float64=1e-4, 
+                 fixed::Bool=false, maxit::Int64=10, mintol::Float64=2e-2, tol::Float64=1e-3, 
                  facetol=1e-4, savesteps::Bool=false, savedata::Bool=false, bin::Float64=0.05,
                  filekey::String="smooth", conds=nothing, extended=false, smart=false)
 
@@ -852,10 +861,11 @@ function smooth!(mesh::Mesh; verbose=true, alpha::Float64=1.0, target::Float64=0
     hist  = fit(Histogram, Q, 0.0:bin:1.0, closed=:right).weights
     push!(hists, OrderedDict(Symbol(r) => v for (r,v) in zip(0.0:bin:1-bin,hist)))
 
-    verbose && @printf("%4s  %5s  %5s  %5s  %5s  %5s  %5s  %7s  %9s  %10s\n", "it", "qmin", "q1", "q2", "q3", "qmax", "qavg", "sdev", "time", "histogram (0.0:$bin:1.0]")
+    verbose && @printf("%4s  %5s  %5s  %5s  %5s  %5s  %5s  %7s  %9s  %10s\n", "it", "qmin", "q1", "q2", "q3", "qmax", "qavg", "sdev", "time", "histogram (0:$bin:1]")
     verbose && @printf("%4d  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %7.5f  %9s", 0, qmin, q1, q2, q3, qmax, q, dev, "-")
     #verbose && println("  ", fit(Histogram, Q, 0.3:0.05:1.0, closed=:right).weights)
-    verbose && println("  ", fit(Histogram, Q, 0.0:bin:1.0, closed=:right).weights)
+    verbose && println("  ", str_histogram(hist))
+
 
     # Lagrange multipliers matrix
     A   = mountA(mesh, fixed, conds, facetol) 
@@ -971,7 +981,8 @@ function smooth!(mesh::Mesh; verbose=true, alpha::Float64=1.0, target::Float64=0
 
         verbose && @printf("%4d  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %7.5f  %9s", i, qmin, q1, q2, q3, qmax, q, dev, see(sw, format=:ms))
         #verbose && println("  ", fit(Histogram, Q, 0.3:0.05:1.0, closed=:right).weights)
-        verbose && println("  ", fit(Histogram, Q, 0.0:bin:1.0, closed=:right).weights)
+        #verbose && println("  ", fit(Histogram, Q, 0.0:bin:1.0, closed=:right).weights)
+        verbose && println("  ", str_histogram(hist))
 
         #Δqmin<0.0 && break
 
@@ -1009,8 +1020,8 @@ laplacian_smooth!(mesh; maxit, verbose, mintol, tol, savesteps, savedata, fileke
 
 Smooths a finite element mesh using Laplacian smoothing (standard, weighted, smart).
 """
-function laplacian_smooth!(mesh::Mesh; maxit::Int64=20, verbose::Bool=true, 
-    mintol::Float64=1e-3, tol::Float64=1e-4, facetol::Float64=1e-5, 
+function laplacian_smooth!(mesh::Mesh; maxit::Int64=20, verbose::Bool=true, fixed=false,
+    mintol::Float64=1e-2, tol::Float64=1e-4, facetol::Float64=1e-5, 
     savesteps::Bool=false, savedata::Bool=false, bin::Float64=0.05,
     filekey::String="smooth", smart=false, weighted=false)
 
@@ -1071,10 +1082,10 @@ function laplacian_smooth!(mesh::Mesh; maxit::Int64=20, verbose::Bool=true,
     #verbose && @printf("  it: %2d  qmin: %7.5f  qavg: %7.5f  dev: %7.5f", 0, qmin, q, dev)
     #verbose && @printf("  it: %2d  q-range: %5.3f…%5.3f  qavg: %5.3f  dev: %7.5f", 0, qmin, qmax, q, dev)
     #verbose && println("  hist: ", fit(Histogram, Q, 0.5:bin:1.0, closed=:right).weights)
-    verbose && @printf("%4s  %5s  %5s  %5s  %5s  %5s  %5s  %7s  %9s  %10s\n", "it", "qmin", "q1", "q2", "q3", "qmax", "qavg", "sdev", "time", "histogram (0.0:$bin:1.0]")
+    verbose && @printf("%4s  %5s  %5s  %5s  %5s  %5s  %5s  %7s  %9s  %10s\n", "it", "qmin", "q1", "q2", "q3", "qmax", "qavg", "sdev", "time", "histogram (0:$bin:1]")
     verbose && @printf("%4d  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %7.5f  %9s", 0, qmin, q1, q2, q3, qmax, q, dev, "-")
     #verbose && println("  ", fit(Histogram, Q, 0.3:bin:1.0, closed=:right).weights)
-    verbose && println("  ", fit(Histogram, Q, 0.0:bin:1.0, closed=:right).weights)
+    verbose && println("  ", str_histogram(hist))
 
     # find center point and update point position
     for i=1:maxit
@@ -1086,6 +1097,7 @@ function laplacian_smooth!(mesh::Mesh; maxit::Int64=20, verbose::Bool=true,
 
             # skip surface nodes over non-flat locations
             if in_border[id] 
+                fixed && continue # skip if fixed boundary
                 node = border_nodes[ map_pn[id] ]
                 normals = node.normals
                 nnorm   = length(normals)
@@ -1179,7 +1191,7 @@ function laplacian_smooth!(mesh::Mesh; maxit::Int64=20, verbose::Bool=true,
 
         verbose && @printf("%4d  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %7.5f  %9s", i, qmin, q1, q2, q3, qmax, q, dev, see(sw, format=:ms))
         #verbose && println("  ", fit(Histogram, Q, 0.3:bin:1.0, closed=:right).weights)
-        verbose && println("  ", fit(Histogram, Q, 0.0:bin:1.0, closed=:right).weights)
+        verbose && println("  ", str_histogram(hist))
 
         #Δqmin<0.0 && break
 
