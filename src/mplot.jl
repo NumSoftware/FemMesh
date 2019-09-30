@@ -135,11 +135,11 @@ end
 function get_main_edges(cells::Array{Cell,1}, angle=30)
     edge_dict  = Dict{UInt64,Cell}()
     faces_dict = Dict{UInt64,Int}( hash(f)=>i for (i,f) in enumerate(cells) )
-    get_main_edges = Cell[]
+    main_edges = Cell[]
     # Get faces normals
     normals = [ get_facet_normal(f) for f in cells ]
 
-    # Get only edges with almost coplanar adjacent planes
+    # Get edges with non-coplanar adjacent faces
     for face in cells
         face.shape.family == SOLID_SHAPE || continue # only surface cells
         face_idx = faces_dict[hash(face)]
@@ -154,12 +154,12 @@ function get_main_edges(cells::Array{Cell,1}, angle=30)
                 face0_idx = faces_dict[hash(edge0.ocell)]
                 n2 = normals[face0_idx] # normal from edge0's parent
                 α =acos( abs(min(dot(n1,n2),1)) )*180/pi
-                α>angle && push!(get_main_edges, edge)
+                α>angle && push!(main_edges, edge)
             end
         end
     end
 
-    return get_main_edges
+    return main_edges
 
 end
 
@@ -226,6 +226,8 @@ Plots a `mesh` using `PyPlot` backend. If `filename` is provided it writes a pdf
 
 `colorbarlabel = ""` : Label at color bar
 
+`colorbarlocation = ""` : Location of color bar (top, bottom, left and right)
+
 `colorbarpad   = 0.0` : Separation of color bar from the plot
 
 `warpscale     = 0.0` : Factor multiplied to "U" field when available
@@ -263,6 +265,7 @@ function mplot(
                colormap         = nothing,
                colorbarscale    = 0.9,
                colorbarlabel    = "",
+               colorbarlocation = "right",
                colorbarpad      = 0.0,
                warpscale        = 0.0,
                highlightcell    = 0,
@@ -528,7 +531,7 @@ function mplot(
 
         # plot colorbar
         if has_field
-            cbar = plt.colorbar(cltn, label=colorbarlabel, shrink=colorbarscale, aspect=10*colorbarscale*figsize[2], format="%.1f", pad=colorbarpad)
+            cbar = plt.colorbar(cltn, label=colorbarlabel, shrink=colorbarscale, aspect=10*colorbarscale*figsize[2], format="%.1f", pad=colorbarpad, location=colorbarlocation)
             cbar.ax.tick_params(labelsize=7)
             cbar.outline.set_linewidth(0.0)
             cbar.locator = matplotlib.ticker.MaxNLocator(nbins=8)
@@ -579,7 +582,7 @@ function mplot(
         if has_field
             cltn.set_array(fvals)
             cltn.set_clim(fieldlims)
-            cbar = plt.colorbar(cltn, label=colorbarlabel, shrink=colorbarscale, aspect=0.9*20*colorbarscale, format="%.1f")
+            cbar = plt.colorbar(cltn, label=colorbarlabel, shrink=colorbarscale, aspect=0.9*20*colorbarscale, format="%.1f", location=colorbarlocation)
             cbar.ax.tick_params(labelsize=7)
             cbar.outline.set_linewidth(0.0)
             cbar.locator = matplotlib.ticker.MaxNLocator(nbins=8)
