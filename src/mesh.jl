@@ -24,9 +24,9 @@ mutable struct Mesh
     #qmin   ::Float64 
 
     # Data
-    point_scalar_data::Dict{String,Array}
-    cell_scalar_data ::Dict{String,Array}
-    point_vector_data::Dict{String,Array}
+    point_scalar_data::OrderedDict{String,Array}
+    cell_scalar_data ::OrderedDict{String,Array}
+    point_vector_data::OrderedDict{String,Array}
 
     function Mesh()
         this = new()
@@ -40,9 +40,9 @@ mutable struct Mesh
         #this.quality = 0.0
         #this.qmin    = 0.0
 
-        this.point_scalar_data = Dict()
-        this.cell_scalar_data  = Dict()
-        this.point_vector_data = Dict()
+        this.point_scalar_data = OrderedDict()
+        this.cell_scalar_data  = OrderedDict()
+        this.point_vector_data = OrderedDict()
         return this
     end
 end
@@ -614,7 +614,7 @@ function Base.getindex(mesh::Mesh, filter_ex::Expr)
 end
 
 
-function threshold!(mesh::Mesh, field::Union{Symbol,String}, minval::Float64, maxval::Float64)
+function threshold(mesh::Mesh, field::Union{Symbol,String}, minval::Float64, maxval::Float64)
     field = string(field)
 
     # check if field exists
@@ -667,6 +667,39 @@ function threshold!(mesh::Mesh, field::Union{Symbol,String}, minval::Float64, ma
     return new_mesh
 
 end
+
+
+export get_segment_data
+function get_segment_data(msh::Mesh, X1::Array{<:Real,1}, X2::Array{<:Real,1}, filename::String=""; npoints=200)
+    data = msh.point_scalar_data
+    table = DTable(["s"; collect(keys(data))])
+    X1 = [X1; 0.0][1:3]
+    X2 = [X2; 0.0][1:3]
+    Δ = (X2-X1)/(npoints-1)
+    Δs = norm(Δ)
+    s1 = 0.0
+
+    for i=1:npoints
+        X = X1 + Δ*(i-1)
+        s = s1 + Δs*(i-1)
+        cell = find_cell(X, msh.cells, msh.cellpartition, 1e-7, Cell[])
+        coords = getcoords(cell)
+        R = inverse_map(cell.shape, coords, X)
+        N = cell.shape.func(R)
+        map = [ p.id for p in cell.points ]
+        vals = [ s ]
+        for (k,V) in data
+            val = dot(V[map], N)
+            push!(vals, val)
+        end
+        push!(table, vals)
+    end
+
+    filename != "" && save(table, filename)
+
+    return table
+end
+
 
 export randmesh
 function randmesh(l::Real...)

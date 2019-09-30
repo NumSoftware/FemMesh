@@ -54,11 +54,13 @@ include("partition.jl")
 
 include("mesh.jl")
 include("io.jl")
-export Mesh, update!, quality!, reorder!, save, get_surface, get_neighbors, threshold!, datafields
+export Mesh, update!, quality!, reorder!, save, get_surface, get_neighbors, threshold, datafields
 
 include("block.jl")
 include("block_inset.jl")
 export Block, Block2D, Block3D, BlockTruss, BlockCoords, BlockCylinder
+
+include("frontal.jl")
 
 include("refine.jl")
 export hrefine
