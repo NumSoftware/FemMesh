@@ -307,9 +307,9 @@ function update!(mesh::Mesh; verbose::Bool=false, genfacets::Bool=true, genedges
     end
 
     # Reset data
-    mesh.point_scalar_data = Dict()
-    mesh.cell_scalar_data  = Dict()
-    mesh.point_vector_data = Dict()
+    mesh.point_scalar_data = OrderedDict()
+    mesh.cell_scalar_data  = OrderedDict()
+    mesh.point_vector_data = OrderedDict()
     mesh.point_scalar_data["point-id"] = collect(1:length(mesh.points))
     mesh.cell_scalar_data["quality"]   = Q
     mesh.cell_scalar_data["cell-id"]   = collect(1:length(mesh.cells))
