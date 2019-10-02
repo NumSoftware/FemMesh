@@ -121,9 +121,9 @@ function read_vtk(filename::String)
     data    = split(alltext)
 
     local coords, connects, cell_types, npoints, ncells
-    point_scalar_data = Dict{String,Array}()
-    point_vector_data = Dict{String,Array}()
-    cell_scalar_data  = Dict{String,Array}()
+    point_scalar_data = OrderedDict{String,Array}()
+    point_vector_data = OrderedDict{String,Array}()
+    cell_scalar_data  = OrderedDict{String,Array}()
     reading_point_data = false
     reading_cell_data  = false
 
