@@ -153,14 +153,13 @@ function get_main_edges(cells::Array{Cell,1}, angle=30)
                 n1 = normals[face_idx] # normal from face
                 face0_idx = faces_dict[hash(edge0.ocell)]
                 n2 = normals[face0_idx] # normal from edge0's parent
-                α =acos( abs(min(dot(n1,n2),1)) )*180/pi
+                α =acos( abs(clamp(dot(n1,n2),-1,1)) )*180/pi
                 α>angle && push!(main_edges, edge)
             end
         end
     end
 
     return main_edges
-
 end
 
 
@@ -180,6 +179,42 @@ function get_facet_normal(face::Cell)
     normalize!(N) # get unitary vector
 
     return N
+end
+
+
+function get_surface_based_on_displacements(mesh::Mesh)::Array{Cell,1}
+
+    surf_dict = Dict{UInt64, Cell}()
+    W = mesh.point_scalar_data["wn"]
+    #D = [ W[p.id] for p in mesh.points ]
+    maxW = maximum(W)
+    #minW = 5e-2*maxW
+    #minW = 9e-2*maxW
+    #@show W
+    minW = 0.01*maxW
+    #pos(x) = x>0.0 ? x : 0.0
+    disp(face) = mean( W[p.id] for p in face.points )
+
+    # Get only unique faces. If dup, original and dup are deleted
+    for cell in mesh.cells
+        for face in get_faces(cell)
+            hs = hash(face)
+            if haskey(surf_dict, hs)
+                d = abs(disp(face)-disp(surf_dict[hs]))
+                #if abs(disp(face)-disp(surf_dict[hs]))<minW
+                if d<minW
+                    delete!(surf_dict, hs)
+                else
+                    surf_dict[hs] = face
+                end
+            else
+                surf_dict[hs] = face
+            end
+        end
+    end
+
+    return [ face for face in values(surf_dict) ]
+
 end
 
 
@@ -287,13 +322,19 @@ function mplot(
         points  = mesh.points
         cells   = mesh.cells
         connect = [ Int[ p.id for p in c.points ] for c in cells ]
+        id_dict = Dict{Int, Int}( p.id => i for (i,p) in enumerate(points) )
     else
-        point_scalar_data = Dict{String,Array}()
-        cell_scalar_data  = Dict{String,Array}()
-        point_vector_data = Dict{String,Array}()
+        point_scalar_data = OrderedDict{String,Array}()
+        cell_scalar_data  = OrderedDict{String,Array}()
+        point_vector_data = OrderedDict{String,Array}()
 
         # get surface cells and update
-        scells = get_surface(mesh.cells)  
+        if haskey(mesh.point_vector_data, "U") && haskey(mesh.point_scalar_data, "wn")
+            # special case when using cohesive elements
+            scells = get_surface_based_on_displacements(mesh)
+        else
+            scells = get_surface(mesh.cells)
+        end
         oc_ids = [ c.ocell.id for c in scells ]
         linecells = [ cell for cell in mesh.cells if cell.shape.family==LINE_SHAPE] # add line cells
         append!(oc_ids, [c.id for c in linecells])
@@ -506,9 +547,12 @@ function mplot(
             ΔX = [ cos(θ)*cos(γ), sin(θ)*cos(γ), sin(γ) ]*0.01*L
  
             for edge in edges
-                p1 = edge.points[1]
-                p2 = edge.points[2]
-                verts = [ [ p1.x, p1.y, p1.z ], [ p2.x, p2.y, p2.z ] ]
+                #p1 = edge.points[1]
+                #p2 = edge.points[2]
+                #verts = [ [ p1.x, p1.y, p1.z ], [ p2.x, p2.y, p2.z ] ]
+                id1 = edge.points[1].id
+                id2 = edge.points[2].id
+                verts = [ XYZ[id_dict[id1],:], XYZ[id_dict[id2],:] ]
                 for v in verts
                     v .+= ΔX
                 end
@@ -657,10 +701,3 @@ function mplot(
     return
 
 end
-
-
-#@doc """
-#
-#$(SIGNATURES)
-#
-#where `x` and `y`
