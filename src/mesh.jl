@@ -144,6 +144,7 @@ end
 
 # Reverse Cuthill–McKee algorithm (RCM) 
 function reorder!(mesh::Mesh; sort_degrees=true, reversed=false)
+    @show "HiiiiiiiiiiiII"
 
     # Get all mesh edges
     all_edges = Dict{UInt64, Cell}()
@@ -307,7 +308,7 @@ function fixup!(mesh::Mesh; verbose::Bool=false, genfacets::Bool=true, genedges:
     end
 
     # Ordering
-    reorder!(mesh)
+    reorder && reorder!(mesh)
 
     # Reset data
     mesh.point_scalar_data = OrderedDict()
