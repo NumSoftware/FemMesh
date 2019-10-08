@@ -144,7 +144,6 @@ end
 
 # Reverse Cuthill–McKee algorithm (RCM) 
 function reorder!(mesh::Mesh; sort_degrees=true, reversed=false)
-    @show "HiiiiiiiiiiiII"
 
     # Get all mesh edges
     all_edges = Dict{UInt64, Cell}()
