@@ -32,8 +32,8 @@ mutable struct Cell<:AbstractCell
         this.embedded= false
         this.crossed = false
         this.ocell   = ocell
-        this.nips = nips != 0 ? get(shape.quadrature, nips, -1) : 0
-        this.nips >= 0 || error("Cell: integ. points number ($nips) not available for ShapeType $(shape.name)")
+        nips in keys(shape.quadrature) || error("Cell: integ. points number ($nips) not available for shape $(shape.name)")
+        this.nips = nips
         this.linked_cells = []
         return this
     end
@@ -70,10 +70,23 @@ function get_points(cells::Array{Cell,1})::Array{Point,1}
     return R
 end
 
-# Updates cell internal data
-function update!(c::Cell)::Nothing
-    c.quality = cell_quality(c)
-    return nothing
+export setquadrature!
+
+function setquadrature!(cells::Array{Cell,1}, nips::Int=0)
+    shapes = ShapeType[]
+
+    for cell in cells
+        shape = cell.shape
+        if nips in keys(shape.quadrature)
+            cell.nips = nips
+        else
+            cell.nips = 0
+            if !(shape in shapes)
+                @warn "setquadrature: cannot set $nips integ. points for shape $(shape.name)"
+                push!(shapes, shape)
+            end
+        end
+    end
 end
 
 export getproperty

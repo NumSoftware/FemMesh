@@ -770,7 +770,7 @@ function smooth2!(mesh::Mesh; verbose=true, alpha::Float64=1.0, target::Float64=
         end
 
         for c in mesh.cells
-            update!(c)
+            c.quality = cell_quality(c)
         end
 
         Q = Float64[ c.quality for c in mesh.cells]

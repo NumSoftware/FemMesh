@@ -271,7 +271,7 @@ function read_vtk(filename::String)
     end
 
     # update mesh and get faces and edges
-    update!(mesh)
+    fixup!(mesh, reorder=false)
 
     # Setting data
     mesh.point_scalar_data = point_scalar_data

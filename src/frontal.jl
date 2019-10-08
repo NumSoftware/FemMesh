@@ -113,7 +113,7 @@ function inv_dist_interpolation(H::Array{Float64,2}, X::Array{Float64,1})
     sum2 = 0.0
     for i=1:n
         d = norm(X-H[i,1:2])
-        w = (1/d)^3
+        w = (1/d)^1.5
         sum1 += H[i,3]*w
         sum2 += w
     end
@@ -313,9 +313,6 @@ function angle(p1::Point, p2::Point)
 end
 
 function angle(p1::Point, p2::Point, p3::Point)
-    # vertex at p2
-    #@show angle(p2,p3)*180/pi
-    #@show angle(p2,p1)*180/pi
     θ = angle(p2,p1) - angle(p2,p3)
     if θ<0; θ += 2*π end
     return θ
@@ -327,7 +324,8 @@ function angle(p1::Point, p2::Point, p3::Point)
 end
 
 export frontal
-function frontal(boundary::List, H::Array{Float64,2})
+
+function frontal2(boundary::List, H::Array{Float64,2})
     nnodes = length(boundary)
     @assert nnodes >= 3
 
@@ -343,20 +341,21 @@ function frontal(boundary::List, H::Array{Float64,2})
 try
     k=0
     while length(boundary)>2
+        k+=1
         #check(boundary)
         debug && println()
         debug && @show k
 
-        #k==3 && break
-        #k==11 && break
+        #k==4 && break
+        #k==25 && break
         #k==41 && break
         #k==51 && break
         #k==75 && break
         #k==120 && break
-        #k==207 && break
+        #k==179 && break
+        #k==217 && break
         #k==10000 && debug && break
 
-        k+=1
 
 
         n2 = n1.next
@@ -375,11 +374,11 @@ try
         N = normalize!(P2-P1)
         N = [-N[2], N[1]]
 
-        l = inv_dist_interpolation(H, P1)
+        l = inv_dist_interpolation(H, (P1+P2)/2)
         #@show l
 
 
-        #l01 = √((p0.x-p1.x)^2 + (p0.y-p1.y)^2)
+        l01 = √((p0.x-p1.x)^2 + (p0.y-p1.y)^2)
         l12 = √((p2.x-p1.x)^2 + (p2.y-p1.y)^2)
         l23 = √((p2.x-p3.x)^2 + (p2.y-p3.y)^2)
         #l = (l12+len)/2
@@ -389,9 +388,13 @@ try
         #l = min(l, len)
         #l=len
         #
-        #if θ>5*pi/6 || θ<pi/2
+
+        #θ1 = angle(p0, p1, p2)
+        #θ2 = angle(p1, p2, p3)
+
+        if θ>4*pi/6 || θ<pi/2
+        #if θ>4*pi/6 
             P = 0.5*(P1+P2) + √3/2*l*N
-        #=
         else
             @show θ*180/pi
             P3 = [p3.x, p3.y]
@@ -402,15 +405,15 @@ try
             @show P3
             @show N1
             @show N2
-            P = P2 + 0.9*min(l12, l23)*(N1+N2)/2
+            @show l
+            @show l01
+            @show l12
+            P = P2 + l*normalize(N1+N2)
             @show P
             @show angle(p1, p2, Point(P))*180/pi
-            #error()
         end
-        =#
 
         p = Point(P)
-
         pc, found = closestpoint(boundary, p, 0.9*l)
         @show pc
         
@@ -455,6 +458,155 @@ try
             debug && @show "SKIPPING-------------"
             n1 = n1.next
         end
+
+        debug && @show length(boundary)
+    end
+    debug && println("Triangulation finished!!!")
+    debug && @show length(cells)
+    debug && @show length(points)
+
+catch e
+    printstyled(e, color=:red, bold=true)
+    println()
+end
+
+    return cells, points
+end
+
+
+
+
+function frontal(boundary::List, H::Array{Float64,2})
+    nnodes = length(boundary)
+    @assert nnodes >= 3
+
+    cells = Cell[]
+    points = [ node.data for node in boundary]
+
+    n1 = boundary.first
+    debug = false
+    debug = true
+
+    @show nnodes
+
+try
+    k=0
+    while length(boundary)>2
+        k+=1
+        #check(boundary)
+        debug && println()
+        debug && @show k
+
+        #k==2 && break
+        #k==4 && break
+        #k==25 && break
+        #k==41 && break
+        #k==51 && break
+        #k==75 && break
+        #k==120 && break
+        #k==179 && break
+        #k==230 && break
+        #k==257 && break
+        #k==223 && debug && break
+        #k==300 && debug && break
+        #k==1000 && debug && break
+        #k==10000 && debug && break
+
+
+
+        n2 = n1.next
+        n3 = n2.next
+
+        p0 = n1.prev.data
+        p1 = n1.data
+        p2 = n2.data
+        p3 = n3.data
+
+        θ1 = angle(p0, p1, p2)*180/pi
+        θ2 = angle(p1, p2, p3)*180/pi
+
+        if θ1<=90 # try to close p0-p1
+            if !intersects(boundary, p0, p1)
+                debug && @show "CLOSE-------------p0-p1"
+                cell = Cell(TRI3, [p0, p1, p2])
+                push!(cells, cell)
+                delete!(boundary, n1)
+                n1 = n2.prev
+                continue
+            end
+        end
+
+        if θ2<=90 # try to close p1-p2
+            if !intersects(boundary, p1, p2)
+                debug && @show "CLOSE-------------p1-p2"
+                cell = Cell(TRI3, [p1, p2, p3])
+                push!(cells, cell)
+                delete!(boundary, n2)
+                continue
+            end
+        end
+
+        @show θ2
+
+        if θ2>90 # try to add point
+            P1 = [p1.x, p1.y]
+            P2 = [p2.x, p2.y]
+            P3 = [p3.x, p3.y]
+            l = inv_dist_interpolation(H, (P1+P2)/2)
+            if θ2<=150 # bisector in p2
+                N1 = normalize!(P1-P2)
+                N2 = normalize!(P3-P2)
+                P = P2 + l*normalize(N1+N2)
+            else # normal to p1-p2
+                N = normalize!(P2-P1)
+                N = [-N[2], N[1]]
+                P = 0.5*(P1+P2) + √3/2*l*N
+            end
+
+            p = Point(P)
+            pc, found = closestpoint(boundary, p, 0.9*l)
+            lppc = √((p.x-pc.x)^2 + (p.y-pc.y)^2)
+
+            @show found
+
+
+            if found && pc==n3.next.data
+                debug && @show "ADD-------------p1-p2-pc"
+                debug && @show "ADD-------------p1-p2-pc"
+                cell = Cell(TRI3, [p1, p2, pc])
+                push!(cells, cell)
+                cell = Cell(TRI3, [p2, p3, pc])
+                push!(cells, cell)
+                delete!(boundary, n2)
+                delete!(boundary, n3)
+                continue
+            elseif found && (pc==p0 || pc==p3 || lppc<0.4*l)
+                debug && @show "SKIP------------------"
+                n1 = n1.next
+                continue
+            else
+                if !intersects(boundary, p2, p)
+                    if !intersects(boundary, p1, p)
+                        debug && @show "ADD-------------p1-p2-p"
+                        cell = Cell(TRI3, [p1, p2, p])
+                        push!(cells, cell)
+                        push!(points, p)
+                        n = Node{Point}(p)
+                        insert!(boundary, n2, n)
+                        if θ2<=150 && !intersects(boundary, p3, p)
+                            debug && @show "ADD-------------p2-p3-p"
+                            cell = Cell(TRI3, [p2, p3, p])
+                            push!(cells, cell)
+                            delete!(boundary, n2)
+                        end
+                        n1=n
+                        continue
+                    end
+                end
+            end
+        end
+
+        n1 = n1.next
 
         debug && @show length(boundary)
     end

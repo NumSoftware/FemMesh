@@ -63,7 +63,7 @@ export Block, Block2D, Block3D, BlockTruss, BlockCoords, BlockCylinder
 include("frontal.jl")
 
 include("refine.jl")
-export hrefine
+export hrefine, prefine
 
 include("operators.jl")
 export move!, array, copy, mirror, rotate!, polar, rollaxes!, scale!

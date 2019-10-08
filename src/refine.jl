@@ -15,7 +15,6 @@ function hrefine(mesh::Mesh; n=2, verbose=true)
                     N = cell.shape.func([r, s])
                     C = N'*coords
                     if i==1 || j==1 || i+j==n+2
-                    #if i in (1, n+1) || j in (1, n+1) || i==j
                         C = round.(C, digits=8)
                         p = get_point(msh.pointdict, C)
                         if p==nothing
@@ -28,24 +27,13 @@ function hrefine(mesh::Mesh; n=2, verbose=true)
                     p_arr[i,j] = p
                 end
             end
-            #display(p_arr)
 
             for j = 1:n
                 for i = 1:n
-                    #@show i,j
                     i+j >= n+2 && continue
-                    #j>i && continue
-                    #@show i,j
-                    #@show i
-                    #@show j
-                    #j > n-i && continue
                     p1 = p_arr[i  , j  ]
                     p2 = p_arr[i+1, j  ]
                     p3 = p_arr[i  , j+1]
-
-                    #@show p1.x, p1.y
-                    #@show p2.x, p2.y
-                    #@show p3.x, p3.y
 
                     cell1 = Cell(cell.shape, [p1, p2, p3], tag=cell.tag)
                     push!(msh.cells, cell1)
@@ -59,6 +47,36 @@ function hrefine(mesh::Mesh; n=2, verbose=true)
             end
         end
     end
-    update!(msh, verbose=true)
+    fixup!(msh, reorder=true)
+    return msh
+end
+
+
+function prefine(mesh::Mesh; n=2, verbose=true)
+    msh = Mesh()
+
+    for cell in mesh.cells
+        if cell.shape==TRI3
+            NS = TRI6 # new shape
+            coords = getcoords(cell.points)
+            points = Point[]
+            for i=1:NS.npoints
+                R = NS.nat_coords[i,:]
+                N = NS.func(R)
+                C = coords'*N
+                C = round.(C, digits=8)
+                p = get_point(msh.pointdict, C)
+                if p==nothing
+                    p = Point(C); 
+                    push!(msh.points, p)
+                    msh.pointdict[hash(p)] = p
+                end
+                push!(points, p)
+            end
+            newcell = Cell(NS, points, tag=cell.tag)
+            push!(msh.cells, newcell)
+        end
+    end
+    fixup!(msh, reorder=true)
     return msh
 end

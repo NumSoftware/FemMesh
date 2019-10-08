@@ -142,7 +142,7 @@ function mirror(mesh::Mesh; face=[0.0 0 0; 0 1 0; 0 0 1])
         end
     end
 
-    update!(newmesh)
+    fixup!(newmesh)
     return newmesh
 end
 

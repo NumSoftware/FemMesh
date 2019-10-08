@@ -131,8 +131,7 @@ function generate_joints!(mesh::Mesh; layers::Int64=2, verbose::Bool=true, tag="
     mesh.points = [ collect(values(points_dict)); newpoints ]
 
     # update and reorder mesh
-    update!(mesh, verbose=verbose)
-    reorder!(mesh)
+    fixup!(mesh, reorder=true)
 
     if verbose
         @printf "  %4dd mesh                             \n" mesh.ndim
@@ -270,8 +269,7 @@ function generate_joints_candidate!(mesh::Mesh, expr::Expr, tag::String="") # TO
     mesh.cells  = [mesh.cells; jcells]
 
     # update and reorder mesh
-    update!(mesh)
-    reorder!(mesh)
+    fixup!(mesh, reorder=true)
 
     tag!(jcells, tag)
 end
@@ -510,9 +508,7 @@ function generate_joints_by_tag!(mesh::Mesh; layers::Int64=2, verbose::Bool=true
 
 
     # update and reorder mesh
-    update!(mesh, verbose=verbose)
-
-    reorder!(mesh)
+    fixup!(mesh, reorder=true)
 
     if verbose
         @printf "  %4dd mesh                             \n" mesh.ndim

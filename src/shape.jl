@@ -56,7 +56,7 @@ export POLYV
 
 
 function get_ip_coords(shape::ShapeType, nips=0)
-    !haskey(shape.quadrature, nips) && error("Number of ips ($nips) for shape ($shape) is not available")
+    !haskey(shape.quadrature, nips) && error("Cannot set $nips integ. points for shape $shape. Available numbers are $(collect(keys(shape.quadrature))).")
     return shape.quadrature[nips]
 end
 

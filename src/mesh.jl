@@ -59,7 +59,7 @@ function Base.copy(mesh::Mesh)
     end
 
     newmesh.pointdict = Dict( k => newmesh.points[p.id] for (k,p) in mesh.pointdict )
-    update!(newmesh)
+    fixup!(newmesh)
     return newmesh
 end
 
@@ -267,7 +267,7 @@ end
 
 
 # Updates numbering, faces and edges in a Mesh object
-function update!(mesh::Mesh; verbose::Bool=false, genfacets::Bool=true, genedges::Bool=true)
+function fixup!(mesh::Mesh; verbose::Bool=false, genfacets::Bool=true, genedges::Bool=true, reorder::Bool=false)
 
     # Get ndim
     ndim = 1
@@ -305,6 +305,9 @@ function update!(mesh::Mesh; verbose::Bool=false, genfacets::Bool=true, genedges
         c.quality = cell_quality(c)
         push!(Q, c.quality)
     end
+
+    # Ordering
+    reorder!(mesh)
 
     # Reset data
     mesh.point_scalar_data = OrderedDict()
@@ -430,7 +433,7 @@ function Mesh(
     mesh = Mesh()
     mesh.points = points
     mesh.cells  = cells
-    update!(mesh) # no node ordering
+    fixup!(mesh, reorder=false) # no node ordering
     mesh.ndim = ndim # force ndim
 
     return mesh
@@ -528,13 +531,7 @@ function Mesh(
     end
 
     # Updates numbering, quality, facets and edges
-    update!(mesh, verbose=verbose, genfacets=genfacets, genedges=genedges)
-
-    # Reorder nodal numbering
-    if reorder
-        verbosity>1 && print("  reordering points...             \r")
-        reorder!(mesh)
-    end
+    fixup!(mesh, verbose=verbose, genfacets=genfacets, genedges=genedges, reorder=reorder)
 
     if verbosity>0
         npoints = length(mesh.points)
@@ -566,12 +563,11 @@ end
 
 
 function Mesh(cells::Array{Cell,1})
-    # New mesh object
+    # New mesh object TODO: make a copy?
     mesh = Mesh()
     mesh.points = cells[:points]
     mesh.cells  = cells
-    update!(mesh)
-    reorder!(mesh)
+    fixup!(mesh, reorder=false)
 
     return mesh
 end
@@ -579,6 +575,8 @@ end
 
 # Gets a part of a mesh filtering elements
 function Base.getindex(mesh::Mesh, filter_ex::Expr)
+    # TODO: make a copy?
+
     # filter cells
     cells  = mesh.cells[filter_ex]
     # get points
@@ -607,7 +605,7 @@ function Base.getindex(mesh::Mesh, filter_ex::Expr)
     end
 
     # update node numbering, facets and edges
-    update!(new_mesh)
+    fixup!(new_mesh, reorder=false)
 
     return new_mesh
 
@@ -662,7 +660,7 @@ function threshold(mesh::Mesh, field::Union{Symbol,String}, minval::Float64, max
     end
 
     # update node numbering, facets and edges
-    update!(new_mesh)
+    fixup!(new_mesh, reorder=false)
 
     return new_mesh
 

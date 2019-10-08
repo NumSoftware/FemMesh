@@ -124,7 +124,7 @@ function extrude(mesh::Mesh; len::Number=1.0, n::Int=1, verbose::Bool=true)
     newmesh = Mesh()
     newmesh.points = collect(values(pointsD))
     newmesh.cells  = cells
-    update!(newmesh)
+    fixup!(newmesh, reorder=true)
 
     if verbose
         @printf "  %5d points obtained\n" length(newmesh.points)
@@ -267,7 +267,7 @@ function extrude2(mesh::Mesh; axis=[0.0,0.0,1.], len::Number=1.0, n::Int=1, verb
         end
     end
 
-    update!(newmesh, genfacets=true, genedges=genedges)
+    fixup!(newmesh, reorder=true, genfacets=true, genedges=genedges)
 
     if verbose
         @printf "  %5d points obtained\n" length(newmesh.points)
@@ -441,7 +441,7 @@ function extrude1(mesh::Mesh; axis=[0.0,0.0,1.], len::Number=1.0, n::Int=1, verb
         end
     end
 
-    update!(newmesh, genfacets=true, genedges=genedges)
+    fixup!(newmesh, genfacets=true, genedges=genedgesm, reorder=true)
 
     if verbose
         @printf "  %5d points obtained\n" length(newmesh.points)
