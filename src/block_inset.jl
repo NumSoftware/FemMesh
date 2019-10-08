@@ -1,7 +1,5 @@
 # This file is part of FemMesh package. See copyright license in https://github.com/NumSoftware/FemMesh
 
-export BlockInset
-
 """
 `BlockInset(coords, [curvetype=0,] [cellshape=LIN3,] [closed=false,] [tag="",] [toln=1e-4,] [tolc=1e-9,] [lam=1.0,])`
 

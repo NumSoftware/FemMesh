@@ -46,7 +46,7 @@ include("point.jl")
 export Point, Cell, hash, get_x, get_y, get_z
 include("cell.jl")
 export getcoords, get_point, get_points, get_faces, get_patches, cell_extent, cell_quality
-export tag!, update!
+export tag!, setquadrature!
 include("partition.jl")
 
 #include("ugrid.jl")
@@ -54,11 +54,13 @@ include("partition.jl")
 
 include("mesh.jl")
 include("io.jl")
-export Mesh, update!, quality!, reorder!, save, get_surface, get_neighbors, threshold, datafields
+export Mesh, fixup!, quality!, reorder!, save, get_surface, get_neighbors, threshold, datafields
 
 include("block.jl")
-include("block_inset.jl")
 export Block, Block2D, Block3D, BlockTruss, BlockCoords, BlockCylinder
+
+include("block_inset.jl")
+export BlockInset
 
 include("frontal.jl")
 
@@ -72,6 +74,8 @@ include("extrude.jl")
 export extrude
 
 include("smooth.jl") 
+export smooth!, laplacian_smooth!
+
 include("split.jl") 
 
 include("embedded.jl") 
@@ -81,7 +85,7 @@ include("mplot.jl")
 export mplot
 
 include("cplot.jl") 
-export cplot
+export cplot, newfig
 
 # show function for FemMesh types
 #for datatype in (:ShapeType, :Point, :Cell, :Block, :Mesh, :UnstructuredGrid )

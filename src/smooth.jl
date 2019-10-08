@@ -2,8 +2,6 @@
 
 # This file contains the code for smoothing meshes
 
-export smooth!, laplacian_smooth!
-
 # Returns a matrix with the cell coordinates
 function cellcoords(c::Cell)
     ndim = c.shape.ndim

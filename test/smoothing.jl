@@ -6,7 +6,6 @@ printstyled("\nMesh smoothing\n", color=:blue, bold=true)
 println("QUAD4:")
 bl   = Block( [0 0; 1 1], nx=2, ny=2, cellshape=QUAD4)
 mesh = Mesh(bl)
-setquadrature!(mesh.cells, 5)
 smooth!(mesh, maxit=5, extended=false)
 quality = mean(mesh.cell_scalar_data["quality"])
 @test quality ≈ 1.0 atol=1e-2

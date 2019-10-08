@@ -5,8 +5,6 @@ abstract type AbstractCell end
 abstract type AbstractBlock<:AbstractCell end
 
 
-
-
 # Cell
 # ====
 
@@ -70,7 +68,6 @@ function get_points(cells::Array{Cell,1})::Array{Point,1}
     return R
 end
 
-export setquadrature!
 
 function setquadrature!(cells::Array{Cell,1}, nips::Int=0)
     shapes = ShapeType[]
@@ -89,7 +86,6 @@ function setquadrature!(cells::Array{Cell,1}, nips::Int=0)
     end
 end
 
-export getproperty
 
 function Base.getproperty(c::Cell, s::Symbol)
     s == :coords && return getcoords(c)
@@ -100,20 +96,17 @@ function Base.getproperty(c::Cell, s::Symbol)
 end
 
 function Base.getproperty(cells::Array{Cell,1}, s::Symbol)
-    #s == :all      && return cells
-    #s == :solids   && return filter(cell -> cell.shape.family==SOLID_SHAPE, cells)
-    #s == :lines    && return filter(cell -> cell.shape.family==LINE_SHAPE, cells)
-    #s == :joints   && return filter(cell -> cell.shape.family==JOINT_SHAPE, cells)
-    #s == :joints1D && return filter(cell -> cell.shape.family==JOINT1D_SHAPE, cells)
-    #s == :points   && return get_points(cells)
+    s == :solids   && return filter(cell -> cell.shape.family==SOLID_SHAPE, cells)
+    s == :lines    && return filter(cell -> cell.shape.family==LINE_SHAPE, cells)
+    s == :joints   && return filter(cell -> cell.shape.family==JOINT_SHAPE, cells)
+    s in (:joints1D, :joints1d) && return filter(cell -> cell.shape.family==JOINT1D_SHAPE, cells)
     s == :points && return get_points(cells)
 
     error("type Array{Cell,1} has no property $s")
 end
 
 
-# Index operator for a collection of elements
-# This function is not type stable
+# Index operator for a collection of elements. This function is not type stable
 function Base.getindex(cells::Array{Cell,1}, s::Symbol)
     s == :all      && return cells
     s == :solids   && return filter(cell -> cell.shape.family==SOLID_SHAPE, cells)

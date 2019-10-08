@@ -1,5 +1,3 @@
-#using FemMesh
-#export mplot
 
 const MOVETO = 1
 const LINETO = 2
