@@ -69,7 +69,7 @@ function MakeTRI3()
     shape.edge_idxs   = facet_idxs_TRI3
     shape.facet_shape = LIN2
     shape.nat_coords  = coords_TRI3
-    shape.quadrature  = Dict( 0 => TRI_IP1,  1 => TRI_IP1,  3 => TRI_IP3,   6 => TRI_IP6 )
+    shape.quadrature  = Dict( 0 => TRI_IP3,  1 => TRI_IP1,  3 => TRI_IP3,   6 => TRI_IP6 )
     shape.func        = shape_func_TRI3
     shape.deriv       = shape_deriv_TRI3
     return shape
