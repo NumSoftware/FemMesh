@@ -62,7 +62,7 @@ function prefine(mesh::Mesh; n=2, verbose=true)
             points = Point[]
             for i=1:NS.npoints
                 R = NS.nat_coords[i,:]
-                N = NS.func(R)
+                N = cell.shape.func(R)
                 C = coords'*N
                 C = round.(C, digits=8)
                 p = get_point(msh.pointdict, C)
