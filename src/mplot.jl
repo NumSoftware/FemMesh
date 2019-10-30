@@ -216,7 +216,7 @@ function get_surface_based_on_displacements(mesh::Mesh)::Array{Cell,1}
 end
 
 
-using PyCall # required
+import PyCall.PyObject # required
 
 """
     mplot(mesh, filename="", kwargs...)
@@ -373,7 +373,7 @@ function mplot(
     # fix PyPlot
     @eval import PyPlot:getproperty, LazyPyModule
     if ! @eval hasmethod(getproperty, (LazyPyModule, AbstractString))
-        @eval Base.getproperty(lm::LazyPyModule, s::AbstractString) = getproperty(PyCall.PyObject(lm), s)
+        @eval Base.getproperty(lm::LazyPyModule, s::AbstractString) = getproperty(PyObject(lm), s)
     end
 
     plt.close("all")

@@ -1,4 +1,3 @@
-using PyCall
 
 function newfig(; xlabel="\$x\$", ylabel="\$y\$", lw=0.7, ms=2, legendloc="best",
                xbins=6, ybins=6, grid=false, figsize=(3,2), legendexpand=false, ncol=0, 
