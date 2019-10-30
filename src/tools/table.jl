@@ -32,7 +32,7 @@ mutable struct DTable
 end
 
 
-function DTable(header::Array, columns::Array{ColType,1})
+function DTable(header::Array, columns::Array{<:ColType,1})
     this      = DTable(header)
     nfields   = length(header)
     ncols     = length(columns)
@@ -71,6 +71,7 @@ function push!(table::DTable, row::Array{T,1} where T)
         table.columns = [ typeof(v)[v] for v in row  ]
     else
         for (i,val) in enumerate(row)
+            @show typeof(table.columns[i])
             push!(table.columns[i], val)
         end
     end
@@ -166,7 +167,15 @@ function save(table::DTable, filename::String; verbose::Bool=true, digits::Array
     format = split(filename, ".")[end]
     format in ("dat","json","tex") || error("save DTable: invalid extension $format")
 
-    f  = open(filename, "w")
+    local f::IOStream
+    try
+        f  = open(filename, "w") 
+    catch err
+        @warn "DTable: File $filename could not be opened for writing."
+        return
+    end
+
+
     nc = length(table.colindex)             # number of cols
     nr = nc>0 ? length(table.columns[1]) : 0 # number of rows
 
@@ -181,7 +190,7 @@ function save(table::DTable, filename::String; verbose::Bool=true, digits::Array
             for j=1:nc
                 item = table.columns[j][i]
                 if typeof(item)<:AbstractFloat
-                    @printf(f, "%12.6e", item)
+                    @printf(f, "%12.5e", item)
                 elseif typeof(item)<:Integer
                     @printf(f, "%12d", item) 
                 else
@@ -287,7 +296,13 @@ function save(book::DBook, filename::String; verbose::Bool=true)
     format = split(filename, ".")[end]
     format != "dat" && error("save DBook: filename should have \"dat\" extension")
 
-    f  = open(filename, "w") 
+    local f::IOStream
+    try
+        f  = open(filename, "w") 
+    catch err
+        @warn "DBook: File $filename could not be opened for writing."
+        return
+    end
 
     if format=="json"
         # generate dictionary
@@ -306,7 +321,7 @@ function save(book::DBook, filename::String; verbose::Bool=true)
             nr = nc>0 ? length(table.columns[1]) : 0 # number of rows
 
             # print table label
-            print(f, "Table (snapshot=$k, rows=$nr)\n")
+            print(f, "Table (snapshot=$(k), rows=$nr)\n")
 
             # print header
             for (i,key) in enumerate(keys(table.colindex))
@@ -317,7 +332,7 @@ function save(book::DBook, filename::String; verbose::Bool=true)
             # print values
             for i=1:nr
                 for j=1:nc
-                    @printf(f, "%12.6e", table.columns[j][i])
+                    @printf(f, "%12.5e", table.columns[j][i])
                     print(f, j!=nc ? "\t" : "\n")
                 end
             end
@@ -340,46 +355,10 @@ function loadtable(filename::String, delim='\t')
         matrix, headstr = readdlm(filename, delim, header=true, use_mmap=false)
         table = DTable(strip.(headstr), matrix)
         return table
-
-        #=
-        f = open(filename, "r")
-        lines = readlines(f)
-        table = DTable()
-        header_expected = true
-        for (i,line) in enumerate(lines)
-            items = split(line, delim)
-            if length(items)==1
-                strip(line)=="" && continue
-            end
-
-            if header_expected
-                header = strip.(items)
-                table  = DTable(header)
-                header_expected = false
-                continue
-            end
-
-            row = []
-            for item in items
-                try
-                    char1 = item[1]
-                    isnumeric(char1) || char1 in ('+','-') ?  push!(row, Meta.parse(item)) : push!(row, item)
-                catch err
-                    @error "loadbook: Error while reading value '$item' at line $i"
-                    throw(err)
-                end
-            end
-            #row = parse.(Float64, items)
-            push!(table, row)
-        end
-        close(f)
-        return table
-        =#
-
     end
 end
 
-# TODO: Check
+
 function loadbook(filename::String)
     delim = "\t"
     format = split(filename, ".")[end]
@@ -392,9 +371,7 @@ function loadbook(filename::String)
         header_expected = false
         for (i,line) in enumerate(lines)
             items = split(line)
-            if length(items)==1
-                strip(line)=="" && continue
-            end
+            length(items)==0 && strip(line)=="" && continue
 
             if items[1]=="Table"
                 header_expected = true
@@ -411,13 +388,14 @@ function loadbook(filename::String)
             row = []
             for item in items
                 try
-                    isnumeric(item[1]) ?  push!(row, Meta.parse(item)) : push!(row, item)
+                    char1 = item[1]
+                    isnumeric(char1) || char1 in ('+','-') ?  push!(row, Meta.parse(item)) : push!(row, item)
+                    #isnumeric(item[1]) ?  push!(row, Meta.parse(item)) : push!(row, item)
                 catch err
                     @error "loadbook: Error while reading value '$item' at line $i"
                     throw(err)
                 end
             end
-            #row = parse.(Float64, items)
             push!(book.tables[end], row) # udpate newest table
         end
     end
@@ -427,24 +405,6 @@ function loadbook(filename::String)
 end
 
 # TODO: Improve display. Include column datatype
-#=
-function Base.show(io::IO, table::DTable)
-    if length(table.columns)==0
-        print("DTable()")
-        return
-    end
-    nc = length(table.colindex)  # number of fields (columns)
-    nr = length(table.columns[1])   # number of rows
-
-    matrix = [ table.columns[j][i] for i=1:nr, j=1:nc ]
-    header = reshape(Text.([:row; collect(keys(table.colindex))]), (1, nc+1))
-    print(io, "DTable $(nr)x$nc:\n")
-    #Base.showarray(io, [header; collect(1:nr) matrix], false, header=false)
-    io = IOContext(io, :compact => true)
-    Base.print_matrix(io, [header; collect(1:nr) matrix])
-end
-=#
-
 function Base.show(io::IO, table::DTable)
     if length(table.columns)==0
         print("DTable()")
@@ -478,7 +438,6 @@ function Base.show(io::IO, table::DTable)
     for (i,key) in enumerate(header)
         etype = types[i]
         width = widths[i]
-        #key   = header[i]
         if etype<:Real
             print(lpad(key, width))
         else
@@ -493,7 +452,6 @@ function Base.show(io::IO, table::DTable)
 
     # print values
     for i=1:nr
-
         if i>half_vrows && nr-i>=half_vrows
             i==half_vrows+1 && println(" ⋮")
             continue
@@ -504,7 +462,7 @@ function Base.show(io::IO, table::DTable)
             etype = types[j]
             item = table.columns[j][i]
             if etype<:AbstractFloat
-                item = @sprintf("%12.6e", item)
+                item = @sprintf("%12.5e", item)
                 print(lpad(item, widths[j]))
             elseif etype<:Integer
                 item = @sprintf("%6d", item) 
@@ -525,11 +483,12 @@ end
 
 function Base.show(io::IO, book::DBook)
     print(io, "DBook (tables=$(length(book.tables))):\n")
+    n = length(book.tables)
     for (k,table) in enumerate(book.tables)
         # print table label
         nitems = length(table.columns[1])
-        #print(io, "  Table (snapshot=$k, items=$nitems):\n")
-        str = "  "*replace(string(table), "\n","\n  ")
-        print(io, str, "\n")
+        print(io, " Table (snapshot=$(k), rows=$nitems):\n")
+        str = string(table)
+        k<n && print(io, str, "\n")
     end
 end
