@@ -266,6 +266,54 @@ function reorder!(mesh::Mesh; sort_degrees=true, reversed=false)
 end
 
 
+function renumber!(mesh::Mesh)
+    # Get ndim
+    ndim = 1
+    for point in mesh.points
+        point.y != 0.0 && (ndim=2)
+        point.z != 0.0 && (ndim=3; break)
+    end
+    mesh.ndim = ndim
+    
+    # Numberig nodes
+    for (i,p) in enumerate(mesh.points) p.id = i end
+
+    # Numberig cells 
+    for (i,c) in enumerate(mesh.cells ) 
+        c.id = i; 
+        c.ndim=ndim; 
+    end
+
+    mesh.point_scalar_data["point-id"] = collect(1:length(mesh.points))
+    mesh.cell_scalar_data["cell-id"]   = collect(1:length(mesh.cells))
+    mesh.cell_scalar_data["cell-type"] = [ Int(cell.shape.vtk_type) for cell in mesh.cells ]
+end
+
+function set_faces_edges!(mesh::Mesh)
+    # Facets
+    if genfacets
+        verbose && print("  finding facets...   \r")
+        mesh.faces = get_surface(mesh.cells)
+    end
+    ndim==2 && (mesh.edges=mesh.faces)
+
+    # Edges
+    if genedges && ndim==3
+        verbose && print("  finding edges...   \r")
+        mesh.edges = get_edges(mesh.faces)
+    end
+end
+
+function update_quality!(mesh::Mesh)
+    # Quality
+    Q = Float64[]
+    for c in mesh.cells
+        c.quality = cell_quality(c)
+        push!(Q, c.quality)
+    end
+    mesh.cell_scalar_data["quality"]   = Q
+end
+
 # Updates numbering, faces and edges in a Mesh object
 function fixup!(mesh::Mesh; verbose::Bool=false, genfacets::Bool=true, genedges::Bool=true, reorder::Bool=false)
 
@@ -310,9 +358,9 @@ function fixup!(mesh::Mesh; verbose::Bool=false, genfacets::Bool=true, genedges:
     reorder && reorder!(mesh)
 
     # Reset data
-    mesh.point_scalar_data = OrderedDict()
-    mesh.cell_scalar_data  = OrderedDict()
-    mesh.point_vector_data = OrderedDict()
+    #mesh.point_scalar_data = OrderedDict()
+    #mesh.cell_scalar_data  = OrderedDict()
+    #mesh.point_vector_data = OrderedDict()
     mesh.point_scalar_data["point-id"] = collect(1:length(mesh.points))
     mesh.cell_scalar_data["quality"]   = Q
     mesh.cell_scalar_data["cell-id"]   = collect(1:length(mesh.cells))
