@@ -274,9 +274,9 @@ function read_vtk(filename::String)
     fixup!(mesh, reorder=false)
 
     # Setting data
-    mesh.point_scalar_data = point_scalar_data
-    mesh.point_vector_data = point_vector_data
-    mesh.cell_scalar_data  = cell_scalar_data
+    mesh.point_scalar_data = merge(mesh.point_scalar_data, point_scalar_data)
+    mesh.point_vector_data = merge(mesh.point_vector_data, point_vector_data)
+    mesh.cell_scalar_data  = merge(mesh.cell_scalar_data, cell_scalar_data)
 
     # Fix shape for polyvertex cells
     if has_polyvertex
