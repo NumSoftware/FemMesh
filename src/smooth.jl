@@ -582,8 +582,10 @@ function find_disps(mesh::Mesh, patches)
         np = length(c.points)
         C0 = cellcoords(c)
         v  = abs(cell_extent(c)) # area or volume
+        #v  = 0.3*v
 
-        v = v^2.5
+        #v = v^2.5
+        #v = v^1.1
         V[c.id] = v
         #@show v
 
@@ -596,22 +598,22 @@ function find_disps(mesh::Mesh, patches)
         C = BC
 
         # align C with cell orientation
-        R, d = rigid_transform(C, C0)
-        D = repeat( d , np, 1)
-        C1 = C*R' + D
+        R, D = rigid_transform(C, C0)
+        C1 = C*R' .+ D
         U  = C1 - C0  # displacements matrix
 
-        # add forces to UU
+        # add to UU
         dmap = [ p.id for p in c.points ]
 
-        UU[dmap, :] .+= v.*U
+        UU[dmap, :] .+= v^1.0.*U
+        #UU[dmap, :] .+= U
     end
 
     # weighted average
     for node in mesh.points
         patch = patches[node.id]
-        sumV = sum( V[c.id] for c in patch )
-        #@show sumV
+        sumV = sum( V[c.id]^1.0 for c in patch )
+        #sumV = length(patch)
         UU[node.id, :] ./= sumV
     end
 
@@ -628,11 +630,12 @@ function str_histogram(hist::Array{Int64,1})
 end
 
 
-export smooth2!
-function smooth2!(mesh::Mesh; verbose=true, alpha::Float64=1.0, target::Float64=0.97, 
+function fast_smooth!(mesh::Mesh; verbose=true, alpha::Float64=1.0, target::Float64=0.97, 
                  fixed::Bool=false, maxit::Int64=30, mintol::Float64=1e-3, tol::Float64=1e-4, 
                  facetol=1e-4, savesteps::Bool=false, savedata::Bool=false, bin::Float64=0.05,
                  filekey::String="smooth", conds=nothing, extended=false, smart=false)
+
+    #@show keys(mesh.cell_scalar_data)
 
     # tol   : tolerance in change of mesh quality for succesive iterations
     # mintol: tolerance in change of worst cell quality in a mesh for succesive iterations
@@ -672,11 +675,9 @@ function smooth2!(mesh::Mesh; verbose=true, alpha::Float64=1.0, target::Float64=
         map_pn[ node.point.id ] = i
     end
 
-    #savesteps && save(mesh, "$filekey-0.vtk", verbose=false)
-
     # Stats
     Q = Float64[ c.quality for c in mesh.cells]
-    q    = mesh.quality
+    q    = mean(Q)
     qmin = minimum(Q)
     qmax = maximum(Q)
     dev  = stdm(Q, q) 
@@ -691,23 +692,16 @@ function smooth2!(mesh::Mesh; verbose=true, alpha::Float64=1.0, target::Float64=
 
     verbose && @printf("%4s  %5s  %5s  %5s  %5s  %5s  %5s  %7s  %9s  %10s\n", "it", "qmin", "q1", "q2", "q3", "qmax", "qavg", "sdev", "time", "histogram (0:$bin:1]")
     verbose && @printf("%4d  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %7.5f  %9s", 0, qmin, q1, q2, q3, qmax, q, dev, "-")
-    #verbose && println("  ", fit(Histogram, Q, 0.3:0.05:1.0, closed=:right).weights)
     verbose && println("  ", str_histogram(hist))
 
     nits = 0
-    t0 = time()
 
     for i=1:maxit
 
         sw = StopWatch()
 
-        # Forces vector needed for smoothing # TODO: use displacements instead
+        # Forces vector needed for smoothing 
         D = find_disps(mesh, patches)
-        #if ndim==2
-            #mesh.point_vector_data["forces"] = [ reshape(F, ndim, npoints)' zeros(npoints)]
-        #else
-            #mesh.point_vector_data["forces"] = reshape(F, ndim, npoints)'
-        #end
 
         # Save last step file with current forces
         savesteps && save(mesh, "$filekey-$(i-1).vtk", verbose=false)
@@ -772,19 +766,18 @@ function smooth2!(mesh::Mesh; verbose=true, alpha::Float64=1.0, target::Float64=
         end
 
         Q = Float64[ c.quality for c in mesh.cells]
-        mesh.quality = mean(Q)
-        mesh.qmin    = minimum(Q)
+        new_q = mean(Q)
+        new_qmin = minimum(Q)
+        new_qmin <= 0.0 && error("smooth!: got negative quality value (qmin=$new_qmin).")
+
+        mesh.cell_scalar_data["quality"] = Q
         savesteps && save(mesh, "$filekey-$i.vtk", verbose=false)
 
-        #if any(Q .== 0.0)
-            #error("smooth!: Smooth procedure got invalid element(s). Try using alpha<1.")
-        #end
+        Δq    = abs(q - new_q)
+        Δqmin = new_qmin - qmin
 
-        Δq    = abs(q - mesh.quality)
-        Δqmin = mesh.qmin - qmin
-
-        q    = mesh.quality
-        qmin = mesh.qmin
+        q    = new_q
+        qmin = new_qmin
         qmax = maximum(Q)
         dev  = stdm(Q, q)
         q1, q2, q3 = quantile(Q, [0.25, 0.5, 0.75])
@@ -795,10 +788,7 @@ function smooth2!(mesh::Mesh; verbose=true, alpha::Float64=1.0, target::Float64=
         push!(hists, OrderedDict(Symbol(r) => v for (r,v) in zip(0.0:bin:1-bin,hist)))
 
         verbose && @printf("%4d  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %7.5f  %9s", i, qmin, q1, q2, q3, qmax, q, dev, see(sw, format=:ms))
-        #verbose && println("  ", fit(Histogram, Q, 0.3:0.05:1.0, closed=:right).weights)
         verbose && println("  ", str_histogram(hist))
-
-        #Δqmin<0.0 && break
 
         if Δq<tol && Δqmin<mintol && i>1
             break
@@ -861,7 +851,6 @@ function smooth!(mesh::Mesh; verbose=true, alpha::Float64=1.0, target::Float64=0
 
     verbose && @printf("%4s  %5s  %5s  %5s  %5s  %5s  %5s  %7s  %9s  %10s\n", "it", "qmin", "q1", "q2", "q3", "qmax", "qavg", "sdev", "time", "histogram (0:$bin:1]")
     verbose && @printf("%4d  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %7.5f  %9s", 0, qmin, q1, q2, q3, qmax, q, dev, "-")
-    #verbose && println("  ", fit(Histogram, Q, 0.3:0.05:1.0, closed=:right).weights)
     verbose && println("  ", str_histogram(hist))
 
 
@@ -953,16 +942,11 @@ function smooth!(mesh::Mesh; verbose=true, alpha::Float64=1.0, target::Float64=0
         end
 
         Q = Float64[ c.quality for c in mesh.cells]
-        #mesh.quality = mean(Q)
-        #mesh.qmin    = minimum(Q)
         new_q = mean(Q)
         new_qmin = minimum(Q)
         mesh.cell_scalar_data["quality"] = Q
         savesteps && save(mesh, "$filekey-$i.vtk", verbose=false)
 
-        #if any(Q .== 0.0)
-            #error("smooth!: Smooth procedure got invalid element(s). Try using alpha<1.")
-        #end
         Δq    = abs(q - new_q)
         Δqmin = new_qmin - qmin
 
@@ -978,11 +962,7 @@ function smooth!(mesh::Mesh; verbose=true, alpha::Float64=1.0, target::Float64=0
         push!(hists, OrderedDict(Symbol(r) => v for (r,v) in zip(0.0:bin:1-bin,hist)))
 
         verbose && @printf("%4d  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %7.5f  %9s", i, qmin, q1, q2, q3, qmax, q, dev, see(sw, format=:ms))
-        #verbose && println("  ", fit(Histogram, Q, 0.3:0.05:1.0, closed=:right).weights)
-        #verbose && println("  ", fit(Histogram, Q, 0.0:bin:1.0, closed=:right).weights)
         verbose && println("  ", str_histogram(hist))
-
-        #Δqmin<0.0 && break
 
         if Δq<tol && Δqmin<mintol && i>1
             break

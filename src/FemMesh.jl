@@ -74,7 +74,7 @@ include("extrude.jl")
 export extrude
 
 include("smooth.jl") 
-export smooth!, laplacian_smooth!
+export smooth!, laplacian_smooth!, fast_smooth!
 
 include("split.jl") 
 
