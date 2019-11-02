@@ -184,23 +184,22 @@ function get_surface_based_on_displacements(mesh::Mesh)::Array{Cell,1}
 
     surf_dict = Dict{UInt64, Cell}()
     W = mesh.point_scalar_data["wn"]
-    #D = [ W[p.id] for p in mesh.points ]
+    U = mesh.point_vector_data["U"]
     maxW = maximum(W)
-    #minW = 5e-2*maxW
-    #minW = 9e-2*maxW
-    #@show W
-    minW = 0.01*maxW
-    #pos(x) = x>0.0 ? x : 0.0
-    disp(face) = mean( W[p.id] for p in face.points )
+
+    disp(face) = mean(U[[p.id for p in face.points], :], dims=1)
+    #disp(face) = mean( W[p.id] for p in face.points )
 
     # Get only unique faces. If dup, original and dup are deleted
     for cell in mesh.cells
         for face in get_faces(cell)
             hs = hash(face)
+            dface = disp(face)
             if haskey(surf_dict, hs)
-                d = abs(disp(face)-disp(surf_dict[hs]))
-                #if abs(disp(face)-disp(surf_dict[hs]))<minW
-                if d<minW
+                d = norm(dface-disp(surf_dict[hs]))
+                #d = disp(face)
+                #d = abs(disp(face)-disp(surf_dict[hs]))
+                if d<0.3*maxW
                     delete!(surf_dict, hs)
                 else
                     surf_dict[hs] = face
@@ -273,9 +272,9 @@ Plots a `mesh` using `PyPlot` backend. If `filename` is provided it writes a pdf
 
 `dist          = 10.0` : 3D plot distance from observer
 
-`mainedges     = true` : Highlight main edges of 3D meshes in the pdf output
+`outline       = true` : Highlight main edges of 3D meshes in the pdf output
 
-`edgeangle     = 30` : Limit angle to identify main edges
+`outlineangle  = 30` : Limit angle to identify main edges
 
 `figsize       = (4,2.5)` : Figure size
 
@@ -305,8 +304,8 @@ function mplot(
                elev             = 30.0,
                azim             = 45.0,
                dist             = 10.0,
-               mainedges        = true,
-               edgeangle        = 30,
+               outline          = true,
+               outlineangle     = 30,
                figsize          = (4,2.5),
                leaveopen        = false
               )
@@ -365,7 +364,6 @@ function mplot(
     pts = [ [p.x, p.y, p.z] for p in points ]
     XYZ = [ pts[i][j] for i=1:npoints, j=1:3]
 
-
     # Lazy import of PyPlot
     @eval import PyPlot:plt, matplotlib, figure, art3D, Axes3D, ioff
     @eval ioff()
@@ -407,6 +405,9 @@ function mplot(
         try
             ax.set_aspect("equal")
         catch err
+            @show err
+            dump(err)
+
         end
         
         # Set limits
@@ -538,9 +539,9 @@ function mplot(
         edgecolor = (0.3, 0.3, 0.3, 0.65)
 
         # Plot main edges
-        filename == "" && (mainedges = false)
-        if mainedges
-            edges = get_main_edges(cells, edgeangle)
+        filename == "" && (outline = false)
+        if outline
+            edges = get_main_edges(cells, outlineangle)
             θ, γ = (azim+0)*pi/180, elev*pi/180
             ΔX = [ cos(θ)*cos(γ), sin(θ)*cos(γ), sin(γ) ]*0.01*L
  
@@ -562,7 +563,7 @@ function mplot(
         cltn = @eval art3D[:Poly3DCollection]($all_verts, cmap=$cmap, facecolor="aliceblue", edgecolor=$edgecolor, lw=$lw, alpha=$alpha)
 
         if has_field
-            if mainedges
+            if outline
                 fvals = [ fvals; fill(mean(fvals), length(edges)) ]
             end
 
