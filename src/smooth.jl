@@ -570,29 +570,25 @@ end
 
 
 # Mount a matrix with nodal displacements
-function find_disps(mesh::Mesh, patches)
+function find_disps(mesh::Mesh, patches, extended, α, qmin)
     n    = length(mesh.points)
     m    = length(mesh.cells)
     ndim = mesh.ndim
     UU = zeros(n,ndim)
-    V = zeros(m) # vols
+    W = zeros(m) # qualities
 
     for c in mesh.cells
         # get coordinates matrix
         np = length(c.points)
         C0 = cellcoords(c)
         v  = abs(cell_extent(c)) # area or volume
-        #v  = 0.3*v
-
-        #v = v^2.5
-        #v = v^1.1
-        V[c.id] = v
-        #@show v
+        W[c.id] = v
+        #W[c.id] = 1.0
 
         R0 = cell_orientation(c)
         s = v^(1.0/ndim) # scale factor
 
-        #extended && (s *= α)
+        extended && (s *= α)
 
         BC = basic_coords(c.shape)*s
         C = BC
@@ -602,19 +598,21 @@ function find_disps(mesh::Mesh, patches)
         C1 = C*R' .+ D
         U  = C1 - C0  # displacements matrix
 
+        if extended && qmin<1.0
+            U .= (1-c.quality)/(1-qmin).*U 
+        end
+
         # add to UU
         dmap = [ p.id for p in c.points ]
 
-        UU[dmap, :] .+= v^1.0.*U
-        #UU[dmap, :] .+= U
+        UU[dmap, :] .+= W[c.id].*U
     end
 
     # weighted average
     for node in mesh.points
         patch = patches[node.id]
-        sumV = sum( V[c.id]^1.0 for c in patch )
-        #sumV = length(patch)
-        UU[node.id, :] ./= sumV
+        sumW = sum( W[c.id]^1.0 for c in patch )
+        UU[node.id, :] ./= sumW
     end
 
     return UU
@@ -624,7 +622,6 @@ end
 function str_histogram(hist::Array{Int64,1})
     m = maximum(hist)
     H = round.(Int, hist./m*7)
-    #@show H
     chars = [" ","_","▁","▂","▃","▄","▅","▆","▇","█"]
     return "["*join( hist[i]==0 ? " " : chars[H[i]+2] for i=1:length(H) )*"]"
 end
@@ -635,12 +632,11 @@ function fast_smooth!(mesh::Mesh; verbose=true, alpha::Float64=1.0, target::Floa
                  facetol=1e-4, savesteps::Bool=false, savedata::Bool=false, bin::Float64=0.05,
                  filekey::String="smooth", conds=nothing, extended=false, smart=false)
 
-    #@show keys(mesh.cell_scalar_data)
-
     # tol   : tolerance in change of mesh quality for succesive iterations
     # mintol: tolerance in change of worst cell quality in a mesh for succesive iterations
 
-    verbose && printstyled("Mesh smoothing:\n", bold=true, color=:cyan)
+    #verbose && printstyled("Mesh smoothing:\n", bold=true, color=:cyan)
+    verbose && printstyled("Mesh fast-$(smart ? "smart-" : "")cells-fitting smoothing:\n", bold=true, color=:cyan)
 
     # check for not allowed cells
     for c in mesh.cells
@@ -694,18 +690,19 @@ function fast_smooth!(mesh::Mesh; verbose=true, alpha::Float64=1.0, target::Floa
     verbose && @printf("%4d  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %7.5f  %9s", 0, qmin, q1, q2, q3, qmax, q, dev, "-")
     verbose && println("  ", str_histogram(hist))
 
-    nits = 0
+    #nits = 0
+    mesh.cell_scalar_data["quality"] = Q
+    savesteps && save(mesh, "$filekey-0.vtk", verbose=false)
 
     for i=1:maxit
 
         sw = StopWatch()
 
         # Forces vector needed for smoothing 
-        D = find_disps(mesh, patches)
+        D = find_disps(mesh, patches, extended, alpha, qmin)
 
         # Save last step file with current forces
-        savesteps && save(mesh, "$filekey-$(i-1).vtk", verbose=false)
-
+        #savesteps && save(mesh, "$filekey-$(i-1).vtk", verbose=false)
 
         # Update mesh
         for point in mesh.points
@@ -752,7 +749,7 @@ function fast_smooth!(mesh::Mesh; verbose=true, alpha::Float64=1.0, target::Floa
                     point.y = X0[2]
                     if ndim==3; point.z = X0[3] end
                 else
-                    # update quality values
+                    # update quality values: important
                     for (c,q) in zip(patch, patch_q)
                         c.quality = q
                     end
@@ -794,11 +791,11 @@ function fast_smooth!(mesh::Mesh; verbose=true, alpha::Float64=1.0, target::Floa
             break
         end
 
-        nits = i
+        #nits = i
     end
     # Set forces to zero for the last step
-    mesh.point_vector_data["forces"] = zeros(length(mesh.points), 3)
-    savesteps && save(mesh, "$filekey-$nits.vtk", verbose=false)
+    #mesh.point_vector_data["forces"] = zeros(length(mesh.points), 3)
+    #savesteps && save(mesh, "$filekey-$nits.vtk", verbose=false)
 
     savedata && save(stats, "$filekey-stats.dat")
     savedata && save(hists, "$filekey-hists.dat")
@@ -945,7 +942,6 @@ function smooth!(mesh::Mesh; verbose=true, alpha::Float64=1.0, target::Float64=0
         new_q = mean(Q)
         new_qmin = minimum(Q)
         mesh.cell_scalar_data["quality"] = Q
-        savesteps && save(mesh, "$filekey-$i.vtk", verbose=false)
 
         Δq    = abs(q - new_q)
         Δqmin = new_qmin - qmin
