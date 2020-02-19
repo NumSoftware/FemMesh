@@ -62,7 +62,7 @@ mutable struct Block <: AbstractBlock
         ndim<=3 || error("Block: invalid coordinate matrix")
         (ndim==3 && cellshape in shapes2d) && (ndim=2)
         cellshape in shapes3d && (ndim==3 || error("Block: 3d points are required for cell shape $cellshape"))
-       
+
         if ndim==1
             ncoord==2 || error("Block: invalid coordinates matrix rows ($ncoord) for dimension $ndim")
             cellshape==nothing && (cellshape=LIN2)
@@ -138,7 +138,7 @@ function split_block(bl::Block, msh::Mesh)
                         msh.pointdict[hash(p)] = p
                     end
                 else
-                    p = Point(C); 
+                    p = Point(C);
                     push!(msh.points, p)
                 end
                 p_arr[i,j] = p
@@ -453,7 +453,7 @@ function split_block(bl::Block, msh::Mesh)
                         p_arr[i+2, j  , k+2],
                         p_arr[i+2, j+2, k+2],
                         p_arr[i  , j+2, k+2],
-                                            
+
                         p_arr[i+1, j  , k  ],
                         p_arr[i+2, j+1, k  ],
                         p_arr[i+1, j+2, k  ],
@@ -462,7 +462,7 @@ function split_block(bl::Block, msh::Mesh)
                         p_arr[i+2, j+1, k+2],
                         p_arr[i+1, j+2, k+2],
                         p_arr[i  , j+1, k+2],
-                                           
+
                         p_arr[i  , j  , k+1],
                         p_arr[i+2, j  , k+1],
                         p_arr[i+2, j+2, k+1],

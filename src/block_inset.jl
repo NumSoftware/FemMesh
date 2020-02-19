@@ -30,7 +30,7 @@ mutable struct BlockInset <: AbstractBlock
     _endpoint  ::Union{Point, Nothing}
     _startpoint::Union{Point, Nothing}
 
-    function BlockInset(coords::Array{<:Real,2}; curvetype=0, closed=false, embedded=false, cellshape=LIN3, tag="", jointtag="", tol=1e-9, toln=1e-4, tolc=1e-9, lam=1.0, id=-1) 
+    function BlockInset(coords::Array{<:Real,2}; curvetype=0, closed=false, embedded=false, cellshape=LIN3, tag="", jointtag="", tol=1e-9, toln=1e-4, tolc=1e-9, lam=1.0, id=-1)
         # TODO: add option: merge_points
         # TODO: add case: endpoints outside mesh
         if typeof(curvetype)<:Integer
@@ -41,7 +41,7 @@ mutable struct BlockInset <: AbstractBlock
             ctype = get(cases, curvetype, -1)
             if ctype==-1; error("Wrong curve type") end
         end
-        
+
         nrows  = size(coords,1)
         points = [ Point(coords[i,:]) for i=1:nrows ]
 
@@ -59,7 +59,7 @@ end
 
 
 function Base.copy(bl::BlockInset; dx=0.0, dy=0.0, dz=0.0)
-    newbl = BlockInset(getcoords(bl.points), curvetype=bl.curvetype, closed=bl.closed, 
+    newbl = BlockInset(getcoords(bl.points), curvetype=bl.curvetype, closed=bl.closed,
                        embedded=bl.embedded, cellshape=bl.cellshape, tag=bl.tag,
                        jointtag=bl.jointtag)
 end
@@ -165,10 +165,10 @@ end
 
 function get_point(s::Float64, coords::Array{Float64,2}, curvetype::Int)
     s = s>1.0 ? 1.0 : s
-    if curvetype<=2; 
-        return interLagrange(s, coords) 
+    if curvetype<=2;
+        return interLagrange(s, coords)
     else
-        return cubicBezier(s, coords) 
+        return cubicBezier(s, coords)
     end
 end
 
@@ -278,7 +278,7 @@ function split_curve(coords::Array{Float64,2}, bl::BlockInset, closed::Bool, msh
         end
 
         if !(closed && end_reached)
-            P2 = Point(X) 
+            P2 = Point(X)
             push!(msh.points, P2)
         else
             P2 = bl._startpoint
@@ -295,7 +295,7 @@ function split_curve(coords::Array{Float64,2}, bl::BlockInset, closed::Bool, msh
         if bl._startpoint == nothing; bl._startpoint = P1 end
         bl._endpoint = P2
 
-        # Saving line cell 
+        # Saving line cell
         lcell = Cell(shape, Ps, tag=bl.tag)
         push!(msh.cells, lcell)
 

@@ -1,6 +1,6 @@
 
 function newfig(; xlabel="\$x\$", ylabel="\$y\$", lw=0.7, ms=2, legendloc="best",
-               xbins=6, ybins=6, grid=false, figsize=(3,2), legendexpand=false, ncol=0, 
+               xbins=6, ybins=6, grid=false, figsize=(3,2), legendexpand=false, ncol=0,
                xmin=NaN, xmax=NaN, ymin=NaN, ymax=NaN,
                fontsize=7, legendfontsize=0, labelspacing=0.5)
 
@@ -13,17 +13,15 @@ function newfig(; xlabel="\$x\$", ylabel="\$y\$", lw=0.7, ms=2, legendloc="best"
     plt.rc("mathtext", fontset="cm")
     plt.rc("lines", scale_dashes=true)
 
-    #if filename!=""
-        plt.ioff()
-        plt.rc("xtick", labelsize=7)
-        plt.rc("ytick", labelsize=7)
-        plt.rc("lines", lw=0.7)
-        plt.rc("lines", markersize=2)
-        plt.rc("axes" , linewidth=0.5)
-        plt.rc("figure", figsize=(3, 2))
-        legendfontsize==0 && (legendfontsize=fontsize)
-        plt.rc("legend", fontsize=legendfontsize)
-    #end
+    plt.ioff()
+    plt.rc("xtick", labelsize=7)
+    plt.rc("ytick", labelsize=7)
+    plt.rc("lines", lw=0.7)
+    plt.rc("lines", markersize=2)
+    plt.rc("axes" , linewidth=0.5)
+    plt.rc("figure", figsize=(3, 2))
+    legendfontsize==0 && (legendfontsize=fontsize)
+    plt.rc("legend", fontsize=legendfontsize)
 
     grid && plt.grid( color="lightgrey", ls="dotted", lw=0.3)
     ax = plt.axes()
@@ -43,7 +41,7 @@ end
 
 
 function cplot(X, Y, filename=""; xlabel="\$x\$", ylabel="\$y\$", lw=0.7, ls="-", ms=2, marker=nothing, color="", legend=[], legendloc="best",
-               xbins=6, ybins=6, grid=false, figsize=(3,2), legendexpand=false, ncol=0, 
+               xbins=6, ybins=6, grid=false, figsize=(3,2), legendexpand=false, ncol=0,
                xmin=NaN, xmax=NaN,
                ymin=NaN, ymax=NaN,
                fontsize=7, legendfontsize=0, labelspacing=0.5)
@@ -51,7 +49,7 @@ function cplot(X, Y, filename=""; xlabel="\$x\$", ylabel="\$y\$", lw=0.7, ls="-"
     @eval import PyPlot:plt, matplotlib, figure
 
     # Fix labels
-    texlabels = Dict( 
+    texlabels = Dict(
                   "sxx"=>raw"$\sigma_{xx}$",
                   "syy"=>raw"$\sigma_{yy}$",
                   "szz"=>raw"$\sigma_{zz}$",

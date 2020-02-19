@@ -44,7 +44,7 @@ function generate_joints!(mesh::Mesh; layers::Int64=2, verbose::Bool=true, tag="
     # Joints generation
     facedict = Dict{UInt64, Cell}()
 
-    # Get paired faces 
+    # Get paired faces
     for cell in solids
         for face in get_faces(cell)
             hs = hash(face)
@@ -146,7 +146,7 @@ function generate_joints!(mesh::Mesh; layers::Int64=2, verbose::Bool=true, tag="
     end
 
     return mesh
-    
+
 end
 
 # Deprecated function
@@ -173,7 +173,7 @@ function generate_joints_candidate!(mesh::Mesh, expr::Expr, tag::String="") # TO
     # Dict for face pairs: hash(face) => facepair
     fp_dict = Dict{UInt64, FacePair}()
 
-    # Get paired faces 
+    # Get paired faces
     for cell in solids
         faces_idxs = cell.shape.facet_idxs # vertex connectivities of all faces from cell
         for (i,face) in enumerate(get_faces(cell))
@@ -194,12 +194,12 @@ function generate_joints_candidate!(mesh::Mesh, expr::Expr, tag::String="") # TO
     end
 
     # Filtering faces
-    faces = [ fp.face1 for fp in face_pairs] 
+    faces = [ fp.face1 for fp in face_pairs]
     for (i,face) in enumerate(faces); face.id = i end
     faces = faces[expr]
 
     in_idxs  = [ face.id for face in faces ]
-    out_idxs = setdiff(1:length(face_pairs), in_idxs) 
+    out_idxs = setdiff(1:length(face_pairs), in_idxs)
 
     # Generating new points
     for fp in face_pairs[in_idxs]
@@ -274,7 +274,7 @@ function generate_joints_candidate!(mesh::Mesh, expr::Expr, tag::String="") # TO
     tag!(jcells, tag)
 end
 
-                            
+
  #Generate joints taking account tags
 
 function generate_joints_by_tag!(mesh::Mesh; layers::Int64=2, verbose::Bool=true, tag="")
@@ -292,7 +292,7 @@ function generate_joints_by_tag!(mesh::Mesh; layers::Int64=2, verbose::Bool=true
     # Joints generation
     facedict = Dict{UInt64, Cell}()
 
-    # Get paired faces 
+    # Get paired faces
     for cell in solids
         for face in get_faces(cell)
             hs = hash(face)
@@ -475,7 +475,7 @@ function generate_joints_by_tag!(mesh::Mesh; layers::Int64=2, verbose::Bool=true
         for (i,p) in enumerate(c.points)
             hs = hash(p)
             f = get(pointsdict_1,hs,nothing)
-            if f!=nothing                   
+            if f!=nothing
                 c.points[i] = f
                 delete!(pointsdict_1,hs)
             else
@@ -523,9 +523,9 @@ function generate_joints_by_tag!(mesh::Mesh; layers::Int64=2, verbose::Bool=true
     end
 
     return mesh
-    
+
 end
-                            
-                        
-                            
-                            
+
+
+
+

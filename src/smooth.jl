@@ -35,7 +35,7 @@ function basic_coords(shape::ShapeType) #check
     end
     if shape == TET4
         a = (6.0*√2.0)^(1.0/3.0)
-        return [   0.0        0.0          0.0 ; 
+        return [   0.0        0.0          0.0 ;
                    a         0.0          0.0 ;
                  a/2.0  √3.0/2.0*a          0.0 ;
                  a/2.0  √3.0/6.0*a  1.0/3.0*√6*a ]
@@ -47,15 +47,15 @@ function basic_coords(shape::ShapeType) #check
         return [ 0.0 0; 1 0; 1 1 ; 0 1; 0.5 0; 1 0.5; 0.5 1; 0 0.5; 0.5 0.5 ]
     end
     if shape == QUAD12
-        return [ 0.0 0; 1 0; 1 1 ; 0 1; 
+        return [ 0.0 0; 1 0; 1 1 ; 0 1;
         1/3 0.0; 1.0 1/3; 2/3 1.0; 0.0 2/3;
         2/3 0.0; 1.0 2/3; 1/3 1.0; 0.0 1/3 ]
     end
-    if shape == HEX8  
+    if shape == HEX8
         return [ 0.0 0.0 0.0; 1.0 0.0 0.0; 1.0 1.0 0.0; 0.0 1.0 0.0; 0.0 0.0 1.0; 1.0 0.0 1.0; 1.0 1.0 1.0; 0.0 1.0 1.0 ]
     end
     if shape == HEX20
-        return [ 0.0 0.0 0.0; 
+        return [ 0.0 0.0 0.0;
                  1.0 0.0 0.0;
                  1.0 1.0 0.0;
                  0.0 1.0 0.0;
@@ -212,7 +212,7 @@ function matrixK(cell::Cell, ndim::Int64, E::Float64, nu::Float64)
         @gemm J = dNdR*C
         @gemm dNdX = inv(J)*dNdR
         detJ = det(J)
-        if detJ < 0.0 
+        if detJ < 0.0
             #@error "Negative jacobian determinant in cell" cell=cell.id ip=i coords=C shape=cell.shape.name
             #error()
         end
@@ -252,7 +252,7 @@ end
 
 function get_map(c::Cell)
     ndim = c.shape.ndim
-    
+
     map = Int[]
     for p in c.points
         for i=1:ndim
@@ -292,7 +292,7 @@ function mountKg(mesh::Mesh, E::Float64, nu::Float64, A)
             push!(C, ndof+i)
             push!(V, val)
     end
-    
+
     return sparse(R, C, V, ndof+nbc, ndof+nbc)
 end
 
@@ -333,7 +333,7 @@ end
 
 function faces_normal(faces::Array{Cell,1}, facetol)
     ndim = 1 + faces[1].shape.ndim
-    
+
     #normals = Set{Array{Float64,1}}()
     normals = Array{Float64,1}[]
 
@@ -356,7 +356,7 @@ function faces_normal(faces::Array{Cell,1}, facetol)
             #N = N/norm(N)
             normalize!(N)
             #check if the normal already exists
-            if all( [ norm(N-NN)>facetol for NN in normals ]) 
+            if all( [ norm(N-NN)>facetol for NN in normals ])
                 push!(normals, N)
             end
         #else
@@ -364,7 +364,7 @@ function faces_normal(faces::Array{Cell,1}, facetol)
         #end
     end
 
-    return normals 
+    return normals
 end
 
 # Auxiliary structure for a surface node
@@ -394,7 +394,7 @@ function mountA(mesh::Mesh, fixed::Bool, conds, facetol)
     end
 
     # find the number of bcs
-    n = 0  # number of bcs 
+    n = 0  # number of bcs
     for node in border_nodes
         if conds!= nothing
             p = node.point
@@ -422,7 +422,7 @@ function mountA(mesh::Mesh, fixed::Bool, conds, facetol)
         R, C, V = Int64[], Int64[], Float64[]
 
         for i=1:n
-            for j=1:ndim 
+            for j=1:ndim
                 #A[ (i-1)*ndim+j, (border_nodes[i].point.id-1)*ndim+j ] = 1.0
                 push!(R, (i-1)*ndim+j )
                 push!(C, (border_nodes[i].point.id-1)*ndim+j )
@@ -443,7 +443,7 @@ function mountA(mesh::Mesh, fixed::Bool, conds, facetol)
 
             if nnorm==1 || nnorm==2  # all faces in up to 2 planes
                 for i=1:nnorm
-                    for j=1:ndim 
+                    for j=1:ndim
                         push!(R, baserow+1)
                         push!(C, basecol+j)
                         push!(V, normals[i][j])
@@ -452,7 +452,7 @@ function mountA(mesh::Mesh, fixed::Bool, conds, facetol)
                     baserow += 1
                 end
             else # zero or more than two non coplanar faces
-                for j=1:ndim 
+                for j=1:ndim
                     #A[ baserow+j, basecol+j ] = 1.0
                     push!(R, baserow+j)
                     push!(C, basecol+j)
@@ -471,7 +471,12 @@ end
 
 
 
-function rigid_transform(source::Array{Float64,2}, target::Array{Float64,2})
+function rigid_transform(source::Array{Float64,2}, target::Array{Float64,2}, pindexes::Array{Int64,1}=Int[])
+    # source: Source coordingates
+    # target: Destination reference
+    # pindexes: Indexes for prioriy matching
+    # C: If provided, will represent the center of rotation
+    # e.g. R, T = rigid_transform(BC, C0)
     A, B = copy(source), copy(target)
     #@test size(A) == size(B)
 
@@ -479,14 +484,25 @@ function rigid_transform(source::Array{Float64,2}, target::Array{Float64,2})
     ndim = size(A,2)
 
     # Centralizing both sets of points
+    #pindexes = []
+    #if length(pindexes)==0
+        #cA = mean(A, dims=1)
+        #cB = mean(B, dims=1)
+    #else
+        #cA = mean(A[pindexes,:], dims=1)
+        #cB = mean(B[pindexes,:], dims=1)
+    #end
     cA = mean(A, dims=1)
     cB = mean(B, dims=1)
-    for i = 1:n
-        for j = 1:ndim
-            A[i,j] -= cA[1,j]
-            B[i,j] -= cB[1,j]
-        end
+
+    A .-= cA
+    B .-= cB
+
+    for i in pindexes
+        A[i,:] .*= 10
+        #B[i,:] .*= 1000
     end
+
 
     # Singular value decomposition
     U, S, V = svd(A'*B)
@@ -501,6 +517,7 @@ function rigid_transform(source::Array{Float64,2}, target::Array{Float64,2})
     end
 
     T = cB - cA*R'
+    #T = -cA*R'
 
     return R, T
 
@@ -524,7 +541,7 @@ function force_bc(mesh::Mesh, E::Float64, nu::Float64, α::Float64, extended::Bo
 
         #extended || (V = α*V)
 
-        R0 = cell_orientation(c)
+        #R0 = cell_orientation(c)
         s = V^(1.0/ndim) # scale factor
 
         extended && (s *= α)
@@ -570,12 +587,12 @@ end
 
 
 # Mount a matrix with nodal displacements
-function find_disps(mesh::Mesh, patches, extended, α, qmin)
+function find_disps(mesh::Mesh, patches, extended, α, qmin, in_border)
     n    = length(mesh.points)
     m    = length(mesh.cells)
     ndim = mesh.ndim
     UU = zeros(n,ndim)
-    W = zeros(m) # qualities
+    W  = ones(m) # qualities
 
     for c in mesh.cells
         # get coordinates matrix
@@ -584,8 +601,10 @@ function find_disps(mesh::Mesh, patches, extended, α, qmin)
         v  = abs(cell_extent(c)) # area or volume
         W[c.id] = v
         #W[c.id] = 1.0
+        #W[c.id] = (2.0 - c.quality)
+        #W[c.id] = c.quality^0.5
 
-        R0 = cell_orientation(c)
+        #R0 = cell_orientation(c)
         s = v^(1.0/ndim) # scale factor
 
         extended && (s *= α)
@@ -594,24 +613,27 @@ function find_disps(mesh::Mesh, patches, extended, α, qmin)
         C = BC
 
         # align C with cell orientation
-        R, D = rigid_transform(C, C0)
+        pindexes = [ i for i=1:np if in_border[ c.points[i].id] ]
+        #@show pindexes
+        R, D = rigid_transform(C, C0, pindexes)
         C1 = C*R' .+ D
         U  = C1 - C0  # displacements matrix
 
-        if extended && qmin<1.0
-            U .= (1-c.quality)/(1-qmin).*U 
-        end
+        #if extended && qmin<1.0
+            #U .= (1-c.quality)/(1-qmin)*U
+        #end
+        #U .*= 0.666
+        U .*= 0.5
 
         # add to UU
         dmap = [ p.id for p in c.points ]
-
         UU[dmap, :] .+= W[c.id].*U
     end
 
     # weighted average
     for node in mesh.points
         patch = patches[node.id]
-        sumW = sum( W[c.id]^1.0 for c in patch )
+        sumW = sum( W[c.id] for c in patch )
         UU[node.id, :] ./= sumW
     end
 
@@ -627,8 +649,8 @@ function str_histogram(hist::Array{Int64,1})
 end
 
 
-function fast_smooth!(mesh::Mesh; verbose=true, alpha::Float64=1.0, target::Float64=0.97, 
-                 fixed::Bool=false, maxit::Int64=30, mintol::Float64=1e-3, tol::Float64=1e-4, 
+function fast_smooth!(mesh::Mesh; verbose=true, alpha::Float64=1.0, target::Float64=0.97,
+                 fixed::Bool=false, maxit::Int64=30, mintol::Float64=1e-3, tol::Float64=1e-4,
                  facetol=1e-4, savesteps::Bool=false, savedata::Bool=false, bin::Float64=0.05,
                  filekey::String="smooth", conds=nothing, extended=false, smart=false)
 
@@ -650,7 +672,7 @@ function fast_smooth!(mesh::Mesh; verbose=true, alpha::Float64=1.0, target::Floa
 
     points, patches = get_patches(mesh)  # key points and corresponding patches
 
-    # get a list of surface nodes (sNodes) that include a list of faces per point 
+    # get a list of surface nodes (sNodes) that include a list of faces per point
     surf_cells = get_surface(mesh.cells)
     surf_points, surf_patches = get_patches(surf_cells)
     border_nodes = [ sNode(point, patch, nothing) for (point,patch) in zip(surf_points,surf_patches)]
@@ -676,7 +698,7 @@ function fast_smooth!(mesh::Mesh; verbose=true, alpha::Float64=1.0, target::Floa
     q    = mean(Q)
     qmin = minimum(Q)
     qmax = maximum(Q)
-    dev  = stdm(Q, q) 
+    dev  = stdm(Q, q)
     q1, q2, q3 = quantile(Q, [0.25, 0.5, 0.75])
 
     stats = DTable()
@@ -698,8 +720,8 @@ function fast_smooth!(mesh::Mesh; verbose=true, alpha::Float64=1.0, target::Floa
 
         sw = StopWatch()
 
-        # Forces vector needed for smoothing 
-        D = find_disps(mesh, patches, extended, alpha, qmin)
+        # Forces vector needed for smoothing
+        D = find_disps(mesh, patches, extended, alpha, qmin, in_border)
 
         # Save last step file with current forces
         #savesteps && save(mesh, "$filekey-$(i-1).vtk", verbose=false)
@@ -711,7 +733,7 @@ function fast_smooth!(mesh::Mesh; verbose=true, alpha::Float64=1.0, target::Floa
             X  = X0 + vec(D[id,:])
 
             # skip surface nodes over non-flat locations
-            if in_border[id] 
+            if in_border[id]
                 node = border_nodes[ map_pn[id] ]
                 normals = node.normals
                 nnorm   = length(normals)
@@ -742,8 +764,10 @@ function fast_smooth!(mesh::Mesh; verbose=true, alpha::Float64=1.0, target::Floa
                 patch_q = [ cell_quality(c) for c in patch ]
 
                 patch_qmin = minimum(patch_q)
-
-                if patch_qmin < patch_qmin0
+                #γ = 0.8
+                γ = 1.0
+                if patch_qmin < γ*patch_qmin0
+                #if patch_qmin < patch_qmin0
                     # restore point coordinates if no improvement
                     point.x = X0[1]
                     point.y = X0[2]
@@ -806,8 +830,8 @@ end
 
 
 
-function smooth!(mesh::Mesh; verbose=true, alpha::Float64=1.0, target::Float64=0.97, 
-                 fixed::Bool=false, maxit::Int64=10, mintol::Float64=2e-2, tol::Float64=1e-3, 
+function smooth!(mesh::Mesh; verbose=true, alpha::Float64=1.0, target::Float64=0.97,
+                 fixed::Bool=false, maxit::Int64=10, mintol::Float64=2e-2, tol::Float64=1e-3,
                  facetol=1e-4, savesteps::Bool=false, savedata::Bool=false, bin::Float64=0.05,
                  filekey::String="smooth", conds=nothing, extended=false, smart=false)
 
@@ -836,7 +860,7 @@ function smooth!(mesh::Mesh; verbose=true, alpha::Float64=1.0, target::Float64=0
     q    = mean(Q)
     qmin = minimum(Q)
     qmax = maximum(Q)
-    dev  = stdm(Q, q) 
+    dev  = stdm(Q, q)
     q1, q2, q3 = quantile(Q, [0.25, 0.5, 0.75])
 
     stats = DTable()
@@ -852,7 +876,7 @@ function smooth!(mesh::Mesh; verbose=true, alpha::Float64=1.0, target::Float64=0
 
 
     # Lagrange multipliers matrix
-    A   = mountA(mesh, fixed, conds, facetol) 
+    A   = mountA(mesh, fixed, conds, facetol)
     nbc = size(A,1)
 
     nits = 0
@@ -960,12 +984,13 @@ function smooth!(mesh::Mesh; verbose=true, alpha::Float64=1.0, target::Float64=0
         verbose && @printf("%4d  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %5.3f  %7.5f  %9s", i, qmin, q1, q2, q3, qmax, q, dev, see(sw, format=:ms))
         verbose && println("  ", str_histogram(hist))
 
+        nits = i
+
         if Δq<tol && Δqmin<mintol && i>1
             break
         end
-
-        nits = i
     end
+    @show nits
 
     n_bad_cells = count(q -> q<=0, Q)
     n_bad_cells>0 && @warn "Invalid cells found: " n=n_bad_cells
@@ -995,7 +1020,7 @@ laplacian_smooth!(mesh; maxit, verbose, mintol, tol, savesteps, savedata, fileke
 Smooths a finite element mesh using Laplacian smoothing (standard, weighted, smart).
 """
 function laplacian_smooth!(mesh::Mesh; maxit::Int64=20, verbose::Bool=true, fixed=false,
-    mintol::Float64=1e-2, tol::Float64=1e-4, facetol::Float64=1e-5, 
+    mintol::Float64=1e-2, tol::Float64=1e-4, facetol::Float64=1e-5,
     savesteps::Bool=false, savedata::Bool=false, bin::Float64=0.05,
     filekey::String="smooth", smart=false, weighted=false)
 
@@ -1015,7 +1040,7 @@ function laplacian_smooth!(mesh::Mesh; maxit::Int64=20, verbose::Bool=true, fixe
         push!(P, patch_points)
     end
 
-    # get a list of surface nodes (sNodes) that include a list of faces per point 
+    # get a list of surface nodes (sNodes) that include a list of faces per point
     surf_cells = get_surface(mesh.cells)
     surf_points, surf_patches = get_patches(surf_cells)
     border_nodes = [ sNode(point, patch, nothing) for (point,patch) in zip(surf_points,surf_patches)]
@@ -1070,7 +1095,7 @@ function laplacian_smooth!(mesh::Mesh; maxit::Int64=20, verbose::Bool=true, fixe
             X0 = [point.x, point.y, point.z][1:ndim]
 
             # skip surface nodes over non-flat locations
-            if in_border[id] 
+            if in_border[id]
                 fixed && continue # skip if fixed boundary
                 node = border_nodes[ map_pn[id] ]
                 normals = node.normals
@@ -1089,7 +1114,7 @@ function laplacian_smooth!(mesh::Mesh; maxit::Int64=20, verbose::Bool=true, fixe
             end
 
             # fix coordinates for surface points
-            if in_border[id] 
+            if in_border[id]
                 ΔX = X - X0
                 if nnorm==1
                     n1 = normals[1]
@@ -1186,5 +1211,5 @@ function laplacian_smooth!(mesh::Mesh; maxit::Int64=20, verbose::Bool=true, fixe
     verbose && println("  done.")
 
     return nothing
-    
+
 end

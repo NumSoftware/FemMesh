@@ -66,10 +66,10 @@ function swap_cells(cell0, cell1)
     local p0, v0, v1 ::TPoint
     for i=1:3
         p0 = cell0.points[i]
-        if !(p0 in cell1.points) 
+        if !(p0 in cell1.points)
             v0 = cell0.points[inc(i,2)]
             v1 = cell0.points[inc(i,1)]
-            break 
+            break
         end
     end
 
@@ -135,7 +135,7 @@ function triangulate(coords::Array{Float64,2}; getedges=false)
 
     # addition of super triangle
     push!(cells, TCell(pp0, pp1, pp2) )
-    
+
     # loop for each input vertex
     for i=1:n
         # input point
@@ -241,7 +241,7 @@ function triangulate(coords::Array{Float64,2}; getedges=false)
     E = [ edge[j] for edge in edges, j=1:2 ]
 
     if getedges
-        return E  
+        return E
     else
         return Con
     end

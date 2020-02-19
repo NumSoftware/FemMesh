@@ -107,7 +107,7 @@ function find_cell(X::Array{Float64,1}, cells::Array{Cell,1}, cellpartition::Cel
     # Build cellpartition if empty
     length(cellpartition.cellpartition) == 0 && build_bins(cells, cellpartition)
 
-    for attempt=1:2 
+    for attempt=1:2
         Cmin = reshape(cellpartition.bbox[1,:],3)
         Cmax = reshape(cellpartition.bbox[2,:],3)
         lbin = cellpartition.lbin
@@ -133,7 +133,7 @@ function find_cell(X::Array{Float64,1}, cells::Array{Cell,1}, cellpartition::Cel
         # If not found in the first attempt try then rebuild cellpartition
         if attempt==1
             @warn "find_cell: Bin search failed. Rebuilding cellpartition..."
-            build_bins(cells, cellpartition) 
+            build_bins(cells, cellpartition)
         end
     end
 

@@ -21,7 +21,7 @@ mutable struct Mesh
     cellpartition::CellPartition
 
     #quality::Float64
-    #qmin   ::Float64 
+    #qmin   ::Float64
 
     # Data
     point_scalar_data::OrderedDict{String,Array}
@@ -64,7 +64,7 @@ function Base.copy(mesh::Mesh)
 end
 
 function datafields(mesh::Mesh)
-    return [ 
+    return [
             collect(keys(mesh.point_scalar_data));
             collect(keys(mesh.point_vector_data));
             collect(keys(mesh.cell_scalar_data));
@@ -103,7 +103,7 @@ function get_edges(surf_cells::Array{Cell,1})::Array{Cell,1}
         end
     end
 
-    return [ edge for edge in values(edges_dict) ] 
+    return [ edge for edge in values(edges_dict) ]
 end
 
 # Return a list of neighbors for each cell
@@ -142,7 +142,7 @@ function get_patches(mesh::Mesh)
     return mesh.points, patches
 end
 
-# Reverse Cuthill–McKee algorithm (RCM) 
+# Reverse Cuthill–McKee algorithm (RCM)
 function reorder!(mesh::Mesh; sort_degrees=true, reversed=false)
 
     # Get all mesh edges
@@ -225,7 +225,7 @@ function reorder!(mesh::Mesh; sort_degrees=true, reversed=false)
 
     while length(N) < npoints
         # Generating current levelset A
-        A = Dict{Int64,Point}() 
+        A = Dict{Int64,Point}()
 
         for p in values(L)
             for q in neighs[p.id]
@@ -237,7 +237,7 @@ function reorder!(mesh::Mesh; sort_degrees=true, reversed=false)
             @error "reorder!: Reordering nodes failed! Possible error with cell connectivities."
             return
         end
-        
+
         # Convert A into an array RA
         RA = collect(values(A))
         if sort_degrees
@@ -274,14 +274,14 @@ function renumber!(mesh::Mesh)
         point.z != 0.0 && (ndim=3; break)
     end
     mesh.ndim = ndim
-    
+
     # Numberig nodes
     for (i,p) in enumerate(mesh.points) p.id = i end
 
-    # Numberig cells 
-    for (i,c) in enumerate(mesh.cells ) 
-        c.id = i; 
-        c.ndim=ndim; 
+    # Numberig cells
+    for (i,c) in enumerate(mesh.cells )
+        c.id = i;
+        c.ndim=ndim;
     end
 
     mesh.point_scalar_data["point-id"] = collect(1:length(mesh.points))
@@ -324,14 +324,14 @@ function fixup!(mesh::Mesh; verbose::Bool=false, genfacets::Bool=true, genedges:
         point.z != 0.0 && (ndim=3; break)
     end
     mesh.ndim = ndim
-    
+
     # Numberig nodes
     for (i,p) in enumerate(mesh.points) p.id = i end
 
-    # Numberig cells 
-    for (i,c) in enumerate(mesh.cells ) 
-        c.id = i; 
-        c.ndim=ndim; 
+    # Numberig cells
+    for (i,c) in enumerate(mesh.cells )
+        c.id = i;
+        c.ndim=ndim;
     end
 
     # Facets
@@ -465,7 +465,7 @@ function Mesh(
 
     # Get ndim
     ndim = size(coords,2)
-    
+
     cells = Cell[]
     for i=1:m
         pts = points[conns[i]]
@@ -511,7 +511,7 @@ Generates a mesh based on an array of geometrical objects.
 # Arguments
 
 `items`     : Array of objects used to generate a `Mesh` object.
-These objects can be of type `Block` or `Mesh`. 
+These objects can be of type `Block` or `Mesh`.
 Subarrays of these type of objects are also supported.
 
 # Keyword arguments
@@ -527,7 +527,7 @@ Subarrays of these type of objects are also supported.
 `silent    = false` : If true, does not print anything
 """
 function Mesh(
-              items     :: Union{Mesh, AbstractBlock, Array{<:Union{AbstractBlock, Array},1}}...; 
+              items     :: Union{Mesh, AbstractBlock, Array{<:Union{AbstractBlock, Array},1}}...;
               genfacets :: Bool = true,
               genedges  :: Bool = true,
               reorder   :: Bool = true,
@@ -762,3 +762,23 @@ function randmesh(l::Real...)
         m = Mesh(Block3D([0.0 0.0 0.0; lx ly lz], nx=nx, ny=ny, nz=nz, cellshape=cellshape), verbose=false)
     end
 end
+
+function check_mesh(mesh::Mesh)
+    cell_dict = Dict{UInt64, Cell}()
+
+    # Get only unique elems. If dup, original and dup are deleted
+    n = 0
+    for cell in mesh.cells
+        hs = hash(cell)
+        if haskey(cell_dict, hs)
+            n += 1
+        else
+            cell_dict[hs] = cell
+        end
+    end
+
+    return n
+
+end
+
+

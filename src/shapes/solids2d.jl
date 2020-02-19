@@ -32,7 +32,7 @@
 #
 
 # natural coordinates
-const coords_TRI3 = 
+const coords_TRI3 =
 [ 0.0  0.0
   1.0  0.0
   0.0  1.0 ]
@@ -48,7 +48,7 @@ function shape_func_TRI3(R::Array{Float64,1})
     return N
 end
 
-const deriv_TRI3_mat = 
+const deriv_TRI3_mat =
 [ -1.0 1.0 0.0
   -1.0 0.0 1.0 ]
 
@@ -78,7 +78,7 @@ end
 
 # Registration
 const  TRI3 = MakeTRI3()
-export TRI3 
+export TRI3
 
 
 
@@ -104,12 +104,12 @@ export TRI3
 #
 
 # natural coordinates
-const coords_TRI6 = 
+const coords_TRI6 =
 [ 0.0  0.0
   1.0  0.0
-  0.0  1.0 
-  0.5  0.0 
-  0.5  0.5 
+  0.0  1.0
+  0.5  0.0
+  0.5  0.5
   0.0  0.5 ]
 
 const facet_idxs_TRI6 = [ [1, 2, 4], [2, 3, 5], [3, 1, 6] ]
@@ -164,7 +164,7 @@ end
 
 # Registration
 const  TRI6 = MakeTRI6()
-export TRI6 
+export TRI6
 
 
 
@@ -216,7 +216,7 @@ end
 
 # Registration
 const  TRI9 = MakeTRI9()
-export TRI9 
+export TRI9
 
 
 
@@ -268,7 +268,7 @@ end
 
 # Registration
 const  TRI10 = MakeTRI10()
-export TRI10 
+export TRI10
 
 
 # QUAD4 shape
@@ -290,10 +290,10 @@ export TRI10
 #
 
 # natural coordinates
-const coords_QUAD4 = 
-[ -1.0 -1.0 
-   1.0 -1.0 
-   1.0  1.0 
+const coords_QUAD4 =
+[ -1.0 -1.0
+   1.0 -1.0
+   1.0  1.0
   -1.0  1.0  ]
 
 const facet_idxs_QUAD4 = [ [1, 2], [2, 3], [3, 4], [4, 1] ]
@@ -363,7 +363,7 @@ export QUAD4
 #
 
 # natural coordinates
-const coords_QUAD8 = 
+const coords_QUAD8 =
 [ -1.0 -1.0
    1.0 -1.0
    1.0  1.0
@@ -461,7 +461,7 @@ export QUAD8
 #
 
 # natural coordinates
-const coords_QUAD9 = 
+const coords_QUAD9 =
 [ -1.0 -1.0
    1.0 -1.0
    1.0  1.0
@@ -469,7 +469,7 @@ const coords_QUAD9 =
    0.0 -1.0
    1.0  0.0
    0.0  1.0
-  -1.0  0.0 
+  -1.0  0.0
    0.0  0.0 ]
 
 const facet_idxs_QUAD9 = [ [1, 2, 5], [2, 3, 6], [3, 4, 7], [4, 1, 8] ]
@@ -498,25 +498,25 @@ function shape_deriv_QUAD9(R::Array{Float64,1})
     rp1=r+1.0; rm1=r-1.0
     sp1=s+1.0; sm1=s-1.0
 
-	D[1,1] = (r + rm1)*s*sm1/4.0
-	D[1,2] = (r + rp1)*s*sm1/4.0
-	D[1,3] = (r + rp1)*s*sp1/4.0
-	D[1,4] = (r + rm1)*s*sp1/4.0
-	D[1,5] = -(r + r)*s*(sm1)/2.0
-	D[1,6] = -(r + rp1)*(s*s - 1.0)/2.0
-	D[1,7] = -(r + r)*s*(sp1)/2.0
-	D[1,8] = -(r + rm1)*(s*s - 1.0)/2.0
-	D[1,9] = 2.0*r*(s*s - 1.0)
+    D[1,1] = (r + rm1)*s*sm1/4.0
+    D[1,2] = (r + rp1)*s*sm1/4.0
+    D[1,3] = (r + rp1)*s*sp1/4.0
+    D[1,4] = (r + rm1)*s*sp1/4.0
+    D[1,5] = -(r + r)*s*(sm1)/2.0
+    D[1,6] = -(r + rp1)*(s*s - 1.0)/2.0
+    D[1,7] = -(r + r)*s*(sp1)/2.0
+    D[1,8] = -(r + rm1)*(s*s - 1.0)/2.0
+    D[1,9] = 2.0*r*(s*s - 1.0)
 
-	D[2,1] = r*rm1*(s+sm1)/4.0
-	D[2,2] = r*rp1*(s+sm1)/4.0
-	D[2,3] = r*rp1*(s+sp1)/4.0
-	D[2,4] = r*rm1*(s+sp1)/4.0
-	D[2,5] = -(r*r - 1.0)*(s + sm1)/2.0
-	D[2,6] = -r*rp1*(s + s)/2.0
-	D[2,7] = -(r*r - 1.0)*(s + sp1)/2.0
-	D[2,8] = -r*rm1*(s + s)/2.0
-	D[2,9] = 2.0*s*(r*r - 1.0)
+    D[2,1] = r*rm1*(s+sm1)/4.0
+    D[2,2] = r*rp1*(s+sm1)/4.0
+    D[2,3] = r*rp1*(s+sp1)/4.0
+    D[2,4] = r*rm1*(s+sp1)/4.0
+    D[2,5] = -(r*r - 1.0)*(s + sm1)/2.0
+    D[2,6] = -r*rp1*(s + s)/2.0
+    D[2,7] = -(r*r - 1.0)*(s + sp1)/2.0
+    D[2,8] = -r*rm1*(s + s)/2.0
+    D[2,9] = 2.0*s*(r*r - 1.0)
 
     return D
 end
@@ -549,7 +549,7 @@ export QUAD9
 # QUAD12 shape
 # ============
 
-#  
+#
 #    4      11       7        3
 #      @-----@-------@------@
 #      |               (1,1)|
@@ -563,7 +563,7 @@ export QUAD9
 #      |(-1,-1)             |
 #      @-----@-------@------@
 #    1       5       9        2
-#  
+#
 
 # natural coordinates
 const coords_QUAD12 =
@@ -579,7 +579,7 @@ const coords_QUAD12 =
      1.0        1.0/3.0
     -1.0/3.0    1.0
     -1         -1.0/3.0 ]
-	
+
 const facet_idxs_QUAD12 = [ [1, 2, 5, 9], [2, 3, 6, 10], [3, 4, 7, 11], [4, 1, 8, 12] ]
 
 function shape_func_QUAD12(R::Array{Float64,1})

@@ -10,7 +10,7 @@ end
 
 
 """
-`move(block, [dx=0.0,] [dy=0.0,] [dz=0.0])` 
+`move(block, [dx=0.0,] [dy=0.0,] [dz=0.0])`
 
 Changes the coordinates of a `block`. Also returns a reference.
 """
@@ -25,7 +25,7 @@ end
 
 
 """
-`move(blocks, [dx=0.0,] [dy=0.0,] [dz=0.0])` 
+`move(blocks, [dx=0.0,] [dy=0.0,] [dz=0.0])`
 
 Changes the coordinates of an array of blocks. Also returns a reference.
 """
@@ -123,7 +123,7 @@ function mirror(mesh::Mesh; face=[0.0 0 0; 0 1 0; 0 0 1])
     newmesh = copy(mesh)
 
     # mirror
-    coords = getcoords(newmesh.points) 
+    coords = getcoords(newmesh.points)
     distances = (coords .- p1')*normal       # d = n^.(xi - xp)
     coords    = coords .- 2*distances.*normal'  # xi = xi - 2*d*n^
 
@@ -190,18 +190,18 @@ function rotate!(bl::AbstractBlock; base=[0.0,0,0], axis=[0.0,0,1], angle=90.0 )
     # Rotation matrices
     if d != 0.0
         Rx  = [  1.0    0.0    0.0
-                 0.0   c/d  -b/d 
+                 0.0   c/d  -b/d
                  0.0   b/d   c/d ]
 
         Rxi = [  1.0    0.0    0.0
-                 0.0   c/d   b/d 
+                 0.0   c/d   b/d
                  0.0  -b/d   c/d ]
     end
 
     Ry  = [   d    0.0  -a
              0.0    1.0  0.0
               a    0.0   d ]
-           
+
     Ryi = [   d    0.0   a
              0.0    1.0  0.0
              -a    0.0   d ]
@@ -238,7 +238,7 @@ end
 """
 `polar(block, [base=[0,0,0],] [axis=[0,0,1],] [angle=360.0,] [n=2])`
 
-Creates `n-1` copies of a `block` and places them using polar distribution based on 
+Creates `n-1` copies of a `block` and places them using polar distribution based on
 a `base` point, an `axis` vector, a total `angle`.
 """
 function polar(bl::T; base=[0.0,0,0], axis=[0.0,0,1], angle=360, n=2 ) where T <: AbstractBlock
@@ -265,7 +265,7 @@ end
 
 
 """
-`move(mesh, [dx=0.0,] [dy=0.0,] [dz=0.0])` 
+`move(mesh, [dx=0.0,] [dy=0.0,] [dz=0.0])`
 
 Moves a Mesh object `mesh`. Also returns a reference.
 """
@@ -313,17 +313,17 @@ function rotate!(mesh::Mesh; base=[0.0,0,0], axis=[0.0,0,1], angle=90.0 )
 
     # Rotation matrices
     Rx  = [  1.0    0.0    0.0
-             0.0   c/d  -b/d 
+             0.0   c/d  -b/d
              0.0   b/d   c/d ]
 
     Rxi = [  1.0    0.0    0.0
-             0.0   c/d   b/d 
+             0.0   c/d   b/d
              0.0  -b/d   c/d ]
 
     Ry  = [   d    0.0  -a
              0.0    1.0  0.0
               a    0.0   d ]
-           
+
     Ryi = [   d    0.0   a
              0.0    1.0  0.0
              -a    0.0   d ]
@@ -336,7 +336,7 @@ function rotate!(mesh::Mesh; base=[0.0,0,0], axis=[0.0,0,1], angle=90.0 )
     R = Rxi*Ryi*Rz*Ry*Rx
 
     if axis==[1.0, 0.0, 0.0]
-        R  = [ 1.0   0.0   0.0 
+        R  = [ 1.0   0.0   0.0
                0.0   l     -m
                0.0   m     l ]
     end

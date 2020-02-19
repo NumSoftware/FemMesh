@@ -180,14 +180,17 @@ function get_facet_normal(face::Cell)
 end
 
 
-function get_surface_based_on_displacements(mesh::Mesh)::Array{Cell,1}
+function get_surface_based_on_displacements(mesh::Mesh)
 
     surf_dict = Dict{UInt64, Cell}()
     W = mesh.point_scalar_data["wn"]
     U = mesh.point_vector_data["U"]
     maxW = maximum(W)
 
-    disp(face) = mean(U[[p.id for p in face.points], :], dims=1)
+    disp(face) = begin
+        map = [p.id for p in face.points]
+        mean(W[map])
+    end
     #disp(face) = mean( W[p.id] for p in face.points )
 
     # Get only unique faces. If dup, original and dup are deleted
@@ -196,10 +199,10 @@ function get_surface_based_on_displacements(mesh::Mesh)::Array{Cell,1}
             hs = hash(face)
             dface = disp(face)
             if haskey(surf_dict, hs)
-                d = norm(dface-disp(surf_dict[hs]))
-                #d = disp(face)
+                #d = norm(dface-disp(surf_dict[hs]))
+                d = disp(face)
                 #d = abs(disp(face)-disp(surf_dict[hs]))
-                if d<0.3*maxW
+                if d<0.0001*maxW
                     delete!(surf_dict, hs)
                 else
                     surf_dict[hs] = face
@@ -281,10 +284,10 @@ Plots a `mesh` using `PyPlot` backend. If `filename` is provided it writes a pdf
 `leaveopen     = false` : If true, leaves the plot open so other drawings can be added
 """
 function mplot(
-               mesh::Mesh, 
+               mesh::Mesh,
                filename::String = "";
                axis             = true,
-               lw               = 0.5,
+               lw               = 0.3,
                pointmarkers     = false,
                pointlabels      = false,
                celllabels       = false,
@@ -298,6 +301,7 @@ function mplot(
                colorbarscale    = 0.9,
                colorbarlabel    = "",
                colorbarlocation = "right",
+               colorbarorientation = "vertical",
                colorbarpad      = 0.0,
                warpscale        = 0.0,
                highlightcell    = 0,
@@ -318,7 +322,8 @@ function mplot(
         point_vector_data = mesh.point_vector_data
         points  = mesh.points
         cells   = mesh.cells
-        connect = [ Int[ p.id for p in c.points ] for c in cells ]
+        connect = []
+        connect = [ [ p.id for p in c.points ] for c in cells ] # Do not use type specifier inside comprehension to avoid problem with Revise
         id_dict = Dict{Int, Int}( p.id => i for (i,p) in enumerate(points) )
     else
         point_scalar_data = OrderedDict{String,Array}()
@@ -356,7 +361,7 @@ function mplot(
 
         # connectivities
         id_dict = Dict{Int, Int}( p.id => i for (i,p) in enumerate(points) )
-        connect = [ Int[ id_dict[p.id] for p in c.points ] for c in cells ]
+        connect = [ [ id_dict[p.id] for p in c.points ] for c in cells ]
     end
 
     ncells  = length(cells)
@@ -405,11 +410,11 @@ function mplot(
         try
             ax.set_aspect("equal")
         catch err
-            @show err
-            dump(err)
-
+            @warn "mplot: Could not set aspect ratio to equal"
+            #@show err
+            #dump(err)
         end
-        
+
         # Set limits
         meanX = mean(limX)
         meanY = mean(limY)
@@ -490,7 +495,7 @@ function mplot(
         # Plot line cells
         all_verts  = []
         lfvals = Float64[]
-        for i=1:ncells 
+        for i=1:ncells
             shape = cells[i].shape
             shape.family == LINE_SHAPE || continue # only line cells
             con = connect[i]
@@ -527,7 +532,7 @@ function mplot(
         all_verts  = []
 
         # Plot surface cells
-        for i=1:ncells 
+        for i=1:ncells
             shape = cells[i].shape
             shape.family == SOLID_SHAPE || continue # only surface cells
             con = connect[i]
@@ -536,7 +541,7 @@ function mplot(
             push!(all_verts, verts)
         end
 
-        edgecolor = (0.3, 0.3, 0.3, 0.65)
+        edgecolor = (0.4, 0.4, 0.4, 1.0)
 
         # Plot main edges
         filename == "" && (outline = false)
@@ -544,7 +549,7 @@ function mplot(
             edges = get_main_edges(cells, outlineangle)
             θ, γ = (azim+0)*pi/180, elev*pi/180
             ΔX = [ cos(θ)*cos(γ), sin(θ)*cos(γ), sin(γ) ]*0.01*L
- 
+
             for edge in edges
                 #p1 = edge.points[1]
                 #p2 = edge.points[2]
@@ -557,7 +562,7 @@ function mplot(
                 end
                 push!(all_verts, verts)
             end
-            edgecolor = [ fill((0.3, 0.3, 0.3, 0.65), ncells) ; fill((0.25, 0.25, 0.25, 1.0), length(edges)) ]
+            edgecolor = [ fill((0.4, 0.4, 0.4, 1.0), ncells) ; fill((0.20, 0.20, 0.20, 1.0), length(edges)) ]
         end
 
         cltn = @eval art3D[:Poly3DCollection]($all_verts, cmap=$cmap, facecolor="aliceblue", edgecolor=$edgecolor, lw=$lw, alpha=$alpha)
@@ -583,10 +588,10 @@ function mplot(
         end
 
 
-    else
+    elseif ndim==2
 
         # Plot line cells
-        for i=1:ncells 
+        for i=1:ncells
             cells[i].shape.family == LINE_SHAPE || continue # only line cells
             con = connect[i]
             X = XYZ[con, 1]
@@ -606,7 +611,7 @@ function mplot(
         for i=1:ncells
             shape = cells[i].shape
             shape.family == SOLID_SHAPE || continue # only surface cells
-            
+
             con = connect[i]
             points = [ XYZ[i,1:2] for i in con ]
             verts, codes = plot_data_for_cell2d(points, shape)
@@ -619,13 +624,29 @@ function mplot(
                 ax.add_patch(patch)
             end
         end
-        
-        edgecolor = (0.3, 0.3 ,0.3, 0.6)
+
+        edgecolor = (0.4, 0.4 ,0.4, 1.0)
+
+        # find edgecolors
+        if has_field
+            edgecolor = []
+            for i=1:ncells
+                v = (fvals[i]-fieldlims[1])/(fieldlims[2]-fieldlims[1])
+                col = Tuple( (cmap(v) .+ [0.3, 0.3, 0.3, 1.0])./2 )
+                push!(edgecolor, col)
+            end
+        end
+
+        #edgecolor = (0.3, 0.3 ,0.3, 0.6)
         cltn = matplotlib.collections.PatchCollection(all_patches, cmap=cmap, edgecolor=edgecolor, facecolor="aliceblue", lw=lw)
         if has_field
             cltn.set_array(fvals)
             cltn.set_clim(fieldlims)
-            cbar = plt.colorbar(cltn, label=colorbarlabel, shrink=colorbarscale, aspect=0.9*20*colorbarscale, format="%.1f")
+            h = orientation=="vertical" ? figsize[2] : figsize[1]
+            h = norm(figsize)
+            #cbar = plt.colorbar(cltn, label=colorbarlabel, shrink=colorbarscale, aspect=0.9*20*colorbarscale, format="%.1f", pad=colorbarpad, orientation=colorbarorientation)
+            #cbar = plt.colorbar(cltn, label=colorbarlabel, shrink=colorbarscale, aspect=15, format="%.1f", pad=colorbarpad, orientation=colorbarorientation)
+            cbar = plt.colorbar(cltn, label=colorbarlabel, shrink=colorbarscale, aspect=4*colorbarscale*h, format="%.1f", pad=colorbarpad, orientation=colorbarorientation)
             cbar.ax.tick_params(labelsize=7)
             cbar.outline.set_linewidth(0.0)
             cbar.locator = matplotlib.ticker.MaxNLocator(nbins=8)
@@ -679,7 +700,7 @@ function mplot(
         end
     end
 
-    if ndim==3 
+    if ndim==3
         ax.view_init(elev=elev, azim=azim)
         ax.dist = dist
     end

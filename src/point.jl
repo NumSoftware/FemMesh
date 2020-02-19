@@ -52,7 +52,7 @@ get_z(point::Point) = point.z
 #Base.hash(p::Point) = hash( (p.x==0.0?0.0:p.x, p.y==0.0?0.0:p.y, p.z==0.0?0.0:p.z) ) # comparisons used to avoid signed zero
 #Base.hash(p::Point) = hash( (p.x==0.0?0.0:p.x, p.y==0.0?0.0:p.y, p.z==0.0?0.0:p.z) ) # comparisons used to avoid signed zero
 
-Base.hash(p::Point) = hash( (round(p.x, digits=8), round(p.y, digits=8), round(p.z, digits=8)) ) 
+Base.hash(p::Point) = hash( (round(p.x, digits=8), round(p.y, digits=8), round(p.z, digits=8)) )
 #Base.hash(p::Point) = hash( (p.x, p.y, p.z))
 
 Base.hash(points::Array{Point,1}) = sum(hash(p) for p in points)
@@ -94,7 +94,7 @@ end
 
 
 # Index operator for an collection of points
-function Base.getindex(points::Array{Point,1}, filter_ex::Expr) 
+function Base.getindex(points::Array{Point,1}, filter_ex::Expr)
     R = Point[]
     for point in points
         x, y, z = point.x, point.y, point.z
@@ -104,7 +104,7 @@ function Base.getindex(points::Array{Point,1}, filter_ex::Expr)
     return R
 end
 
-function Base.getindex(points::Array{Point,1}, tag::String) 
+function Base.getindex(points::Array{Point,1}, tag::String)
     return Point[ p for p in points if p.tag==tag ]
 end
 

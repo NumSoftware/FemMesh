@@ -12,9 +12,9 @@ EMBEDDED      = 6
 # Export
 for s in instances(ShapeFamily)
     @eval export $(Symbol(s))
-end 
+end
 
-mutable struct ShapeType 
+mutable struct ShapeType
     name       ::String
     family     ::ShapeFamily
     ndim       ::Int
@@ -126,7 +126,7 @@ function get_shape_from_vtk(vtk_type::VTKCellType, npoints::Int64, ndim::Int64, 
     elseif npoints==3   return JLINK3
     elseif npoints==9   return TRI9
     elseif npoints==10  return TRI10
-    elseif npoints==12  
+    elseif npoints==12
         #if ndim==2 return QUAD12 end
     elseif npoints==16
         if ndim==2 return QUAD16 end
@@ -179,15 +179,15 @@ function bdistance(shape::ShapeType, R::Array{Float64,1})
     #     R - a vector containing the point coordinates
     # Returns:
     #     a real value: if possitive then the point is inside the element and negative otherwise
-    
+
     r, s, t = R
     bshape = shape.basic_shape
     if bshape == TRI3  return min(r, s, 1.0-r-s) end
     if bshape == QUAD4 return min(1.0 - abs(r), 1.0 - abs(s)) end
     if bshape == TET4  return min(r, s, t, 1.0-r-s-t) end
     if bshape == HEX8  return min(1.0 - abs(r), 1.0 - abs(s), 1.0 - abs(t)) end
-    if bshape == WED6  
-        return min(r, s, 1.0-r-s, 1.0-abs(t)) 
+    if bshape == WED6
+        return min(r, s, 1.0-r-s, 1.0-abs(t))
     end
     error("No boundary distance for shape ($shape)")
 end
@@ -273,7 +273,7 @@ function extrapolator(shape::ShapeType, nips::Int)
     #                  2     [N_21
     #                  :     [
     #                 nIP    [N_ ...                    ]]
-    
+
 
     npoints = shape.npoints
     IP      = get_ip_coords(shape, nips)

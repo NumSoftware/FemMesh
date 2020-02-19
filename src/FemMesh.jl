@@ -6,13 +6,13 @@ __precompile__()
 **FemMesh.jl**
 
 FemMesh module implements functions and types related to mesh generation for
-finite element analyses. 
+finite element analyses.
 
 **Important data types**
 
 Block2D, Block3D, BlockTruss, BlockInset, Point, Cell, Face, Edge, Mesh.
 
-**Important functions** 
+**Important functions**
 
 copy, move!, array, rotate!, polar, extrude.
 
@@ -70,21 +70,21 @@ export hrefine, prefine
 include("operators.jl")
 export move!, array, copy, mirror, rotate!, polar, rollaxes!, scale!
 
-include("extrude.jl") 
+include("extrude.jl")
 export extrude
 
-include("smooth.jl") 
+include("smooth.jl")
 export smooth!, laplacian_smooth!, fast_smooth!
 
-include("split.jl") 
+include("split.jl")
 
-include("embedded.jl") 
+include("embedded.jl")
 export generate_embedded_cells!
 
-include("mplot.jl") 
+include("mplot.jl")
 export mplot
 
-include("cplot.jl") 
+include("cplot.jl")
 export cplot, newfig
 
 # show function for FemMesh types

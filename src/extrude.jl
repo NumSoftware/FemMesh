@@ -150,7 +150,7 @@ function extrude2(mesh::Mesh; axis=[0.0,0.0,1.], len::Number=1.0, n::Int=1, verb
     newmesh   = Mesh()
 
     length(inicells)>0 || error("Extrude: Cannot extrude mesh with no cells.")
-    
+
     # check if all cells are the same
     shape = inicells[1].shape
     any(Bool[ c.shape!=shape for c in inicells ]) && error("Extrude: Input mesh shoud have same type of cells.")
@@ -324,7 +324,7 @@ function extrude1(mesh::Mesh; axis=[0.0,0.0,1.], len::Number=1.0, n::Int=1, verb
             error("Extrude: Only QUAD4, QUAD8, TRI3 and TRI6 cells can be extruded.")
         end
     end
-    
+
     # check if all cells are the same
     shape = inicells[1].shape
     any(Bool[ c.shape!=shape for c in inicells ]) && error("Extrude: Input mesh shoud have same type of cells.")

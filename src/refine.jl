@@ -37,7 +37,7 @@ function hrefine(mesh::Mesh; n=2, verbose=true)
 
                     cell1 = Cell(cell.shape, [p1, p2, p3], tag=cell.tag)
                     push!(msh.cells, cell1)
-                    
+
                     if i+j < n+1
                         p4 = p_arr[i+1, j+1]
                         cell2 = Cell(cell.shape, [p2, p4, p3], tag=cell.tag)
@@ -67,7 +67,7 @@ function prefine(mesh::Mesh; n=2, verbose=true)
                 C = round.(C, digits=8)
                 p = get_point(msh.pointdict, C)
                 if p==nothing
-                    p = Point(C); 
+                    p = Point(C);
                     push!(msh.points, p)
                     msh.pointdict[hash(p)] = p
                 end

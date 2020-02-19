@@ -106,7 +106,7 @@ function save_vtk(mesh::Mesh, filename::String; desc::String="")
         end
     end
 
-    close(f) 
+    close(f)
 
     return nothing
 end
@@ -232,7 +232,7 @@ function read_vtk(filename::String)
         idx += 1
 
     end
-    
+
     # Setting a Mesh object
     # =====================
 
@@ -281,7 +281,7 @@ function read_vtk(filename::String)
     # Fix shape for polyvertex cells
     if has_polyvertex
         # mount dictionary of cells
-        cdict = Dict{UInt64, Cell}() 
+        cdict = Dict{UInt64, Cell}()
         for cell in mesh.cells
             hs = hash(cell)
             cdict[hs] = cell
@@ -289,13 +289,13 @@ function read_vtk(filename::String)
 
         # check cells
         for cell in mesh.cells
-            if cell.shape == POLYV 
+            if cell.shape == POLYV
                 n = length(cell.points)
                 # look for joints1D and fix shape
                 if n>=5
                     # check if cell is related to a JLINK2
                     hss = hash( [ cell.points[i] for i=1:n-2] )
-                    if haskey(cdict, hss) 
+                    if haskey(cdict, hss)
                         cell.shape = JLINK2
                         hs0   = hash( [ cell.points[i] for i=n-1:n] )
                         hcell = cdict[hss]
@@ -307,7 +307,7 @@ function read_vtk(filename::String)
 
                     # check if cell is related to a JLINK3
                     hss = hash( [ cell.points[i] for i=1:n-3] )
-                    if haskey(cdict, hss) 
+                    if haskey(cdict, hss)
                         cell.shape = JLINK3
                         hs0   = hash( [ cell.points[i] for i=n-2:n] )
                         hcell = cdict[hss]
@@ -324,7 +324,7 @@ function read_vtk(filename::String)
                     for i=1:div(n,2)
                         p1 = cell.points[i]
                         p2 = cell.points[div(n,2)+i]
-                        if hash(p1) != hash(p2) 
+                        if hash(p1) != hash(p2)
                             isjoint = false
                             break
                         end
@@ -342,7 +342,7 @@ function read_vtk(filename::String)
                     for i=1:stride
                         p1 = cell.points[i]
                         p2 = cell.points[stride+i]
-                        if hash(p1) != hash(p2) 
+                        if hash(p1) != hash(p2)
                             isjoint = false
                             break
                         end
@@ -440,7 +440,7 @@ function read_tetgen(filekey::String)
 
     # cell types
     #
-    cell_types = 10*ones(Int, ncells) 
+    cell_types = 10*ones(Int, ncells)
 
 
     #ugrid = UnstructuredGrid("Unstructured grid from tetgen", points, cells, cell_types)

@@ -17,7 +17,7 @@ mutable struct Cell<:AbstractCell
     tag    ::String
     id     ::Integer
     ndim   ::Integer
-    quality::Float64              # quality index: surf/(reg_surf) 
+    quality::Float64              # quality index: surf/(reg_surf)
     embedded::Bool                # flag for embedded cells
     crossed::Bool                 # flag if cell crossed by linear inclusion
     ocell  ::Union{AbstractCell,Nothing}     # owner cell if this cell is a face/edge
@@ -192,7 +192,7 @@ function get_faces(cell::AbstractCell)
 
     all_faces_idxs = cell.shape.facet_idxs
     facet_shape    = cell.shape.facet_shape
-    
+
     if facet_shape==() return faces end
 
     sameshape  = typeof(facet_shape) == ShapeType # check if all facets have the same shape
@@ -277,34 +277,34 @@ end
 
 # Returns the surface/perimeter of a regular element given the volume/area of a cell
 function regular_surface(metric::Float64, shape::ShapeType)
-    if shape in [ TRI3, TRI6, TRI9, TRI10 ] 
+    if shape in [ TRI3, TRI6, TRI9, TRI10 ]
         A = metric
         a = 2.0*√(A/√3.0)
         return 3*a
     end
-    if shape in [ QUAD4, QUAD8, QUAD9, QUAD12, QUAD16 ] 
+    if shape in [ QUAD4, QUAD8, QUAD9, QUAD12, QUAD16 ]
         A = metric
         a = √A
         return 4*a
     end
-    if shape in [ PYR5 ] 
+    if shape in [ PYR5 ]
         V = metric
         a = ( 3.0*√2.0*V )^(1.0/3.0)
         return (1 + √3.0)*a^2
     end
-    if shape in [ TET4, TET10 ] 
+    if shape in [ TET4, TET10 ]
         V = metric
         a = ( 6.0*√2.0*V )^(1.0/3.0)
         return √3.0*a^2
     end
-    if shape in [ HEX8, HEX20 ] 
+    if shape in [ HEX8, HEX20 ]
         V = metric
         a = V^(1.0/3.0)
         return 6.0*a^2.0
     end
     if shape in [ WED6, WED15 ]
         V = metric
-        a2 = (16.0/3.0*V^2)^(1.0/3.0) 
+        a2 = (16.0/3.0*V^2)^(1.0/3.0)
         return (3.0 + √3.0/2.0)*a2
     end
     error("No regular surface/perimeter value for shape $(get_name(shape))")
@@ -313,28 +313,28 @@ end
 
 # Returns the area/volume of a regular element given the perimeter/surface
 function regular_vol(metric::Float64, shape::ShapeType)
-    if shape in [ TRI3, TRI6, TRI9, TRI10 ] 
+    if shape in [ TRI3, TRI6, TRI9, TRI10 ]
         p = metric
         a = p/3
-        return a^2/4*√3.0    
+        return a^2/4*√3.0
     end
-    if shape in [ QUAD4, QUAD8, QUAD9, QUAD12, QUAD16 ] 
+    if shape in [ QUAD4, QUAD8, QUAD9, QUAD12, QUAD16 ]
         p = metric
         a = p/4
         return a^2
     end
-    #if shape in [ PYR5 ] 
+    #if shape in [ PYR5 ]
         #V = metric
         #a = ( 3.0*√2.0*V )^(1.0/3.0)
         #return (1 + √3.0)*a^2
     #end
-    if shape in [ TET4, TET10 ] 
+    if shape in [ TET4, TET10 ]
         s = metric
         A = s/4
         a = 2.0*√(A/√3.0)
         return a^3/(6*√2.0)
     end
-    if shape in [ HEX8, HEX20 ] 
+    if shape in [ HEX8, HEX20 ]
         s = metric
         A = s/6
         a = √A
@@ -352,7 +352,7 @@ end
 function cell_aspect_ratio(c::Cell)
     # get faces
     faces = get_faces(c)
-    if length(faces)==0 
+    if length(faces)==0
         return 1.0
     end
 
@@ -389,7 +389,7 @@ end
 function cell_quality(c::Cell)::Float64
     # get faces
     faces = get_faces(c)
-    if length(faces)==0 
+    if length(faces)==0
         return 1.0
     end
 
@@ -415,7 +415,7 @@ function cell_aspect_ratio(c::Cell)::Float64
     faces = get_faces(c)
     len = [ cell_extent(f) for f in faces ]
     c.quality = minimum(len)/maximum(len)
-    return c.quality 
+    return c.quality
 end
 
 # Get an array with shares for all points
@@ -427,7 +427,7 @@ function get_patches(cells::Array{Cell,1})
             pointsd[hash(point)] = point
         end
     end
-    
+
     points = collect(values(pointsd))
     np     = length(points)
 

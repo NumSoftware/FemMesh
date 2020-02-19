@@ -81,19 +81,19 @@ macro gemm(expr)
         A = rhs.args[2]
         B = rhs.args[3]
     end
-    
+
     tA = 'N'
-    if typeof(A) == Expr 
-        if A.head == Symbol("'"); 
-            tA = 'T' 
+    if typeof(A) == Expr
+        if A.head == Symbol("'");
+            tA = 'T'
             A  = A.args[1]
         end
     end
 
     tB = 'N'
     if typeof(B) == Expr
-        if B.head == Symbol("'"); 
-            tB = 'T' 
+        if B.head == Symbol("'");
+            tB = 'T'
             B  = B.args[1]
         end
     end
@@ -131,11 +131,11 @@ macro gemv(expr)
         A = rhs.args[2]
         B = rhs.args[3]
     end
-    
+
     tA = 'N'
-    if typeof(A) == Expr 
-        if A.head == Symbol("'"); 
-            tA = 'T' 
+    if typeof(A) == Expr
+        if A.head == Symbol("'");
+            tA = 'T'
             A  = A.args[1]
         end
     end
@@ -143,7 +143,7 @@ macro gemv(expr)
     return :( BLAS.gemv!($tA, $(esc(α))*$s, $(esc(A)), $(esc(B)), $(β), $(esc(C)) ) )
 end
 
-# Y += α*X   
+# Y += α*X
 # Y  = α*X
 macro scale(expr)
     α = 1.0
